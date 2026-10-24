@@ -1,0 +1,44 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.daily.healthlife'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.daily.healthlife"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    packaging {
+        jniLibs { useLegacyPackaging = true }
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.core:core:1.12.0'
+    implementation 'com.google.android.material:material:1.11.0'
+
+    // ★ 新增：WebSocket 客户端（用于讯飞 IAT）
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+
+    // 讯飞 SDK（可选，不用可以删）
+    implementation fileTree(include: ['*.jar', '*.aar'], dir: 'libs')
+}
