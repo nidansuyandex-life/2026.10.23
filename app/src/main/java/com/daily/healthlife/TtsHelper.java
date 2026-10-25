@@ -2,83 +2,55 @@ package com.daily.healthlife;
 
 import android.content.Context;
 import android.speech.tts.TextToSpeech;
-import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
-
-import java.util.LinkedList;
 import java.util.Locale;
-import java.util.Queue;
 
 public class TtsHelper implements TextToSpeech.OnInitListener {
-    private static final String TAG = "TtsHelper";
     private TextToSpeech tts;
-    private boolean ready = false;
+    private boolean isReady = false;
 
-    private static class Pending {
-        String text, lang;
-        Pending(String t, String l) { text = t; lang = l; }
-    }
-    private final Queue<Pending> queue = new LinkedList<>();
-
-    public TtsHelper(Context ctx) {
-        tts = new TextToSpeech(ctx.getApplicationContext(), this);
+    public TtsHelper(Context context) {
+        tts = new TextToSpeech(context, this);
     }
 
     @Override
     public void onInit(int status) {
         if (status == TextToSpeech.SUCCESS) {
-            ready = true;
-            tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
-                @Override public void onStart(String utteranceId) {}
-                @Override public void onDone(String utteranceId) {}
-                @Override public void onError(String utteranceId) {}
-            });
-            synchronized (queue) {
-                while (!queue.isEmpty()) {
-                    Pending p = queue.poll();
-                    doSpeak(p.text, p.lang);
-                }
+            isReady = true;
+            // 默认设置中文，具体语种在 speak() 中动态设置
+            int result = tts.setLanguage(Locale.CHINA);
+            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                Log.e("TtsHelper", "TTS 语言包缺失或不支持");
             }
-            Log.d(TAG, "TTS ready");
         } else {
-            Log.e(TAG, "TTS init failed: " + status);
+            Log.e("TtsHelper", "TTS 初始化失败");
         }
     }
 
     public void speak(String text, String lang) {
-        if (text == null || text.trim().isEmpty()) return;
-        if (!ready) {
-            synchronized (queue) { queue.add(new Pending(text, lang)); }
-            return;
-        }
-        doSpeak(text, lang);
-    }
+        if (!isReady || tts == null) return;
 
-    private void doSpeak(String text, String lang) {
-        try {
-            Locale loc = (lang != null && lang.toLowerCase().startsWith("zh"))
-                    ? Locale.CHINA : Locale.US;
-            int avail = tts.isLanguageAvailable(loc);
-            if (avail == TextToSpeech.LANG_MISSING_DATA
-                    || avail == TextToSpeech.LANG_NOT_SUPPORTED) {
-                tts.setLanguage(Locale.getDefault());
-            } else {
-                tts.setLanguage(loc);
-            }
-            tts.setSpeechRate(0.95f);
-            tts.setPitch(1.0f);
-            String id = "u" + System.currentTimeMillis();
-            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, id);
-        } catch (Exception e) {
-            Log.e(TAG, "speak err", e);
-        }
+        // 设置语言
+        Locale locale = "zh".equals(lang) || "zh-CN".equals(lang) ? Locale.CHINA : Locale.US;
+        tts.setLanguage(locale);
+        tts.setSpeechRate(0.95f); // 稍微放慢语速
+
+        // 停止当前的朗读，开始新的朗读
+        tts.stop();
+        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "tts-id");
     }
 
     public void stop() {
-        try { if (tts != null) tts.stop(); } catch (Exception ignored) {}
+        if (tts != null && tts.isSpeaking()) {
+            tts.stop();
+        }
     }
 
     public void destroy() {
-        try { if (tts != null) { tts.stop(); tts.shutdown(); } } catch (Exception ignored) {}
+        if (tts != null) {
+            tts.stop();
+            tts.shutdown();
+            tts = null;
+        }
     }
 }
