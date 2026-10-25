@@ -80,13 +80,13 @@ public class JsBridge {
         return sb.append("'").toString();
     }
 
-    // ============ ★ 图片文件存储（替代 localStorage） ============
+    // ============ ★ 图片文件存储 ============
     @JavascriptInterface
     public String saveImage(String base64Data, String filename) {
         try {
             byte[] bytes = Base64.decode(base64Data.split(",")[1], Base64.DEFAULT);
             File dir = act.getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-            if (!dir.exists()) dir.mkdirs();
+            if (!existsDir(dir)) return "";
             File f = new File(dir, filename);
             FileOutputStream fos = new FileOutputStream(f);
             fos.write(bytes);
@@ -96,6 +96,12 @@ public class JsBridge {
             Log.e("JsBridge", "saveImage error", e);
             return "";
         }
+    }
+
+    private boolean existsDir(File dir) {
+        if (dir == null) return false;
+        if (!dir.exists()) return dir.mkdirs();
+        return true;
     }
 
     @JavascriptInterface
@@ -223,6 +229,41 @@ public class JsBridge {
                 v.vibrate(ms);
             }
         } catch (Exception ignored) {}
+    }
+
+    // ============ 新增：桌面卡片与后台倒计时 ============
+    @JavascriptInterface
+    public void updateWidgetData(String jsonStr) {
+        Context context = act.getApplicationContext();
+        android.content.SharedPreferences prefs = context.getSharedPreferences("WidgetData", Context.MODE_PRIVATE);
+        prefs.edit().putString("data", jsonStr).apply();
+
+        Intent intent = new Intent(context, DailyWidgetProvider.class);
+        intent.setAction(android.appwidget.AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+        int[] ids = android.appwidget.AppWidgetManager.getInstance(context).getAppWidgetIds(
+                new android.content.ComponentName(context, DailyWidgetProvider.class)
+        );
+        intent.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_IDS, ids);
+        context.sendBroadcast(intent);
+    }
+
+    @JavascriptInterface
+    public void startNativeWalkTimer(int seconds) {
+        Context context = act.getApplicationContext();
+        Intent intent = new Intent(context, WalkTimerService.class);
+        intent.putExtra("duration", seconds);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent);
+        } else {
+            context.startService(intent);
+        }
+    }
+
+    @JavascriptInterface
+    public void stopNativeWalkTimer() {
+        Context context = act.getApplicationContext();
+        Intent intent = new Intent(context, WalkTimerService.class);
+        context.stopService(intent);
     }
 
     public void destroy() {
