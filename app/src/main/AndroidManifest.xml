@@ -1,51 +1,130 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.daily.healthlife">
 
-    <!-- 基础权限：网络（你的 HTML 里有很多 API 需要联网） -->
+    <!-- ========== 权限 ========== -->
+    <!-- 联网抓取每日知识、名言、新闻等 -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    
-    <!-- 语音识别和录音权限（对应你的 VoiceRecorder） -->
+
+    <!-- 语音识别录音 -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    
-    <!-- 通知与震动权限 -->
-    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Android 13+ 通知权限（活动提醒） -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- 震动（休息/走路提醒） -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- 前台服务（WalkTimerService 倒计时） -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Android 14+ 前台服务类型；如果 WalkTimerService 用的是 dataSync，改成 FOREGROUND_SERVICE_DATA_SYNC -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- 如果想用 WebView 定位拿实时天气，取消下面两行注释，并在 MainActivity 里处理 onGeolocationPermissionsShowPrompt -->
+    <!--
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    -->
+
+    <!-- 查询桌面 Launcher，用于 AppWidget（一般不需要，保留无害） -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
+    </queries>
 
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="日常健康"
+        android:icon="@drawable/ic_launcher"
+        android:roundIcon="@drawable/ic_launcher"
+        android:label="日常 · 健康生活"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
+        android:hardwareAccelerated="true"
+        android:largeHeap="true"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar"
-        android:usesCleartextTraffic="true">
-        
-        <!-- 主界面 -->
+        tools:targetApi="34">
+
+        <!-- ========== 主界面 ========== -->
+        <!--
+            关键点：
+            1. launchMode="singleTask"：保证 healthlife:// 跳转时走 onNewIntent 而不是新建 Activity
+            2. intent-filter 里加了 VIEW + BROWSEABLE + healthlife scheme：
+               否则 HealthWidgetProvider 里的 healthlife://jump?route=xxx 无法路由到 MainActivity
+        -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:configChanges="orientation|keyboardHidden|screenSize"
-            android:launchMode="singleTask">
+            android:launchMode="singleTask"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize|uiMode"
+            android:windowSoftInputMode="adjustResize">
+
+            <!-- 启动入口 -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- 桌面卡片点击跳转 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="healthlife" />
+            </intent-filter>
         </activity>
 
-        <!-- 注册桌面卡片组件 -->
+        <!-- ========== 桌面卡片：健康生活小部件 ========== -->
+        <!--
+            需要配套存在 res/xml/widget_health_card_info.xml（见下方“配套文件”）
+            如果这个文件缺失，会报 resource xml/widget_health_card_info not found
+        -->
         <receiver
             android:name=".HealthWidgetProvider"
-            android:exported="false">
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.daily.healthlife.WIDGET_CHECKIN" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_health_card_info" />
+        </receiver>
+
+        <!-- ========== 桌面卡片：JsBridge 里引用的 DailyWidgetProvider ========== -->
+        <!--
+            如果你的项目里确实有 DailyWidgetProvider 这个类且需要用它，
+            请保留下面这一段，并确保 res/xml/widget_daily_info.xml 存在；
+            如果项目里没有这个类或不用它，直接整段删除，避免编译报错。
+        -->
+        <receiver
+            android:name=".DailyWidgetProvider"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/appwidget_info" />
+                android:resource="@xml/widget_daily_info" />
         </receiver>
 
-        <!-- 如果你的后台走动提醒是 Service，也需要注册 -->
-        <service android:name=".WalkTimerService" />
+        <!-- ========== 后台走动倒计时前台服务 ========== -->
+        <!--
+            如果项目里没有 WalkTimerService，删掉这一段；
+            如果有但没用前台服务（就是普通 Service），去掉 foregroundServiceType 即可。
+        -->
+        <service
+            android:name=".WalkTimerService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="walk_reminder_countdown" />
+        </service>
 
     </application>
 </manifest>
