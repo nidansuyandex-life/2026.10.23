@@ -1,11 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
-        <item name="colorPrimary">#4f46e5</item>
-        <item name="colorPrimaryDark">#4338ca</item>
-        <item name="colorAccent">#7c3aed</item>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- 基础应用主题 -->
+    <style name="Theme.HealthLife" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- 状态栏颜色设置为网页顶部的背景色 -->
+        <item name="android:statusBarColor" tools:targetApi="l">#f6f7fb</item>
+        <!-- 状态栏文字设为深色 -->
+        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
+        <!-- 避免启动时闪白屏 -->
         <item name="android:windowBackground">#f6f7fb</item>
-        <item name="android:statusBarColor">#f6f7fb</item>
-        <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>
