@@ -83,7 +83,7 @@ public class JsBridge {
         return sb.append("'").toString();
     }
 
-    // ============ ★ 图片文件存储 ============
+    // ============ 图片文件存储 ============
     @JavascriptInterface
     public String saveImage(String base64Data, String filename) {
         try {
@@ -234,22 +234,7 @@ public class JsBridge {
         } catch (Exception ignored) {}
     }
 
-    // ============ 桌面卡片与后台倒计时 ============
-    @JavascriptInterface
-    public void updateWidgetData(String jsonStr) {
-        Context context = act.getApplicationContext();
-        android.content.SharedPreferences prefs = context.getSharedPreferences("WidgetData", Context.MODE_PRIVATE);
-        prefs.edit().putString("data", jsonStr).apply();
-
-        Intent intent = new Intent(context, DailyWidgetProvider.class);
-        intent.setAction(android.appwidget.AppWidgetManager.ACTION_APPWIDGET_UPDATE);
-        int[] ids = android.appwidget.AppWidgetManager.getInstance(context).getAppWidgetIds(
-                new android.content.ComponentName(context, DailyWidgetProvider.class)
-        );
-        intent.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_IDS, ids);
-        context.sendBroadcast(intent);
-    }
-
+    // ============ 后台倒计时 ============
     @JavascriptInterface
     public void startNativeWalkTimer(int seconds) {
         Context context = act.getApplicationContext();
@@ -269,7 +254,7 @@ public class JsBridge {
         context.stopService(intent);
     }
 
-    // ============ ★ 供前端调用：同步最新的进度给桌面卡片 ============
+    // ============ 桌面卡片数据同步 ============
     @JavascriptInterface
     public void syncWidgetData(String studyProgress, String monthExpense) {
         SharedPreferences sp = act.getApplicationContext()
@@ -289,7 +274,7 @@ public class JsBridge {
         act.getApplicationContext().sendBroadcast(intent);
     }
 
-    // ============ ★ 供前端获取：桌面打卡状态，实现桌面 -> App 的同步 ============
+    // ============ 桌面打卡状态读取 ============
     @JavascriptInterface
     public boolean getNativeCheckInStatus() {
         SharedPreferences sp = act.getApplicationContext()
