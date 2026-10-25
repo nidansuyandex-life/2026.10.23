@@ -379,6 +379,33 @@ window.addEventListener('unhandledrejection', e => console.error('Promise:', e.r
 // ============ 桌面卡片桥接（桌面 → App / App → 桌面） ============
 window.jumpFromNative = function(route) {
     try {
+        // 处理从桌面点击待办项的事件
+        if (route.startsWith('toggleTodo&key=')) {
+            const key = decodeURIComponent(route.split('key=')[1]);
+            
+            // 如果是打卡项 (home_xxx)
+            if (key.startsWith('home_')) {
+                const c = getChecks();
+                if (c[key]) delete c[key]; else c[key] = true;
+                saveChecks(c);
+            } 
+            // 如果是手动添加的待办项 (日期|时间|标题)
+            else if (key.includes('|')) {
+                const parts = key.split('|');
+                const date = parts[0], time = parts[1], title = parts[2];
+                const m = getTodoStatusMap();
+                const payloadStr = `${date}|${time}|${title}`;
+                if (m[payloadStr]) delete m[payloadStr]; else m[payloadStr] = true;
+                saveTodoStatusMap(m);
+            }
+            
+            // 重新渲染页面并同步数据到桌面
+            render({ keepScroll: true });
+            syncToNativeWidget();
+            return;
+        }
+
+        // 普通的路由跳转
         if (route === 'money') {
             state.tab = 'life';
             state.lifeSub = 'money';
@@ -408,6 +435,50 @@ function syncToNativeWidget() {
             const expenseText = `本月支出：¥${monthExp.toFixed(0)}`;
 
             window.AndroidBridge.syncWidgetData(studyText, expenseText);
+
+            // 同步时间线全量数据给桌面卡片
+            if (window.AndroidBridge.syncWidgetTimeline) {
+                const checks = getChecks();
+                const manualTodos = ((state.calendarData[t] || []).filter(x => x.manual)).slice();
+                
+                // 1. 固定的常规任务（与 homeView 里的时间线对应）
+                const fixedItems = [
+                    { time:'07:40', text:'晨间呼吸', checkKey: `home_${t}_wake` },
+                    { time:'07:45', text:'护肤（早）', checkKey: `home_${t}_skin_am` },
+                    { time:'07:50', text:'早饭', checkKey: `home_${t}_breakfast` },
+                    { time:'08:00', text:'上班/通勤', checkKey: `home_${t}_commute` },
+                    { time:'12:00', text:'中饭', checkKey: `home_${t}_lunch` },
+                    { time:'12:30', text:'学习', checkKey: `home_${t}_study` },
+                    { time:'18:00', text:'晚饭', checkKey: `home_${t}_dinner` },
+                    { time:'19:30', text:'运动打卡', checkKey: `home_${t}_sport` },
+                    { time:'20:30', text:'吃蛋白粉', checkKey: `home_${t}_protein` },
+                    { time:'22:00', text:'护肤（晚）', checkKey: `home_${t}_skin_pm` },
+                    { time:'22:30', text:'睡前呼吸', checkKey: `home_${t}_breathe` }
+                ];
+                
+                // 2. 用户手动添加的待办任务
+                const todoItems = manualTodos.map(mt => ({
+                    time: mt.time || '99:99',
+                    text: mt.title,
+                    key: `${t}|${mt.time}|${mt.title}`,
+                    isTodo: true,
+                    done: !!mt.done
+                }));
+
+                // 3. 合并、排序并生成最终 JSON（全量发送，不截断）
+                const allItems = [...fixedItems, ...todoItems].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+                
+                const timelineData = allItems.map(it => {
+                    return {
+                        time: it.time,
+                        title: it.text,
+                        done: it.isTodo ? it.done : !!(it.checkKey && checks[it.checkKey]),
+                        key: it.isTodo ? it.key : it.checkKey
+                    };
+                });
+
+                window.AndroidBridge.syncWidgetTimeline(JSON.stringify(timelineData));
+            }
         }
     } catch (e) { console.error('syncToNativeWidget error:', e); }
 }
@@ -2755,9 +2826,9 @@ view.addEventListener('click', async e => {
   if (act === 'gotoBodyData'){ state.tab = 'life'; state.lifeSub = 'sport'; state.sportSub = 'body'; render(); return; }
   if (act === 'gotoExport'){ state.tab = 'me'; render(); return; }
   if (act === 'jumpFromHome'){ const target = t.dataset.target; if (target === 'study'){ state.tab = 'study'; state.studySub = 'today'; } else if (target === 'sport'){ state.tab = 'life'; state.lifeSub = 'sport'; state.sportSub = 'plan'; } else if (target === 'money'){ state.tab = 'life'; state.lifeSub = 'money'; state.moneySub = 'record'; } render(); return; }
-  if (act === 'newTodoToday'){ const time = prompt('时间（如 09:00）', '09:00'); if (time === null) return; const title = prompt('事项'); if (!title || !title.trim()) return; const desc = prompt('备注（可留空）', ''); if (desc === null) return; const date = todayStr(); const saved = getManualTodos(); if (!saved[date]) saved[date] = []; saved[date].push({ time: (time||'09:00').trim(), title: title.trim(), desc: (desc||'').trim(), done:false }); saveManualTodos(saved); buildCalendarFromPlans(); toast('已添加到今天'); render({ keepScroll: true }); return; }
-  if (act === 'newTodo'){ const defaultDate = state.selectedDate || todayStr(); const dateInput = prompt('日期（YYYY-MM-DD）', defaultDate); if (dateInput === null) return; const date = (dateInput || '').trim() || defaultDate; if (!/^\d{4}-\d{2}-\d{2}$/.test(date)){ toast('日期格式应为 YYYY-MM-DD'); return; } const time = prompt('时间（如 09:00）', '09:00'); if (time === null) return; const title = prompt('事项'); if (!title || !title.trim()) return; const desc = prompt('备注（可留空）', ''); if (desc === null) return; const saved = getManualTodos(); if (!saved[date]) saved[date] = []; saved[date].push({ time: (time||'09:00').trim(), title: title.trim(), desc: (desc||'').trim(), done:false }); saveManualTodos(saved); state.selectedDate = date; HealthStore.save('selectedDate', state.selectedDate); buildCalendarFromPlans(); toast('已添加 ' + date + ' 的待办'); render({ keepScroll: true }); return; }
-  if (act === 'setOverride'){ const mode = t.dataset.mode; const today = new Date(); today.setHours(0,0,0,0); setOverride(today, mode === 'original' ? null : mode); buildCalendarFromPlans(); render({ keepScroll: true }); toast(mode === 'original' ? '已恢复为正常状态' : '已切换身体状态'); return; }
+  if (act === 'newTodoToday'){ const time = prompt('时间（如 09:00）', '09:00'); if (time === null) return; const title = prompt('事项'); if (!title || !title.trim()) return; const desc = prompt('备注（可留空）', ''); if (desc === null) return; const date = todayStr(); const saved = getManualTodos(); if (!saved[date]) saved[date] = []; saved[date].push({ time: (time||'09:00').trim(), title: title.trim(), desc: (desc||'').trim(), done:false }); saveManualTodos(saved); buildCalendarFromPlans(); syncToNativeWidget(); toast('已添加到今天'); render({ keepScroll: true }); return; }
+  if (act === 'newTodo'){ const defaultDate = state.selectedDate || todayStr(); const dateInput = prompt('日期（YYYY-MM-DD）', defaultDate); if (dateInput === null) return; const date = (dateInput || '').trim() || defaultDate; if (!/^\d{4}-\d{2}-\d{2}$/.test(date)){ toast('日期格式应为 YYYY-MM-DD'); return; } const time = prompt('时间（如 09:00）', '09:00'); if (time === null) return; const title = prompt('事项'); if (!title || !title.trim()) return; const desc = prompt('备注（可留空）', ''); if (desc === null) return; const saved = getManualTodos(); if (!saved[date]) saved[date] = []; saved[date].push({ time: (time||'09:00').trim(), title: title.trim(), desc: (desc||'').trim(), done:false }); saveManualTodos(saved); state.selectedDate = date; HealthStore.save('selectedDate', state.selectedDate); buildCalendarFromPlans(); syncToNativeWidget(); toast('已添加 ' + date + ' 的待办'); render({ keepScroll: true }); return; }
+  if (act === 'setOverride'){ const mode = t.dataset.mode; const today = new Date(); today.setHours(0,0,0,0); setOverride(today, mode === 'original' ? null : mode); buildCalendarFromPlans(); syncToNativeWidget(); render({ keepScroll: true }); toast(mode === 'original' ? '已恢复为正常状态' : '已切换身体状态'); return; }
   if (act === 'studySub'){ state.studySub = t.dataset.sub; render(); return; }
   if (act === 'removeWrong'){ LearnStore.removeWrong(t.dataset.type, t.dataset.key); render(); return; }
   if (act === 'englishSub'){ state.englishSub = t.dataset.sub; state.englishPage = 1; render(); return; }
@@ -2844,13 +2915,13 @@ view.addEventListener('click', e => {
   const dayEl = e.target.closest('[data-date]');
   if (dayEl){ state.selectedDate = dayEl.dataset.date; HealthStore.save('selectedDate', state.selectedDate); render(); return; }
   const toggle = e.target.closest('[data-toggle-todo]');
-  if (toggle && !e.target.closest('[data-del-todo]')){ try { const payload = JSON.parse(decodeURIComponent(toggle.dataset.toggleTodo)); const item = (state.calendarData[payload.date] || []).find(x => x.time === payload.time && x.title === payload.title); if (item){ const m = getTodoStatusMap(); const k = getTodoKey(payload.date, item); if (m[k]) delete m[k]; else m[k] = true; saveTodoStatusMap(m); render({ keepScroll: true }); } } catch(err){} return; }
+  if (toggle && !e.target.closest('[data-del-todo]')){ try { const payload = JSON.parse(decodeURIComponent(toggle.dataset.toggleTodo)); const item = (state.calendarData[payload.date] || []).find(x => x.time === payload.time && x.title === payload.title); if (item){ const m = getTodoStatusMap(); const k = getTodoKey(payload.date, item); if (m[k]) delete m[k]; else m[k] = true; saveTodoStatusMap(m); syncToNativeWidget(); render({ keepScroll: true }); } } catch(err){} return; }
   const del = e.target.closest('[data-del-todo]');
-  if (del){ try { const payload = JSON.parse(decodeURIComponent(del.dataset.delTodo)); const saved = getManualTodos(); if (saved[payload.date]){ saved[payload.date] = saved[payload.date].filter(x => !(x.time === payload.time && x.title === payload.title)); if (!saved[payload.date].length) delete saved[payload.date]; saveManualTodos(saved); render({ keepScroll: true }); } } catch(err){} return; }
+  if (del){ try { const payload = JSON.parse(decodeURIComponent(del.dataset.delTodo)); const saved = getManualTodos(); if (saved[payload.date]){ saved[payload.date] = saved[payload.date].filter(x => !(x.time === payload.time && x.title === payload.title)); if (!saved[payload.date].length) delete saved[payload.date]; saveManualTodos(saved); syncToNativeWidget(); render({ keepScroll: true }); } } catch(err){} return; }
 });
 view.addEventListener('click', e => {
   const c = e.target.closest('.check');
-  if (c && !c.closest('[data-toggle-todo]') && !c.dataset.act){ if (c.dataset.checkKey){ c.classList.toggle('done'); const isDone = c.classList.contains('done'); setCheck(c.dataset.checkKey, isDone); const supp = c.closest('.supp'); if (supp) supp.classList.toggle('taken', isDone); const homeItem = c.closest('.home-tl-item'); if (homeItem) homeItem.classList.toggle('is-done', isDone); } return; }
+  if (c && !c.closest('[data-toggle-todo]') && !c.dataset.act){ if (c.dataset.checkKey){ c.classList.toggle('done'); const isDone = c.classList.contains('done'); setCheck(c.dataset.checkKey, isDone); const supp = c.closest('.supp'); if (supp) supp.classList.toggle('taken', isDone); const homeItem = c.closest('.home-tl-item'); if (homeItem) homeItem.classList.toggle('is-done', isDone); syncToNativeWidget(); } return; }
 });
 view.addEventListener('click', e => {
   const tl = e.target.closest('[data-home-action]'); if (!tl || e.target.closest('.check')) return;
