@@ -376,6 +376,42 @@ select,input[type=text],input[type=password]{width:100%;border:1px solid #e6e8f0
 window.addEventListener('error', e => console.error('Error:', e.message));
 window.addEventListener('unhandledrejection', e => console.error('Promise:', e.reason));
 
+// ============ 桌面卡片桥接（桌面 → App / App → 桌面） ============
+window.jumpFromNative = function(route) {
+    try {
+        if (route === 'money') {
+            state.tab = 'life';
+            state.lifeSub = 'money';
+            state.moneySub = 'record';
+            render();
+        } else if (route === 'study') {
+            state.tab = 'study';
+            state.studySub = 'today';
+            render();
+        } else {
+            state.tab = 'home';
+            render();
+        }
+    } catch (e) { console.error('jumpFromNative error:', e); }
+};
+
+function syncToNativeWidget() {
+    try {
+        if (window.AndroidBridge && window.AndroidBridge.syncWidgetData) {
+            const tasks = LearnStore.getTodayTasks();
+            const doneTasks = tasks.filter(x => x.done).length;
+            const studyText = `今日学习：${doneTasks}/${tasks.length}`;
+
+            const t = todayStr();
+            const monthTx = transactions.filter(x => x.date.startsWith(t.slice(0,7)));
+            const monthExp = monthTx.filter(x => x.type === 'expense').reduce((s,x) => s + x.amount, 0);
+            const expenseText = `本月支出：¥${monthExp.toFixed(0)}`;
+
+            window.AndroidBridge.syncWidgetData(studyText, expenseText);
+        }
+    } catch (e) { console.error('syncToNativeWidget error:', e); }
+}
+
 const DAY = Math.floor((Date.now() + 8*3600*1000) / 86400000);
 const DAILY_WORD_COUNT = 5, DAILY_VALVE_COUNT = 5, REVIEW_TARGET = 5, PAGE_SIZE = 50;
 const WEEK_CN = '日一二三四五六';
@@ -2729,19 +2765,19 @@ view.addEventListener('click', async e => {
   if (act === 'englishLoadMore'){ state.englishPage += 1; render(); return; }
   if (act === 'valveLoadMore'){ state.valvePage += 1; render(); return; }
   if (act === 'taskJump'){ const key = t.dataset.key; if (key === 'words'){ state.studySub = 'english'; state.englishSub = 'today'; } else if (key === 'valve') state.studySub = 'valve'; else if (key === 'logic') state.studySub = 'logic'; else if (key === 'general') state.studySub = 'general'; else if (['passage','expr','yiyan','quote','story'].includes(key)){ state.tab = 'discover'; state.discoverSub = 'express'; } else if (key === 'news'){ state.tab = 'discover'; state.discoverSub = 'news'; } render(); return; }
-  if (act === 'learnWord'){ const card = t.closest('[data-word]'); if (!card) return; const w = card.dataset.word; const deck = card.dataset.deck; const learned = LearnStore.getLearned(); const i = learned.indexOf(w); if (i < 0){ learned.push(w); LearnStore.ensureSchedule('english', w); if (deck) LearnStore.setWordDeck(w, deck); } else learned.splice(i, 1); LearnStore.setLearned(learned); render({ keepScroll: true }); toast(i < 0 ? '已标记为已学' : '已取消'); return; }
+  if (act === 'learnWord'){ const card = t.closest('[data-word]'); if (!card) return; const w = card.dataset.word; const deck = card.dataset.deck; const learned = LearnStore.getLearned(); const i = learned.indexOf(w); if (i < 0){ learned.push(w); LearnStore.ensureSchedule('english', w); if (deck) LearnStore.setWordDeck(w, deck); } else learned.splice(i, 1); LearnStore.setLearned(learned); syncToNativeWidget(); render({ keepScroll: true }); toast(i < 0 ? '已标记为已学' : '已取消'); return; }
   if (act === 'knowToggle'){ const card = t.closest('.know'); const q = card ? card.dataset.q : null; if (!q) return; state.openKnow = state.openKnow === q ? null : q; render({ keepScroll: true }); return; }
-  if (act === 'knowDone'){ e.stopPropagation(); const card = t.closest('.know'); const q = card ? card.dataset.q : null; if (!q) return; const done = LearnStore.getKnowDone(); const i = done.indexOf(q); if (i < 0){ done.push(q); LearnStore.ensureSchedule('work', q); } else done.splice(i, 1); LearnStore.setKnowDone(done); toast(i < 0 ? '已标记掌握' : '已取消'); render({ keepScroll: true }); return; }
+  if (act === 'knowDone'){ e.stopPropagation(); const card = t.closest('.know'); const q = card ? card.dataset.q : null; if (!q) return; const done = LearnStore.getKnowDone(); const i = done.indexOf(q); if (i < 0){ done.push(q); LearnStore.ensureSchedule('work', q); } else done.splice(i, 1); LearnStore.setKnowDone(done); syncToNativeWidget(); toast(i < 0 ? '已标记掌握' : '已取消'); render({ keepScroll: true }); return; }
   if (act === 'thinkToggle'){ const card = t.closest('.know'); const name = card ? card.dataset.think : null; if (!name) return; state.openThink = state.openThink === name ? null : name; render({ keepScroll: true }); return; }
   if (act === 'thinkDone'){ e.stopPropagation(); LearnStore.markThinkDone(t.dataset.name); toast('已记录'); render({ keepScroll: true }); return; }
   if (act === 'valveCat'){ state.valveCat = t.dataset.cat; state.searchQuery = ''; state.openKnow = null; state.valvePage = 1; render(); return; }
   if (act === 'searchClear'){ state.searchQuery = ''; render(); return; }
-  if (act === 'markGeneralDone'){ LS.set('general-done:'+DAY, true); toast('已记录'); render({ keepScroll: true }); return; }
+  if (act === 'markGeneralDone'){ LS.set('general-done:'+DAY, true); syncToNativeWidget(); toast('已记录'); render({ keepScroll: true }); return; }
   if (act === 'refreshGeneral'){ state.generalData = null; CacheStore.save(CACHE_KEY_KNOWLEDGE, null); render({ keepScroll: true }); return; }
-  if (act === 'markYiyanDone'){ LS.set('yiyan-done:'+DAY, true); toast('已记录'); render({ keepScroll: true }); return; }
-  if (act === 'markQuoteDone'){ LS.set('quote-done:'+DAY, true); toast('已记录'); render({ keepScroll: true }); return; }
-  if (act === 'markStoryDone'){ LS.set('story-done:'+DAY, true); toast('已记录'); render({ keepScroll: true }); return; }
-  if (act === 'markPassageDone'){ LS.set('passage-done:'+DAY, true); toast('已记录'); render({ keepScroll: true }); return; }
+  if (act === 'markYiyanDone'){ LS.set('yiyan-done:'+DAY, true); syncToNativeWidget(); toast('已记录'); render({ keepScroll: true }); return; }
+  if (act === 'markQuoteDone'){ LS.set('quote-done:'+DAY, true); syncToNativeWidget(); toast('已记录'); render({ keepScroll: true }); return; }
+  if (act === 'markStoryDone'){ LS.set('story-done:'+DAY, true); syncToNativeWidget(); toast('已记录'); render({ keepScroll: true }); return; }
+  if (act === 'markPassageDone'){ LS.set('passage-done:'+DAY, true); syncToNativeWidget(); toast('已记录'); render({ keepScroll: true }); return; }
   if (act === 'refreshYiyan'){ state.yiyanData = null; state.yiyanLoading = false; CacheStore.save('yiyan', null); render({ keepScroll: true }); return; }
   if (act === 'refreshJoke'){ state.jokeResults = []; CacheStore.save('joke-results', null); render({ keepScroll: true }); return; }
   if (act === 'refreshNews'){ state.newsResults = []; CacheStore.save('news-all', null); render({ keepScroll: true }); return; }
@@ -2753,7 +2789,7 @@ view.addEventListener('click', async e => {
   if (act === 'startAllTest'){ startAllTest(); return; }
   if (act === 'startReview'){ e.stopPropagation(); const type = t.dataset.type; if (type === 'english'){ toast('加载中…'); try { await DeckLoader.ensureForReview(); } catch(err){} const keys = LearnStore.getReviewList('english', REVIEW_TARGET); const list = keys.map(k => DeckLoader.findWord(k)).filter(Boolean); if (!list.length){ toast('还没有学过的单词'); return; } startReview(type, list); } else { const keys = LearnStore.getReviewList('work', REVIEW_TARGET); const list = keys.map(k => SEED.VALVE_ALL.find(v => v.q === k)).filter(Boolean); if (!list.length){ toast('还没有学过的知识'); return; } startReview(type, list); } return; }
   if (act === 'askAbout'){ e.stopPropagation(); const q = t.dataset.q; const card = t.closest('.know') || t.closest('.card'); if (!card) return; const input = card.querySelector('[data-qa-q]'); const question = (input && input.value || '').trim(); if (!question){ toast('先输入问题'); return; } if (!AI.enabled()){ toast('请先配置 AI'); return; } LS.set('ask-text:'+q, question); state.aiAnsweringFor = q; state.aiLoading = true; render({ keepScroll: true }); try { const item = SEED.VALVE_ALL.find(v => v.q === q); const ctx = item ? `${item.cat}：${item.a} ${item.key}` : ''; const answer = await AI.answerQuestion(question, ctx); LS.set('ask-cache:'+q, { question, answer: answer||'（无返回）', t: Date.now() }); toast('AI 已解答'); } catch(err){ LS.set('ask-cache:'+q, { question, answer: '调用失败：'+(err.message||'未知'), t: Date.now() }); toast('调用失败'); } state.aiLoading = false; state.aiAnsweringFor = null; render({ keepScroll: true }); return; }
-  if (act === 'gradeAnswer'){ e.stopPropagation(); const scene = t.dataset.scene, q = t.dataset.q, guide = t.dataset.guide; const ta = document.getElementById('exprAnswer'); const answer = (ta && ta.value || '').trim(); if (!answer){ toast('先写下你的回答'); return; } if (!AI.enabled()){ toast('请先配置 AI'); return; } const key = 'expr-'+scene+'-'+q; LS.set('expr-ans:'+key, answer); t.disabled = true; t.textContent = '⏳ 评分中…'; const resultEl = document.getElementById('gradeResult'); if (resultEl) resultEl.innerHTML = `<div style="margin-top:12px;padding:14px;background:#f8f9fd;border-radius:12px;font-size:13px;color:var(--sub);text-align:center;">AI 评分中…</div>`; try { const result = await AI.gradeExpression(scene, q, guide, answer); if (result){ LS.set('expr-grade:'+key, result); LS.set('expr-done:'+todayStr(), true); if (resultEl) resultEl.innerHTML = renderGradeCard(result); updateTopbar(); toast('评分完成'); } } catch(err){ if (resultEl) resultEl.innerHTML = renderGradeCard({ error:'调用失败：'+(err.message||'未知') }); } finally { t.disabled = false; t.textContent = '🔄 重新评分'; } return; }
+  if (act === 'gradeAnswer'){ e.stopPropagation(); const scene = t.dataset.scene, q = t.dataset.q, guide = t.dataset.guide; const ta = document.getElementById('exprAnswer'); const answer = (ta && ta.value || '').trim(); if (!answer){ toast('先写下你的回答'); return; } if (!AI.enabled()){ toast('请先配置 AI'); return; } const key = 'expr-'+scene+'-'+q; LS.set('expr-ans:'+key, answer); t.disabled = true; t.textContent = '⏳ 评分中…'; const resultEl = document.getElementById('gradeResult'); if (resultEl) resultEl.innerHTML = `<div style="margin-top:12px;padding:14px;background:#f8f9fd;border-radius:12px;font-size:13px;color:var(--sub);text-align:center;">AI 评分中…</div>`; try { const result = await AI.gradeExpression(scene, q, guide, answer); if (result){ LS.set('expr-grade:'+key, result); LS.set('expr-done:'+todayStr(), true); if (resultEl) resultEl.innerHTML = renderGradeCard(result); updateTopbar(); syncToNativeWidget(); toast('评分完成'); } } catch(err){ if (resultEl) resultEl.innerHTML = renderGradeCard({ error:'调用失败：'+(err.message||'未知') }); } finally { t.disabled = false; t.textContent = '🔄 重新评分'; } return; }
   if (act === 'lifeSub'){ state.lifeSub = t.dataset.sub; render(); return; }
   if (act === 'calendarSub'){ state.calendarSub = t.dataset.sub; render(); return; }
   if (act === 'moneySub'){ state.moneySub = t.dataset.sub; render(); return; }
@@ -2776,7 +2812,7 @@ view.addEventListener('click', async e => {
   if (act === 'addTxCat'){ if (!state.pendingTx) return; const ttype = t.dataset.t || state.pendingTx.type; const name = (prompt('新分类名称（2-8 字）') || '').trim(); if (!name) return; if (name.length > 8){ toast('分类名太长'); return; } const all = getCustomCats(); if (!all[ttype]) all[ttype] = []; const fixed = (ttype === 'income' ? INCOME_CATS : EXPENSE_CATS).map(x => x[0]); if (fixed.includes(name) || all[ttype].includes(name)){ toast('该分类已存在'); return; } all[ttype].push(name); saveCustomCats(all); state.pendingTx.category = name; renderTxEditor(); toast('已添加分类：' + name); return; }
   if (act === 'delTxCat'){ e.stopPropagation(); const name = t.dataset.cat; if (!name) return; if (!confirm('删除分类「' + name + '」？\n（已记账目不受影响）')) return; const all = getCustomCats(); ['expense','income'].forEach(k => { all[k] = (all[k]||[]).filter(x => x !== name); }); saveCustomCats(all); if (state.pendingTx && state.pendingTx.category === name){ state.pendingTx.category = state.pendingTx.type === 'income' ? '其他收入' : '其他'; } renderTxEditor(); toast('已删除分类'); return; }
   if (act === 'cancelTx'){ state.pendingTx = null; renderTxEditor(); return; }
-  if (act === 'confirmTx'){ if (!state.pendingTx){ toast('没有待确认的账目'); return; } const dateEl = document.getElementById('txDate'); const date = dateEl ? dateEl.value : todayStr(); const amtEl = document.getElementById('txAmount'); const amt = amtEl ? parseFloat(amtEl.value) : NaN; if (!amt || amt <= 0){ toast('请输入有效金额'); return; } const accEl = document.getElementById('txAccount'); const account = accEl ? accEl.value : '现金'; const noteEl = document.getElementById('txNote'); const note = noteEl ? noteEl.value.trim() : ''; if (state.pendingTx.editingId){ const tx = transactions.find(x => x.id === state.pendingTx.editingId); if (tx){ tx.date = date; tx.amount = amt; tx.account = account; tx.category = state.pendingTx.category; tx.note = note; tx.type = state.pendingTx.type; } } else { transactions.unshift({ id: Date.now()+Math.floor(Math.random()*1000), date, time: fmtTime(new Date()), amount: amt, account, category: state.pendingTx.category, note: note || state.pendingTx.note, type: state.pendingTx.type }); } state.transactions = transactions; LS.set('app_h_transactions', transactions); state.pendingTx = null; toast('已保存'); render(); return; }
+  if (act === 'confirmTx'){ if (!state.pendingTx){ toast('没有待确认的账目'); return; } const dateEl = document.getElementById('txDate'); const date = dateEl ? dateEl.value : todayStr(); const amtEl = document.getElementById('txAmount'); const amt = amtEl ? parseFloat(amtEl.value) : NaN; if (!amt || amt <= 0){ toast('请输入有效金额'); return; } const accEl = document.getElementById('txAccount'); const account = accEl ? accEl.value : '现金'; const noteEl = document.getElementById('txNote'); const note = noteEl ? noteEl.value.trim() : ''; if (state.pendingTx.editingId){ const tx = transactions.find(x => x.id === state.pendingTx.editingId); if (tx){ tx.date = date; tx.amount = amt; tx.account = account; tx.category = state.pendingTx.category; tx.note = note; tx.type = state.pendingTx.type; } } else { transactions.unshift({ id: Date.now()+Math.floor(Math.random()*1000), date, time: fmtTime(new Date()), amount: amt, account, category: state.pendingTx.category, note: note || state.pendingTx.note, type: state.pendingTx.type }); } state.transactions = transactions; LS.set('app_h_transactions', transactions); state.pendingTx = null; toast('已保存'); syncToNativeWidget(); render(); return; }
   if (act === 'startSport'){ const t0 = document.getElementById('sportStartTime'); const label = (t0 && t0.value) || fmtTime(new Date()); const [h, m] = label.split(':').map(Number); const d = new Date(); d.setHours(h, m, 0, 0); saveSportSession({ startTs:d.getTime(), startLabel: label, endTs:null, sets:{}, pausedTotal:0, pausedAt:null }); toast('已开始打卡'); render(); return; }
   if (act === 'pauseSport'){ const s = getSportSession(); if (!s || s.endTs || s.pausedAt) return; s.pausedAt = Date.now(); saveSportSession(s); toast('已暂停'); render({ keepScroll: true }); return; }
   if (act === 'resumeSport'){ const s = getSportSession(); if (!s || !s.pausedAt) return; s.pausedTotal = (s.pausedTotal || 0) + (Date.now() - s.pausedAt); s.pausedAt = null; saveSportSession(s); toast('继续训练'); render({ keepScroll: true }); return; }
@@ -2827,7 +2863,7 @@ view.addEventListener('click', e => {
 });
 view.addEventListener('click', e => {
   const del = e.target.closest('[data-del-tx]');
-  if (del){ e.stopPropagation(); const id = Number(del.dataset.delTx); if (!confirm('删除这笔记录？')) return; transactions = transactions.filter(x => x.id !== id); state.transactions = transactions; LS.set('app_h_transactions', transactions); render(); return; }
+  if (del){ e.stopPropagation(); const id = Number(del.dataset.delTx); if (!confirm('删除这笔记录？')) return; transactions = transactions.filter(x => x.id !== id); state.transactions = transactions; LS.set('app_h_transactions', transactions); syncToNativeWidget(); render(); return; }
   const tx = e.target.closest('[data-tx-id]');
   if (tx){ const item = transactions.find(x => x.id === Number(tx.dataset.txId)); if (!item) return; state.pendingTx = { type:item.type, amount:item.amount, category:item.category, account:item.account||'现金', note:item.note||'', date:item.date||todayStr(), editingId:item.id }; renderTxEditor(); setTimeout(() => { const area = document.getElementById('txEditArea'); if (area) area.scrollIntoView({ block:'center', behavior:'smooth' }); }, 100); return; }
 });
@@ -2985,6 +3021,19 @@ function initWalkReminder(){ requestNotifPermission(); setTimeout(() => checkWal
   LearnStore.checkIn();
   render();
   initWalkReminder();
+  // 启动后：同步一次桌面卡片 + 读取桌面打卡状态
+  setTimeout(() => {
+    try {
+      syncToNativeWidget();
+      if (window.AndroidBridge && window.AndroidBridge.getNativeCheckInStatus) {
+        const isChecked = window.AndroidBridge.getNativeCheckInStatus();
+        if (isChecked) {
+          LS.set('native-checkin:' + todayStr(), true);
+          console.log('用户已在桌面完成打卡');
+        }
+      }
+    } catch (e) { console.error('init widget sync error:', e); }
+  }, 1200);
   setInterval(() => {
     const el = document.getElementById('sportTimer');
     if (el){
