@@ -1,22 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.你的包名">
+    package="com.daily.healthlife">
 
-    <!-- 必须权限 -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    
-    <!-- 后台倒计时 & 提醒所需权限 -->
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    
-    <!-- 语音识别/拍照所需权限（如果你用到了） -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    
+    <!-- 后台倒计时前台服务所需 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Android 14 必须声明特殊用途前台服务 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -27,7 +24,6 @@
         android:theme="@style/Theme.AppCompat.NoActionBar"
         android:usesCleartextTraffic="true">
         
-        <!-- 你的主页面 -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -38,7 +34,6 @@
             </intent-filter>
         </activity>
 
-        <!-- 桌面小卡片 Receiver -->
         <receiver
             android:name=".DailyWidgetProvider"
             android:exported="true">
@@ -50,12 +45,7 @@
                 android:resource="@xml/widget_info" />
         </receiver>
 
-        <!-- 后台久坐提醒的定时广播 Receiver -->
-        <receiver
-            android:name=".WalkReminderReceiver"
-            android:exported="false" />
-
-        <!-- 后台倒计时 Service (用于保证200s倒计时在后台存活) -->
+        <!-- 新增：200s后台倒计时服务 -->
         <service
             android:name=".WalkTimerService"
             android:enabled="true"
