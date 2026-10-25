@@ -2,55 +2,50 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.daily.healthlife">
 
+    <!-- 基础权限：网络（你的 HTML 里有很多 API 需要联网） -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     
-    <!-- 后台倒计时前台服务所需 -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <!-- Android 14 必须声明特殊用途前台服务 -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- 语音识别和录音权限（对应你的 VoiceRecorder） -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    
+    <!-- 通知与震动权限 -->
+    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.NoActionBar"
+        android:label="日常健康"
+        android:theme="@style/Theme.AppCompat.Light.NoActionBar"
         android:usesCleartextTraffic="true">
         
+        <!-- 主界面 -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:configChanges="orientation|screenSize|keyboardHidden|uiMode">
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
+        <!-- 注册桌面卡片组件 -->
         <receiver
-            android:name=".DailyWidgetProvider"
-            android:exported="true">
+            android:name=".HealthWidgetProvider"
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/widget_info" />
+                android:resource="@xml/appwidget_info" />
         </receiver>
 
-        <!-- 新增：200s后台倒计时服务 -->
-        <service
-            android:name=".WalkTimerService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="specialUse" />
+        <!-- 如果你的后台走动提醒是 Service，也需要注册 -->
+        <service android:name=".WalkTimerService" />
 
     </application>
 </manifest>
