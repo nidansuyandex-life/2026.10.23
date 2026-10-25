@@ -7,13 +7,31 @@
     android:orientation="vertical"
     android:gravity="center_vertical">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="日常 · 健康生活"
-        android:textColor="#1B1F2A"
-        android:textSize="16sp"
-        android:textStyle="bold" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="日常 · 健康生活"
+            android:textColor="#1B1F2A"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+        <!-- 打卡按钮 -->
+        <TextView
+            android:id="@+id/widget_btn_checkin"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="打卡"
+            android:background="#1FBFA9"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="4dp"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/widget_progress"
@@ -24,6 +42,7 @@
         android:textColor="#6b7280"
         android:textSize="13sp" />
 
+    <!-- 点击区域：跳转记账 -->
     <TextView
         android:id="@+id/widget_expense"
         android:layout_width="wrap_content"
