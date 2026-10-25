@@ -26,8 +26,10 @@
             android:layout_height="wrap_content"
             android:text="打卡"
             android:background="#1FBFA9"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="4dp"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
             android:textColor="#FFFFFF"
             android:textSize="12sp" />
     </LinearLayout>
@@ -70,7 +72,6 @@
             android:textColor="#1B1F2A"
             android:textSize="14sp"
             android:textStyle="bold" />
-        <!-- 页码提示 -->
         <TextView
             android:id="@+id/widget_page_indicator"
             android:layout_width="wrap_content"
@@ -81,27 +82,129 @@
             android:visibility="gone" />
     </LinearLayout>
 
-    <!-- 待办列表容器：包含15个固定布局，动态填充 -->
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:orientation="vertical">
-        <!-- 1~15 -->
-        <LinearLayout android:id="@+id/widget_todo_item_1" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp" android:visibility="gone"><TextView android:id="@+id/widget_todo_check_1" android:layout_width="20dp" android:layout_height="20dp" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/><TextView android:id="@+id/widget_todo_text_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" /></LinearLayout>
-        <LinearLayout android:id="@+id/widget_todo_item_2" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp" android:visibility="gone"><TextView android:id="@+id/widget_todo_check_2" android:layout_width="20dp" android:layout_height="20dp" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/><TextView android:id="@+id/widget_todo_text_2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" /></LinearLayout>
-        <LinearLayout android:id="@+id/widget_todo_item_3" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp" android:visibility="gone"><TextView android:id="@+id/widget_todo_check_3" android:layout_width="20dp" android:layout_height="20dp" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/><TextView android:id="@+id/widget_todo_text_3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" /></LinearLayout>
-        <LinearLayout android:id="@+id/widget_todo_item_4" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp" android:visibility="gone"><TextView android:id="@+id/widget_todo_check_4" android:layout_width="20dp" android:layout_height="20dp" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/><TextView android:id="@+id/widget_todo_text_4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" /></LinearLayout>
-        <LinearLayout android:id="@+id/widget_todo_item_5" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp" android:visibility="gone"><TextView android:id="@+id/widget_todo_check_5" android:layout_width="20dp" android:layout_height="20dp" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/><TextView android:id="@+id/widget_todo_text_5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" /></LinearLayout>
-        <LinearLayout android:id="@+id/widget_todo_item_6" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp" android:visibility="gone"><TextView android:id="@+id/widget_todo_check_6" android:layout_width="20dp" android:layout_height="20dp" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/><TextView android:id="@+id/widget_todo_text_6" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" /></LinearLayout>
-        <LinearLayout android:id="@+id/widget_todo_item_7" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp" android:visibility="gone"><TextView android:id="@+id/widget_todo_check_7" android:layout_width="20dp" android:layout_height="20dp" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/><TextView android:id="@+id/widget_todo_text_7" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" /></LinearLayout>
-        <LinearLayout android:id="@+id/widget_todo_item_8" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp" android:visibility="gone"><TextView android:id="@+id/widget_todo_check_8" android:layout_width="20dp" android:layout_height="20dp" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/><TextView android:id="@+id/widget_todo_text_8" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" /></LinearLayout>
-        <LinearLayout android:id="@+id/widget_todo_item_9" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp" android:visibility="gone"><TextView android:id="@+id/widget_todo_check_9" android:layout_width="20dp" android:layout_height="20dp" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/><TextView android:id="@+id/widget_todo_text_9" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" /></LinearLayout>
-        <LinearLayout android:id="@+id/widget_todo_item_10" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp" android:visibility="gone"><TextView android:id="@+id/widget_todo_check_10" android:layout_width="20dp" android:layout_height="20dp" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/><TextView android:id="@+id/widget_todo_text_10" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" /></LinearLayout>
-        <LinearLayout android:id="@+id/widget_todo_item_11" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp" android:visibility="gone"><TextView android:id="@+id/widget_todo_check_11" android:layout_width="20dp" android:layout_height="20dp" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/><TextView android:id="@+id/widget_todo_text_11" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" /></LinearLayout>
-        <LinearLayout android:id="@+id/widget_todo_item_12" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp" android:visibility="gone"><TextView android:id="@+id/widget_todo_check_12" android:layout_width="20dp" android:layout_height="20dp" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/><TextView android:id="@+id/widget_todo_text_12" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" /></LinearLayout>
-        <LinearLayout android:id="@+id/widget_todo_item_13" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp" android:visibility="gone"><TextView android:id="@+id/widget_todo_check_13" android:layout_width="20dp" android:layout_height="20dp" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/><TextView android:id="@+id/widget_todo_text_13" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" /></LinearLayout>
-        <LinearLayout android:id="@+id/widget_todo_item_14" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp" android:visibility="gone"><TextView android:id="@+id/widget_todo_check_14" android:layout_width="20dp" android:layout_height="20dp" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/><TextView android:id="@+id/widget_todo_text_14" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" /></LinearLayout>
-        <LinearLayout android:id="@+id/widget_todo_item_15" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingVertical="4dp" android:visibility="gone"><TextView android:id="@+id/widget_todo_check_15" android:layout_width="20dp" android:layout_height="20dp" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/><TextView android:id="@+id/widget_todo_text_15" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" /></LinearLayout>
+        <!-- 1 -->
+        <LinearLayout android:id="@+id/widget_todo_item_1" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp" android:visibility="gone">
+            <FrameLayout android:layout_width="20dp" android:layout_height="20dp">
+                <TextView android:id="@+id/widget_todo_check_1" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/>
+                <TextView android:id="@+id/widget_todo_check_done_1" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg_done" android:gravity="center" android:text="✓" android:textColor="#FFFFFF" android:textSize="12sp" android:visibility="gone"/>
+            </FrameLayout>
+            <TextView android:id="@+id/widget_todo_text_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" />
+        </LinearLayout>
+        <!-- 2 -->
+        <LinearLayout android:id="@+id/widget_todo_item_2" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp" android:visibility="gone">
+            <FrameLayout android:layout_width="20dp" android:layout_height="20dp">
+                <TextView android:id="@+id/widget_todo_check_2" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/>
+                <TextView android:id="@+id/widget_todo_check_done_2" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg_done" android:gravity="center" android:text="✓" android:textColor="#FFFFFF" android:textSize="12sp" android:visibility="gone"/>
+            </FrameLayout>
+            <TextView android:id="@+id/widget_todo_text_2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" />
+        </LinearLayout>
+        <!-- 3 -->
+        <LinearLayout android:id="@+id/widget_todo_item_3" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp" android:visibility="gone">
+            <FrameLayout android:layout_width="20dp" android:layout_height="20dp">
+                <TextView android:id="@+id/widget_todo_check_3" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/>
+                <TextView android:id="@+id/widget_todo_check_done_3" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg_done" android:gravity="center" android:text="✓" android:textColor="#FFFFFF" android:textSize="12sp" android:visibility="gone"/>
+            </FrameLayout>
+            <TextView android:id="@+id/widget_todo_text_3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" />
+        </LinearLayout>
+        <!-- 4 -->
+        <LinearLayout android:id="@+id/widget_todo_item_4" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp" android:visibility="gone">
+            <FrameLayout android:layout_width="20dp" android:layout_height="20dp">
+                <TextView android:id="@+id/widget_todo_check_4" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/>
+                <TextView android:id="@+id/widget_todo_check_done_4" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg_done" android:gravity="center" android:text="✓" android:textColor="#FFFFFF" android:textSize="12sp" android:visibility="gone"/>
+            </FrameLayout>
+            <TextView android:id="@+id/widget_todo_text_4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" />
+        </LinearLayout>
+        <!-- 5 -->
+        <LinearLayout android:id="@+id/widget_todo_item_5" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp" android:visibility="gone">
+            <FrameLayout android:layout_width="20dp" android:layout_height="20dp">
+                <TextView android:id="@+id/widget_todo_check_5" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/>
+                <TextView android:id="@+id/widget_todo_check_done_5" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg_done" android:gravity="center" android:text="✓" android:textColor="#FFFFFF" android:textSize="12sp" android:visibility="gone"/>
+            </FrameLayout>
+            <TextView android:id="@+id/widget_todo_text_5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" />
+        </LinearLayout>
+        <!-- 6 -->
+        <LinearLayout android:id="@+id/widget_todo_item_6" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp" android:visibility="gone">
+            <FrameLayout android:layout_width="20dp" android:layout_height="20dp">
+                <TextView android:id="@+id/widget_todo_check_6" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/>
+                <TextView android:id="@+id/widget_todo_check_done_6" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg_done" android:gravity="center" android:text="✓" android:textColor="#FFFFFF" android:textSize="12sp" android:visibility="gone"/>
+            </FrameLayout>
+            <TextView android:id="@+id/widget_todo_text_6" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" />
+        </LinearLayout>
+        <!-- 7 -->
+        <LinearLayout android:id="@+id/widget_todo_item_7" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp" android:visibility="gone">
+            <FrameLayout android:layout_width="20dp" android:layout_height="20dp">
+                <TextView android:id="@+id/widget_todo_check_7" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/>
+                <TextView android:id="@+id/widget_todo_check_done_7" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg_done" android:gravity="center" android:text="✓" android:textColor="#FFFFFF" android:textSize="12sp" android:visibility="gone"/>
+            </FrameLayout>
+            <TextView android:id="@+id/widget_todo_text_7" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" />
+        </LinearLayout>
+        <!-- 8 -->
+        <LinearLayout android:id="@+id/widget_todo_item_8" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp" android:visibility="gone">
+            <FrameLayout android:layout_width="20dp" android:layout_height="20dp">
+                <TextView android:id="@+id/widget_todo_check_8" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/>
+                <TextView android:id="@+id/widget_todo_check_done_8" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg_done" android:gravity="center" android:text="✓" android:textColor="#FFFFFF" android:textSize="12sp" android:visibility="gone"/>
+            </FrameLayout>
+            <TextView android:id="@+id/widget_todo_text_8" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" />
+        </LinearLayout>
+        <!-- 9 -->
+        <LinearLayout android:id="@+id/widget_todo_item_9" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp" android:visibility="gone">
+            <FrameLayout android:layout_width="20dp" android:layout_height="20dp">
+                <TextView android:id="@+id/widget_todo_check_9" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/>
+                <TextView android:id="@+id/widget_todo_check_done_9" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg_done" android:gravity="center" android:text="✓" android:textColor="#FFFFFF" android:textSize="12sp" android:visibility="gone"/>
+            </FrameLayout>
+            <TextView android:id="@+id/widget_todo_text_9" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" />
+        </LinearLayout>
+        <!-- 10 -->
+        <LinearLayout android:id="@+id/widget_todo_item_10" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp" android:visibility="gone">
+            <FrameLayout android:layout_width="20dp" android:layout_height="20dp">
+                <TextView android:id="@+id/widget_todo_check_10" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/>
+                <TextView android:id="@+id/widget_todo_check_done_10" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg_done" android:gravity="center" android:text="✓" android:textColor="#FFFFFF" android:textSize="12sp" android:visibility="gone"/>
+            </FrameLayout>
+            <TextView android:id="@+id/widget_todo_text_10" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" />
+        </LinearLayout>
+        <!-- 11 -->
+        <LinearLayout android:id="@+id/widget_todo_item_11" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp" android:visibility="gone">
+            <FrameLayout android:layout_width="20dp" android:layout_height="20dp">
+                <TextView android:id="@+id/widget_todo_check_11" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/>
+                <TextView android:id="@+id/widget_todo_check_done_11" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg_done" android:gravity="center" android:text="✓" android:textColor="#FFFFFF" android:textSize="12sp" android:visibility="gone"/>
+            </FrameLayout>
+            <TextView android:id="@+id/widget_todo_text_11" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" />
+        </LinearLayout>
+        <!-- 12 -->
+        <LinearLayout android:id="@+id/widget_todo_item_12" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp" android:visibility="gone">
+            <FrameLayout android:layout_width="20dp" android:layout_height="20dp">
+                <TextView android:id="@+id/widget_todo_check_12" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/>
+                <TextView android:id="@+id/widget_todo_check_done_12" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg_done" android:gravity="center" android:text="✓" android:textColor="#FFFFFF" android:textSize="12sp" android:visibility="gone"/>
+            </FrameLayout>
+            <TextView android:id="@+id/widget_todo_text_12" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" />
+        </LinearLayout>
+        <!-- 13 -->
+        <LinearLayout android:id="@+id/widget_todo_item_13" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp" android:visibility="gone">
+            <FrameLayout android:layout_width="20dp" android:layout_height="20dp">
+                <TextView android:id="@+id/widget_todo_check_13" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/>
+                <TextView android:id="@+id/widget_todo_check_done_13" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg_done" android:gravity="center" android:text="✓" android:textColor="#FFFFFF" android:textSize="12sp" android:visibility="gone"/>
+            </FrameLayout>
+            <TextView android:id="@+id/widget_todo_text_13" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" />
+        </LinearLayout>
+        <!-- 14 -->
+        <LinearLayout android:id="@+id/widget_todo_item_14" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp" android:visibility="gone">
+            <FrameLayout android:layout_width="20dp" android:layout_height="20dp">
+                <TextView android:id="@+id/widget_todo_check_14" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/>
+                <TextView android:id="@+id/widget_todo_check_done_14" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg_done" android:gravity="center" android:text="✓" android:textColor="#FFFFFF" android:textSize="12sp" android:visibility="gone"/>
+            </FrameLayout>
+            <TextView android:id="@+id/widget_todo_text_14" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" />
+        </LinearLayout>
+        <!-- 15 -->
+        <LinearLayout android:id="@+id/widget_todo_item_15" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp" android:visibility="gone">
+            <FrameLayout android:layout_width="20dp" android:layout_height="20dp">
+                <TextView android:id="@+id/widget_todo_check_15" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg" android:gravity="center" android:textColor="#FFFFFF" android:textSize="12sp"/>
+                <TextView android:id="@+id/widget_todo_check_done_15" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_checkbox_bg_done" android:gravity="center" android:text="✓" android:textColor="#FFFFFF" android:textSize="12sp" android:visibility="gone"/>
+            </FrameLayout>
+            <TextView android:id="@+id/widget_todo_text_15" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:textColor="#3A4152" android:textSize="13sp" />
+        </LinearLayout>
     </LinearLayout>
 
-    <!-- 底部翻页按钮 -->
     <LinearLayout android:id="@+id/widget_page_control" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal" android:gravity="center" android:visibility="gone">
         <TextView android:id="@+id/widget_btn_prev" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="上一页" android:padding="8dp" android:textColor="#4f46e5" android:textSize="13sp" android:textStyle="bold"/>
         <TextView android:layout_width="20dp" android:layout_height="wrap_content" android:text=" "/>
