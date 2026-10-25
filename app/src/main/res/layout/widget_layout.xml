@@ -2,25 +2,140 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
-    android:padding="16dp"
+    android:background="#F6F7FB"
+    android:padding="12dp"
     android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/widget_title"
-        android:layout_width="wrap_content"
+    <!-- 顶部标题和日期 -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="日常·健康生活"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="#333333" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="日常·健康"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="#1B1F2A" />
+        <TextView
+            android:id="@+id/widget_date"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="10月25日"
+            android:textSize="12sp"
+            android:textColor="#6B7280" />
+    </LinearLayout>
 
-    <TextView
-        android:id="@+id/widget_content"
-        android:layout_width="wrap_content"
+    <!-- 三个数据指标卡片 -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="今日任务：0/10"
-        android:textSize="14sp"
-        android:textColor="#666666" />
+        android:orientation="horizontal"
+        android:layout_marginTop="10dp">
+
+        <!-- 今日学习 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:background="#FFFFFF"
+            android:padding="8dp"
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/widget_study"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="3/10"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="#4f46e5" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="今日学习"
+                android:textSize="10sp"
+                android:textColor="#6B7280" />
+        </LinearLayout>
+
+        <!-- 训练状态 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:background="#FFFFFF"
+            android:padding="8dp"
+            android:layout_marginLeft="6dp"
+            android:layout_marginRight="6dp"
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/widget_sport"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⏳"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="#1FBFA9" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="训练状态"
+                android:textSize="10sp"
+                android:textColor="#6B7280" />
+        </LinearLayout>
+
+        <!-- 本月支出 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:background="#FFFFFF"
+            android:padding="8dp"
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/widget_money"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="¥0"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="#FF6B5B" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="本月支出"
+                android:textSize="10sp"
+                android:textColor="#6B7280" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 时间线 (显示前 2 条) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="10dp"
+        android:background="#FFFFFF"
+        android:padding="8dp">
+
+        <TextView
+            android:id="@+id/widget_timeline_1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="07:40 起床 - 晨间呼吸"
+            android:textSize="12sp"
+            android:textColor="#1B1F2A" />
+
+        <TextView
+            android:id="@+id/widget_timeline_2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="08:00 上班 / 通勤"
+            android:textSize="12sp"
+            android:textColor="#6B7280"
+            android:layout_marginTop="4dp" />
+    </LinearLayout>
+
 </LinearLayout>
