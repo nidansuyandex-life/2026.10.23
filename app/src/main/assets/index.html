@@ -77,7 +77,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .check{width:22px;height:22px;border-radius:50%;border:2px solid #E3E6EF;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;cursor:pointer;transition:.2s;background:#fff;}
 .check.done{background:var(--accent);border-color:var(--accent);}
 .check.done::after{content:'✓';}
-/* 身体状态紧凑 6 列 */
 .body-state-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;}
 .body-state-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:7px 2px;border-radius:9px;background:#F7F8FC;border:1.5px solid transparent;cursor:pointer;font-size:10px;font-weight:600;color:#3A4152;text-align:center;line-height:1.2;transition:.15s;}
 .body-state-item .bsi-icon{font-size:15px;line-height:1;}
@@ -186,6 +185,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .mic.listening{animation:pulseMic 1.4s infinite;box-shadow:0 0 0 6px rgba(31,191,169,.15);}
 @keyframes pulseMic{0%{transform:scale(1)}50%{transform:scale(1.06)}100%{transform:scale(1)}}
 .mic-hint{margin-top:16px;font-size:12.5px;color:var(--sub);text-align:center;padding:0 20px;line-height:1.6;}
+.mic-actions{display:flex;gap:8px;margin-top:10px;max-width:320px;width:100%;}
 .text-input-area{display:none;margin-top:10px;width:100%;}
 .text-input-area.show{display:block;}
 .text-input-area input{width:100%;border:1.5px solid #E3E6EF;border-radius:12px;padding:12px 14px;font-family:inherit;font-size:13.5px;outline:none;margin-bottom:8px;}
@@ -446,7 +446,6 @@ function toast(msg){
   setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, 1900);
 }
 
-// ============ 翻译（双接口兜底） ============
 async function translateToChineseBackup(text){
   if (!text || !String(text).trim()) return '';
   try {
@@ -469,7 +468,6 @@ async function translateToChinese(text){
   const cacheKey = 'trans-cache:' + t.slice(0, 80);
   const cached = LS.get(cacheKey, '');
   if (cached) return cached;
-  // 1. MyMemory
   try {
     const q = t.slice(0, 450);
     const url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(q) + '&langpair=en|zh-CN';
@@ -478,13 +476,11 @@ async function translateToChinese(text){
     if (/MYMEMORY WARNING|QUERY LENGTH LIMIT|INVALID/i.test(translated)) translated = '';
     if (translated){ LS.set(cacheKey, translated); return translated; }
   } catch(e){}
-  // 2. Google 备用
   const g = await translateToChineseBackup(t);
   if (g){ LS.set(cacheKey, g); return g; }
   return '';
 }
 
-// ============ 本地兜底内容 ============
 const FALLBACK_QUOTES = [
   { text:'The only way to do great work is to love what you do.', author:'Steve Jobs', cn:'做伟大工作的唯一方法就是热爱你所做的事。' },
   { text:'Life is what happens when you are busy making other plans.', author:'John Lennon', cn:'生活就是当你忙于制定其他计划时发生的事。' },
@@ -1745,7 +1741,6 @@ function updateTopbar(){
 const TABS = [{ id:'home', icon:'🏠', label:'首页' },{ id:'study', icon:'📚', label:'学习' },{ id:'life', icon:'✨', label:'生活' },{ id:'discover', icon:'🌍', label:'发现' },{ id:'me', icon:'👤', label:'我的' }];
 function renderTabs(){ tabbar.innerHTML = TABS.map(t => `<button class="tab ${t.id===state.tab?'on':''}" data-tab="${t.id}"><span class="tab-icon">${t.icon}</span><span>${t.label}</span></button>`).join(''); }
 
-// ============ 首页（身体状态 6 列紧凑 + 时间线调整） ============
 function homeView(){
   const now = new Date(); const t = todayStr();
   const dStr = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`;
@@ -2069,14 +2064,22 @@ function moneySection(){
   if (sub === 'record') content = moneyRecordPane(); else if (sub === 'book') content = moneyBookPane(); else content = moneyExportPane();
   return `<div class="subtabs" style="margin-top:4px;">${subs.map(s => `<button class="subtab ${s.id===sub?'on':''}" data-act="moneySub" data-sub="${s.id}">${s.label}</button>`).join('')}</div>${content}`;
 }
+// ★ moneyRecordPane：增加停止识别按钮
 function moneyRecordPane(){
   const today = todayStr();
   const todayTx = transactions.filter(t => t.date === today);
   const iconOf = c => c === '餐饮' ? '☕' : c === '交通' ? '🚕' : c === '购物' ? '🛒' : c === '工资' ? '💼' : '💳';
   const txHtml = arr => arr.length ? arr.map(t => `<div class="tx" data-tx-id="${t.id}"><div class="ic">${iconOf(t.category)}</div><div class="body"><div class="h-t-name">${esc(t.note || t.category)}</div><div class="muted" style="font-size:11.5px;color:var(--sub)">${t.time} · ${t.type === 'income' ? '收入' : '支出'}${t.account?' · '+esc(t.account):''} · ${t.category}</div></div><div class="amt ${t.type === 'income' ? 'inc' : ''}">${t.type === 'income' ? '+' : '-'}${t.amount.toFixed(2)}</div><button class="del-tx" data-del-tx="${t.id}">✕</button></div>`).join('') : '<p class="tip" style="color:#8A90A2">暂无记录</p>';
-  return `<div class="card"><div class="mic-wrap"><button class="mic" id="micBtn">🎙️</button><p class="mic-hint" id="micHint">点击麦克风开始语音输入（10 秒）</p><button class="btn-ghost-h" data-act="toggleManual" style="margin-top:12px;max-width:220px">⌨️ 手动输入文字</button><div class="text-input-area" id="textInputArea"><input type="text" id="manualTxInput" placeholder="如：午餐 35 元 / 发工资 8000"><button class="btn-ghost-h" data-act="parseManual" style="padding:11px">解析这笔</button></div></div><div id="txEditArea"></div></div><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">今日明细 <span class="muted" style="color:var(--sub);font-size:11.5px">点条目可编辑</span></div>${txHtml(todayTx)}</div>`;
+  return `<div class="card"><div class="mic-wrap">
+    <button class="mic" id="micBtn">🎙️</button>
+    <p class="mic-hint" id="micHint">点击麦克风开始语音输入，说完后点「⏹ 停止识别」</p>
+    <div class="mic-actions">
+      <button class="btn-ghost-h" data-act="toggleManual" style="flex:1;font-size:13px;padding:11px;">⌨️ 手动输入</button>
+      <button class="btn-ghost-h" data-act="stopVoice" style="flex:1;font-size:13px;padding:11px;background:#FFEDEA;color:var(--hot);">⏹ 停止识别</button>
+    </div>
+    <div class="text-input-area" id="textInputArea"><input type="text" id="manualTxInput" placeholder="如：午餐 35 元 / 发工资 8000"><button class="btn-ghost-h" data-act="parseManual" style="padding:11px">解析这笔</button></div>
+  </div><div id="txEditArea"></div></div><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">今日明细 <span class="muted" style="color:var(--sub);font-size:11.5px">点条目可编辑</span></div>${txHtml(todayTx)}</div>`;
 }
-// ★ 账本最近记录：增加删除按钮
 function moneyBookPane(){
   const today = todayStr(); const ym = today.slice(0, 7);
   const monthExpense = transactions.filter(t => t.type === 'expense' && t.date.startsWith(ym)).reduce((s,t) => s + t.amount, 0);
@@ -2747,6 +2750,7 @@ view.addEventListener('click', async e => {
   if (act === 'backToToday'){ const now = new Date(); state.calYear = now.getFullYear(); state.calMonth = now.getMonth(); state.selectedDate = todayStr(); render(); return; }
   if (act === 'toggleManual'){ const a = document.getElementById('textInputArea'); if (a) a.classList.toggle('show'); return; }
   if (act === 'parseManual'){ const v = document.getElementById('manualTxInput').value.trim(); if (!v){ toast('请输入文字'); return; } state.pendingTx = parseTransactionText(v); renderTxEditor(); return; }
+  if (act === 'stopVoice'){ stopVoiceRecord(); toast('已停止录音，等待识别结果…'); return; }
   if (act === 'setExportRange'){ state.exportRange = t.dataset.range; HealthStore.save('exportRange', state.exportRange); render({ keepScroll: true }); return; }
   if (act === 'exportCsv'){ exportCsv(); return; }
   if (act === 'exportExcel'){ exportExcel(); return; }
@@ -2769,30 +2773,8 @@ view.addEventListener('click', async e => {
   if (act === 'saveBodyForm'){ let cnt = 0; document.querySelectorAll('[data-bkey]').forEach(input => { const k = input.dataset.bkey; const v = parseFloat(input.value); if (!isNaN(v)){ body[k] = v; cnt++; } }); HealthStore.save('body', body); const hist = getBodyHistory(); const idx = hist.findIndex(x => x.date === todayStr()); const entry = { date: todayStr(), weight: body.weight, bodyFat: body.bodyFat }; if (idx >= 0) hist[idx] = entry; else hist.push(entry); saveBodyHistory(hist); toast(`已保存 ${cnt} 项身材尺寸`); render({ keepScroll: true }); return; }
   if (act === 'saveCloth'){ const name = document.getElementById('clothName').value.trim(); const cat = document.getElementById('clothCat').value; const size = document.getElementById('clothSize').value.trim(); const color = document.getElementById('clothColor').value.trim(); const preview = document.getElementById('clothPreview'); const img = preview && preview.src && preview.style.display !== 'none' ? preview.src : null; let imagePath = null; if (img){ imagePath = saveImageToNative(img, 'cloth_' + Date.now() + '.jpg'); } const item = { id:Date.now()+Math.floor(Math.random()*1000), cat, name: name || CATEGORIES[cat].label, size: size || '均码', color, garment: { ...state.garmentDraft }, imagePath }; clothes.unshift(item); LS.set('app_h_clothes', clothes); toast('已保存'); render(); return; }
   if (act === 'delCloth'){ if (!confirm('删除这件单品？')) return; const id = Number(t.dataset.id); const item = clothes.find(c => c.id === id); if (item && item.imagePath) deleteImageNative(item.imagePath); clothes = clothes.filter(c => c.id !== id); LS.set('app_h_clothes', clothes); render(); return; }
-  if (act === 'addProduct'){
-    const name = (document.getElementById('prodName').value || '').trim();
-    const majorCat = document.getElementById('prodMajorCat').value;
-    const openedDate = document.getElementById('prodOpened').value || null;
-    const shelfLifeMonths = document.getElementById('prodShelfLife').value ? Number(document.getElementById('prodShelfLife').value) : null;
-    const expiryDate = document.getElementById('prodExpiry').value || null;
-    const ingredients = (document.getElementById('prodIngredients').value || '').trim();
-    if (!name){ toast('请填写产品名称'); return; }
-    if (!majorCat){ toast('请选择大类'); return; }
-    if (!openedDate && !expiryDate){ toast('开封时间或未开封到期日至少填一个'); return; }
-    const lib = getProductLibrary();
-    lib.push({ id:'p_'+Date.now()+'_'+Math.floor(Math.random()*1000), name, majorCat, openedDate, shelfLifeMonths, expiryDate, ingredients, createdAt:Date.now() });
-    saveProductLibrary(lib);
-    toast('✓ 已添加：' + name);
-    render({ keepScroll: true });
-    return;
-  }
-  if (act === 'delProduct'){
-    const id = t.dataset.id; if (!id) return;
-    if (!confirm('从产品库删除这件产品？')) return;
-    const lib = getProductLibrary().filter(p => p.id !== id);
-    saveProductLibrary(lib);
-    toast('已删除'); render({ keepScroll: true }); return;
-  }
+  if (act === 'addProduct'){ const name = (document.getElementById('prodName').value || '').trim(); const majorCat = document.getElementById('prodMajorCat').value; const openedDate = document.getElementById('prodOpened').value || null; const shelfLifeMonths = document.getElementById('prodShelfLife').value ? Number(document.getElementById('prodShelfLife').value) : null; const expiryDate = document.getElementById('prodExpiry').value || null; const ingredients = (document.getElementById('prodIngredients').value || '').trim(); if (!name){ toast('请填写产品名称'); return; } if (!majorCat){ toast('请选择大类'); return; } if (!openedDate && !expiryDate){ toast('开封时间或未开封到期日至少填一个'); return; } const lib = getProductLibrary(); lib.push({ id:'p_'+Date.now()+'_'+Math.floor(Math.random()*1000), name, majorCat, openedDate, shelfLifeMonths, expiryDate, ingredients, createdAt:Date.now() }); saveProductLibrary(lib); toast('✓ 已添加：' + name); render({ keepScroll: true }); return; }
+  if (act === 'delProduct'){ const id = t.dataset.id; if (!id) return; if (!confirm('从产品库删除这件产品？')) return; const lib = getProductLibrary().filter(p => p.id !== id); saveProductLibrary(lib); toast('已删除'); render({ keepScroll: true }); return; }
   if (act === 'aiRecommendRoutine'){ aiRecommendRoutine(); return; }
   if (act === 'clearAIRoutine'){ clearAIRoutine(todayStr()); toast('已恢复本地算法'); render({ keepScroll: true }); return; }
   if (act === 'setSkin'){ skinState = t.dataset.skin; HealthStore.save('skinState', skinState); clearAIRoutine(todayStr()); render(); return; }
@@ -2852,12 +2834,118 @@ sheet.addEventListener('click', async e => {
   if (act === 'clearAIHistory'){ if (confirm('清空？')){ LearnStore.clearAIHistory(); openAIAssistant(); } return; }
   if (act === 'aiSend'){ sendAIMessage(); return; }
 });
-let _voiceTimerHandle = null; let _voiceActive = false;
-function startVoiceRecord(){ if (!window.AndroidTTS || typeof AndroidTTS.startRecognize !== 'function'){ toast('当前环境不支持语音识别'); return; } _voiceActive = true; const mic = document.getElementById('micBtn'); if (mic) mic.classList.add('listening'); const hint = document.getElementById('micHint'); if (hint) hint.textContent = '正在聆听… 10 秒（再点麦克风可提前结束）'; let left = 10; if (_voiceTimerHandle) clearInterval(_voiceTimerHandle); _voiceTimerHandle = setInterval(() => { left--; const h = document.getElementById('micHint'); if (h) h.textContent = `正在聆听… 还剩 ${left} 秒（再点麦克风可提前结束）`; if (left <= 0) stopVoiceRecord(); }, 1000); try { AndroidTTS.startRecognize(10); } catch(e){ toast('启动失败：' + e.message); stopVoiceRecord(); } }
-function stopVoiceRecord(){ _voiceActive = false; if (_voiceTimerHandle){ clearInterval(_voiceTimerHandle); _voiceTimerHandle = null; } const mic = document.getElementById('micBtn'); if (mic) mic.classList.remove('listening'); const hint = document.getElementById('micHint'); if (hint) hint.textContent = '点击麦克风开始语音输入（10 秒）'; try { if (window.AndroidTTS && AndroidTTS.stopRecognize) AndroidTTS.stopRecognize(); } catch(e){} }
-window.onVoiceResult = function(text){ stopVoiceRecord(); if (!text || !String(text).trim()){ toast('没有识别到内容'); return; } state.pendingTx = parseTransactionText(String(text).trim()); renderTxEditor(); toast('已识别：' + String(text).trim().slice(0, 20)); };
-window.onVoiceError = function(err){ stopVoiceRecord(); toast('语音识别失败：' + (err || '未知错误')); };
-window.onFileSaved = function(ok, pathOrMsg){ if (ok) console.log('文件已保存：' + pathOrMsg); else console.log('文件保存失败：' + pathOrMsg); };
+
+// ============ 语音识别（兼容多接口 + 多回调） ============
+let _voiceActive = false;
+let _voiceTimerHandle = null;
+let _voiceStartTime = 0;
+
+function detectVoiceAPI(){
+  const candidates = ['AndroidTTS', 'AndroidSpeech', 'AndroidASR', 'AndroidVoice', 'AndroidRecognizer', 'AndroidVoiceInput'];
+  for (const name of candidates){
+    const api = window[name];
+    if (api && typeof api.startRecognize === 'function') return name;
+  }
+  return null;
+}
+
+function registerVoiceCallbacks(){
+  const handler = function(text){
+    console.log('[Voice] 收到识别结果:', text);
+    stopVoiceRecord();
+    if (!text || !String(text).trim()){
+      toast('没有识别到内容，请再说一次或手动输入');
+      return;
+    }
+    const raw = String(text).trim();
+    try {
+      const parsed = parseTransactionText(raw);
+      state.pendingTx = parsed;
+      if (state.tab !== 'life' || state.lifeSub !== 'money' || state.moneySub !== 'record'){
+        state.tab = 'life'; state.lifeSub = 'money'; state.moneySub = 'record';
+        render();
+        setTimeout(() => { renderTxEditor(); }, 150);
+      } else {
+        renderTxEditor();
+      }
+      toast('已识别：' + raw.slice(0, 20) + (parsed.amount ? ' → ¥' + parsed.amount : '（请补金额）'));
+    } catch(e){
+      console.error('[Voice] 处理失败:', e);
+      toast('识别结果处理失败：' + e.message);
+    }
+  };
+  window.onVoiceResult = handler;
+  window.onSpeechResult = handler;
+  window.onSpeechRecognizeResult = handler;
+  window.onVoiceRecognizeResult = handler;
+  window.onASRResult = handler;
+  window.onRecognizeResult = handler;
+  window.onResult = handler;
+  window.onVoiceError = function(err){
+    console.error('[Voice] 错误:', err);
+    stopVoiceRecord();
+    toast('语音识别失败：' + (err || '未知错误，请手动输入'));
+  };
+}
+registerVoiceCallbacks();
+
+function startVoiceRecord(){
+  if (_voiceActive){ stopVoiceRecord(); return; }
+  const apiName = detectVoiceAPI();
+  console.log('[Voice] 检测到接口:', apiName || '无');
+  if (!apiName){
+    toast('当前环境不支持语音识别，请点击「手动输入」');
+    return;
+  }
+  _voiceActive = true;
+  _voiceStartTime = Date.now();
+  const mic = document.getElementById('micBtn');
+  if (mic) mic.classList.add('listening');
+  const hint = document.getElementById('micHint');
+  if (hint) hint.textContent = '🎙️ 正在聆听…说完点「⏹ 停止识别」';
+  let left = 30;
+  if (_voiceTimerHandle) clearInterval(_voiceTimerHandle);
+  _voiceTimerHandle = setInterval(() => {
+    left--;
+    if (hint) hint.textContent = `🎙️ 正在聆听…还剩 ${left} 秒`;
+    if (left <= 0) stopVoiceRecord();
+  }, 1000);
+  const api = window[apiName];
+  let result = null, error = null;
+  try { result = api.startRecognize(30); }
+  catch(e1){
+    try { result = api.startRecognize(10); }
+    catch(e2){
+      try { result = api.startRecognize(); }
+      catch(e3){ error = e3; }
+    }
+  }
+  console.log('[Voice] startRecognize 返回:', result, error ? '错误:' + error.message : '');
+  if (error){
+    toast('启动语音识别失败：' + error.message);
+    stopVoiceRecord();
+    return;
+  }
+  if (typeof result === 'string' && result){
+    window.onVoiceResult(result);
+  }
+}
+
+function stopVoiceRecord(){
+  if (!_voiceActive && !_voiceTimerHandle) return;
+  _voiceActive = false;
+  if (_voiceTimerHandle){ clearInterval(_voiceTimerHandle); _voiceTimerHandle = null; }
+  const mic = document.getElementById('micBtn');
+  if (mic) mic.classList.remove('listening');
+  const hint = document.getElementById('micHint');
+  if (hint) hint.textContent = '点击麦克风开始语音输入，说完后点「⏹ 停止识别」';
+  const apiName = detectVoiceAPI();
+  if (apiName){
+    try { const api = window[apiName]; if (api && typeof api.stopRecognize === 'function') api.stopRecognize(); } catch(e){ console.log('[Voice] stopRecognize 失败:', e.message); }
+  }
+  console.log('[Voice] 录音时长:', Math.round((Date.now() - _voiceStartTime) / 1000) + ' 秒');
+}
+
 view.addEventListener('click', e => { const mic = e.target.closest('#micBtn'); if (!mic) return; if (_voiceActive) stopVoiceRecord(); else startVoiceRecord(); });
 tabbar.addEventListener('click', e => { const t = e.target.closest('.tab'); if (!t) return; stopSpeak(); state.tab = t.dataset.tab; render(); });
 fab.addEventListener('click', () => openAIAssistant());
