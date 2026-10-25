@@ -97,6 +97,30 @@ public class MainActivity extends AppCompatActivity {
         });
 
         webView.loadUrl("file:///android_asset/index.html");
+
+        // ★ 处理桌面卡片点击跳转
+        handleIntent(getIntent());
+    }
+
+    // ★ 处理卡片点击传来的路由
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIntent(intent);
+    }
+
+    private void handleIntent(Intent intent) {
+        if (intent != null && intent.getData() != null) {
+            String route = intent.getData().getQueryParameter("route");
+            if (route != null && webView != null) {
+                // 延迟 500ms，确保 WebView 和 H5 页面已完全加载
+                webView.postDelayed(() -> {
+                    String js = "if(window.jumpFromNative) window.jumpFromNative('" + route + "');";
+                    webView.evaluateJavascript(js, null);
+                }, 500);
+            }
+        }
     }
 
     private void requestPerms() {
