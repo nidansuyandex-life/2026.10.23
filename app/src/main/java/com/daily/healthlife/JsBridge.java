@@ -3,9 +3,12 @@ package com.daily.healthlife;
 import android.app.AlertDialog;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -231,7 +234,7 @@ public class JsBridge {
         } catch (Exception ignored) {}
     }
 
-    // ============ 新增：桌面卡片与后台倒计时 ============
+    // ============ 桌面卡片与后台倒计时 ============
     @JavascriptInterface
     public void updateWidgetData(String jsonStr) {
         Context context = act.getApplicationContext();
@@ -264,6 +267,34 @@ public class JsBridge {
         Context context = act.getApplicationContext();
         Intent intent = new Intent(context, WalkTimerService.class);
         context.stopService(intent);
+    }
+
+    // ============ ★ 供前端调用：同步最新的进度给桌面卡片 ============
+    @JavascriptInterface
+    public void syncWidgetData(String studyProgress, String monthExpense) {
+        SharedPreferences sp = act.getApplicationContext()
+                .getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
+        sp.edit()
+          .putString("study_progress", studyProgress)
+          .putString("month_expense", monthExpense)
+          .apply();
+
+        // 触发桌面卡片刷新
+        Intent intent = new Intent(act.getApplicationContext(), HealthWidgetProvider.class);
+        intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+        int[] ids = AppWidgetManager.getInstance(act.getApplicationContext()).getAppWidgetIds(
+                new ComponentName(act.getApplicationContext(), HealthWidgetProvider.class)
+        );
+        intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids);
+        act.getApplicationContext().sendBroadcast(intent);
+    }
+
+    // ============ ★ 供前端获取：桌面打卡状态，实现桌面 -> App 的同步 ============
+    @JavascriptInterface
+    public boolean getNativeCheckInStatus() {
+        SharedPreferences sp = act.getApplicationContext()
+                .getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
+        return sp.getBoolean("is_checked_in", false);
     }
 
     public void destroy() {
