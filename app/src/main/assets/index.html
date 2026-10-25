@@ -396,6 +396,14 @@ const LS = {
 };
 const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
+// ============ 固定的自定义分类操作函数 ============
+function getCustomCats(){
+  const v = LS.get('app_h_customCats', null);
+  if (!v || typeof v !== 'object') return { expense: [], income: [] };
+  return { expense: Array.isArray(v.expense) ? v.expense : [], income: Array.isArray(v.income) ? v.income : [] };
+}
+function saveCustomCats(v){ LS.set('app_h_customCats', v); }
+
 function dailyPick(arr,n,salt=0){
   if(!arr||!arr.length) return [];
   let seed=(DAY*1000+salt*7919)%2147483647;
@@ -1308,15 +1316,23 @@ function parseTransactionText(text){
   let category = type === 'income' ? '其他收入' : '其他';
   const dict = type === 'income' ? INCOME_CATS : EXPENSE_CATS;
   for (const [cat, re] of dict) { if (re.test(t)) { category = cat; break; } }
-  const customs = getCustomCats()[type] || [];
+  
+  // 安全获取自定义分类，彻底摆脱外部函数依赖
+  const customObj = LS.get('app_h_customCats', { expense: [], income: [] });
+  const customs = (customObj && Array.isArray(customObj[type])) ? customObj[type] : [];
   for (const c of customs){ if (c && t.includes(c)){ category = c; break; } }
+  
   let account = '现金';
   for (let i = 0; i < ACCOUNT_HINTS.length; i++){ if (ACCOUNT_HINTS[i].test(t)) { account = ACCOUNT_LIST[i]; break; } }
   return { type, amount: isNaN(amount) ? 0 : amount, category, account, note: t };
 }
 function getCatList(type){
   const base = (type === 'income' ? INCOME_CATS : EXPENSE_CATS).map(x => x[0]);
-  const custom = getCustomCats()[type] || [];
+  
+  // 安全获取自定义分类，彻底摆脱外部函数依赖
+  const customObj = LS.get('app_h_customCats', { expense: [], income: [] });
+  const custom = (customObj && Array.isArray(customObj[type])) ? customObj[type] : [];
+  
   custom.forEach(c => { if (!base.includes(c)) base.push(c); });
   base.push(type === 'income' ? '其他收入' : '其他');
   return base;
@@ -2064,7 +2080,6 @@ function moneySection(){
   if (sub === 'record') content = moneyRecordPane(); else if (sub === 'book') content = moneyBookPane(); else content = moneyExportPane();
   return `<div class="subtabs" style="margin-top:4px;">${subs.map(s => `<button class="subtab ${s.id===sub?'on':''}" data-act="moneySub" data-sub="${s.id}">${s.label}</button>`).join('')}</div>${content}`;
 }
-// ★ moneyRecordPane：增加停止识别按钮
 function moneyRecordPane(){
   const today = todayStr();
   const todayTx = transactions.filter(t => t.date === today);
@@ -2835,7 +2850,7 @@ sheet.addEventListener('click', async e => {
   if (act === 'aiSend'){ sendAIMessage(); return; }
 });
 
-// ============ 语音识别（兼容多接口 + 多回调） ============
+// ============ 语音识别 ============
 let _voiceActive = false;
 let _voiceTimerHandle = null;
 let _voiceStartTime = 0;
