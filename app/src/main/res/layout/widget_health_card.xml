@@ -3,10 +3,10 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#FFFFFF"
-    android:padding="16dp"
-    android:orientation="vertical"
-    android:gravity="center_vertical">
+    android:padding="12dp"
+    android:orientation="vertical">
 
+    <!-- 顶部：标题和打开APP按钮 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -20,14 +20,12 @@
             android:textColor="#1B1F2A"
             android:textSize="16sp"
             android:textStyle="bold" />
-        
-        <!-- 打卡按钮：改用通用的 padding 兼容低版本 -->
         <TextView
-            android:id="@+id/widget_btn_checkin"
+            android:id="@+id/widget_btn_open_app"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="打卡"
-            android:background="#1FBFA9"
+            android:text="打开APP"
+            android:background="#4A9EFF"
             android:paddingLeft="12dp"
             android:paddingRight="12dp"
             android:paddingTop="4dp"
@@ -36,21 +34,134 @@
             android:textSize="12sp" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/widget_progress"
-        android:layout_width="wrap_content"
+    <!-- 进度和支出 -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="今日学习：0/10"
-        android:textColor="#6b7280"
-        android:textSize="13sp" />
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
+        <TextView
+            android:id="@+id/widget_progress"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="今日学习：0/10"
+            android:textColor="#6b7280"
+            android:textSize="12sp" />
+        <TextView
+            android:id="@+id/widget_expense"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="本月支出：¥0"
+            android:textColor="#FF6B5B"
+            android:textSize="12sp" />
+    </LinearLayout>
 
-    <TextView
-        android:id="@+id/widget_expense"
-        android:layout_width="wrap_content"
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E5E7EB"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp" />
+
+    <!-- 时间线 1 -->
+    <LinearLayout
+        android:id="@+id/widget_item_1_layout"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="本月支出：¥0"
-        android:textColor="#FF6B5B"
-        android:textSize="13sp" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
+        <ImageView
+            android:id="@+id/widget_item_1_check"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/widget_checkbox_bg" />
+        <TextView
+            android:id="@+id/widget_item_1_text"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
+            android:text="07:40 起床"
+            android:textColor="#1B1F2A"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- 时间线 2 -->
+    <LinearLayout
+        android:id="@+id/widget_item_2_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
+        <ImageView
+            android:id="@+id/widget_item_2_check"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/widget_checkbox_bg" />
+        <TextView
+            android:id="@+id/widget_item_2_text"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
+            android:text="07:45 护肤"
+            android:textColor="#1B1F2A"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- 时间线 3 -->
+    <LinearLayout
+        android:id="@+id/widget_item_3_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
+        <ImageView
+            android:id="@+id/widget_item_3_check"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/widget_checkbox_bg" />
+        <TextView
+            android:id="@+id/widget_item_3_text"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
+            android:text="07:50 早饭"
+            android:textColor="#1B1F2A"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- 时间线 4 -->
+    <LinearLayout
+        android:id="@+id/widget_item_4_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
+        <ImageView
+            android:id="@+id/widget_item_4_check"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/widget_checkbox_bg" />
+        <TextView
+            android:id="@+id/widget_item_4_text"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
+            android:text="08:00 上班"
+            android:textColor="#1B1F2A"
+            android:textSize="13sp" />
+    </LinearLayout>
+
 </LinearLayout>
