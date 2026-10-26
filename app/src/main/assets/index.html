@@ -456,20 +456,21 @@ function syncToNativeWidget() {
             let sportText = plan.label; if (ov && ovMap[ov]) sportText = ovMap[ov];
             const showProtein = (!ov) || ov === 'swim' || ov === 'reduced';
 
+            // 核心：给每个固定任务配上可爱的 Emoji！
             const fixedItems = [
-                { time:'07:40', text:'起床', checkKey: `home_${t}_wake` },
-                { time:'07:45', text:'护肤', checkKey: `home_${t}_skin_am` },
-                { time:'07:50', text:'早饭', checkKey: `home_${t}_breakfast` },
-                { time:'08:00', text:'上班', checkKey: `home_${t}_commute` },
-                { time:'12:00', text:'中饭', checkKey: `home_${t}_lunch` },
-                { time:'12:30', text:'学习', checkKey: `home_${t}_study` },
-                { time:'18:00', text:'晚饭', checkKey: `home_${t}_dinner` },
-                { time:'19:30', text: sportText, checkKey: `home_${t}_sport` },
-                { time:'22:00', text:'洗漱', checkKey: `home_${t}_skin_pm` },
-                { time:'22:30', text:'睡前呼吸', checkKey: `home_${t}_breathe` }
+                { time:'07:40', text:'起床', checkKey: `home_${t}_wake`, icon: '🌅' },
+                { time:'07:45', text:'护肤', checkKey: `home_${t}_skin_am`, icon: '🧴' },
+                { time:'07:50', text:'早饭', checkKey: `home_${t}_breakfast`, icon: '🥣' },
+                { time:'08:00', text:'上班', checkKey: `home_${t}_commute`, icon: '💼' },
+                { time:'12:00', text:'中饭', checkKey: `home_${t}_lunch`, icon: '🍱' },
+                { time:'12:30', text:'学习', checkKey: `home_${t}_study`, icon: '📚' },
+                { time:'18:00', text:'晚饭', checkKey: `home_${t}_dinner`, icon: '🍲' },
+                { time:'19:30', text: sportText, checkKey: `home_${t}_sport`, icon: '🏃' },
+                { time:'22:00', text:'洗漱', checkKey: `home_${t}_skin_pm`, icon: '🐱' },
+                { time:'22:30', text:'睡前呼吸', checkKey: `home_${t}_breathe`, icon: '🌙' }
             ];
             if (showProtein){
-                fixedItems.push({ time:'20:30', text:'吃蛋白粉', checkKey: `home_${t}_protein` });
+                fixedItems.push({ time:'20:30', text:'吃蛋白粉', checkKey: `home_${t}_protein`, icon: '🥛' });
             }
             
             const todoItems = manualTodos.map(mt => {
@@ -477,13 +478,15 @@ function syncToNativeWidget() {
                     time: mt.time || '99:99',
                     text: mt.title,
                     key: 'todo_' + encodeURIComponent(JSON.stringify({ date: t, time: mt.time, title: mt.title })),
-                    done: !!mt.done
+                    done: !!mt.done,
+                    icon: '📝' // 自定义待办统一用这个图标
                 };
             });
             
             const allTimeline = fixedItems.map(it => ({
                 time: it.time,
                 text: it.text,
+                icon: it.icon,
                 key: it.checkKey,
                 done: !!checks[it.checkKey]
             }));
@@ -494,7 +497,7 @@ function syncToNativeWidget() {
                 window.AndroidBridge.syncTimelineData(JSON.stringify(finalTimeline));
             }
 
-            // 依然保留原有的数据同步
+            // 同步金额（左边大数字）
             const tasks = LearnStore.getTodayTasks();
             const doneTasks = tasks.filter(x => x.done).length;
             const studyText = `今日学习：${doneTasks}/${tasks.length}`;
@@ -2800,7 +2803,7 @@ function doImportConfirm(text){
       if (Array.isArray(health.clothes)){ clothes = health.clothes; LS.set('app_h_clothes', clothes); }
       if (Array.isArray(health.productLibrary)){ saveProductLibrary(health.productLibrary); }
       if (health.dailyChecks) saveChecks(health.dailyChecks);
-      if (health.customCats && typeof health.customCats === 'object'){ const cur = getCustomCats(); const merged = { expense: Array.from(new Set([...(cur.expense||[]), ...(health.customCats.expense||[])])), income: Array.from(new Set([...(cur.income||[]), ...(health.customCats.income||[])])) }; saveCustomCats(merged); }
+      if (health.customCats && typeof health.customCats === 'object'){ const cur = getCustomCats(); const merged = { expense: Array.from(new Set([...(cur.expense||[]), ...(health.customCats.expense||[])])), income: Array.from(new Set([...(cur.income||[]), ...(health.customCats.income||[])]) }; saveCustomCats(merged); }
       imported++;
     }
     if (learn){
