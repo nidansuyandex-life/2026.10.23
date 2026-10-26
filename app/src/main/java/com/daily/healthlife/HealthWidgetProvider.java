@@ -89,7 +89,6 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                 list.add(arr.getJSONObject(i));
             }
             
-            // 防止白屏：如果没数据，给5个空壳填充
             if (list.isEmpty()) {
                 for (int i = 0; i < 5; i++) {
                     JSONObject dummy = new JSONObject();
@@ -101,7 +100,7 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                 }
             }
             
-            // 第一步：先按时间排序
+            // 先按时间排序
             Collections.sort(list, new Comparator<JSONObject>() {
                 @Override
                 public int compare(JSONObject o1, JSONObject o2) {
@@ -109,7 +108,7 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                 }
             });
 
-            // 第二步：核心逻辑！未完成的全部挑出来，已完成的下沉到底部
+            // 未完成的任务排前面，已完成的下沉
             List<JSONObject> sortedList = new ArrayList<>();
             for (JSONObject item : list) {
                 if (!item.optBoolean("done", false)) sortedList.add(item);
@@ -123,7 +122,6 @@ public class HealthWidgetProvider extends AppWidgetProvider {
             int[] textIds = {R.id.widget_item_1_text, R.id.widget_item_2_text, R.id.widget_item_3_text, R.id.widget_item_4_text, R.id.widget_item_5_text};
             int[] checkIds = {R.id.widget_item_1_check, R.id.widget_item_2_check, R.id.widget_item_3_check, R.id.widget_item_4_check, R.id.widget_item_5_check};
 
-            // 只显示前 5 个
             for (int i = 0; i < 5; i++) {
                 if (i < sortedList.size()) {
                     JSONObject item = sortedList.get(i);
@@ -137,11 +135,12 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                     views.setTextViewText(icons[i], icon);
                     views.setTextViewText(textIds[i], (time.isEmpty() ? "" : time + " ") + text);
                     
+                    // 使用你自己的自定义图标
                     if (done) {
-                        views.setImageViewResource(checkIds[i], android.R.drawable.radiobutton_on_background);
+                        views.setImageViewResource(checkIds[i], R.drawable.widget_checkbox_bg_done);
                         views.setTextColor(textIds[i], 0xFF9CA3AF); 
                     } else {
-                        views.setImageViewResource(checkIds[i], android.R.drawable.radiobutton_off_background);
+                        views.setImageViewResource(checkIds[i], R.drawable.widget_checkbox_bg);
                         views.setTextColor(textIds[i], 0xFF1B1F2A);
                     }
 
