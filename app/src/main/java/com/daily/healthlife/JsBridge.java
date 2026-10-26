@@ -42,12 +42,14 @@ public class JsBridge {
         this.recorder = new VoiceRecorder(a);
     }
 
+    // ============ TTS 语音朗读 ============
     @JavascriptInterface
     public void speak(String text, String lang) { tts.speak(text, lang); }
 
     @JavascriptInterface
     public void stopSpeak() { tts.stop(); }
 
+    // ============ 语音识别 ============
     @JavascriptInterface
     public void startRecognize(int durationSec) {
         act.runOnUiThread(() -> recorder.start(durationSec, new VoiceRecorder.Callback() {
@@ -201,6 +203,7 @@ public class JsBridge {
         });
     }
 
+    // ============ 通知与震动 ============
     @JavascriptInterface
     public void notify(String title, String body) {
         try {
@@ -234,7 +237,22 @@ public class JsBridge {
         } catch (Exception ignored) {}
     }
 
-    // ============ 后台倒计时 ============
+    // ============ 桌面卡片与后台倒计时 (原项目功能) ============
+    @JavascriptInterface
+    public void updateWidgetData(String jsonStr) {
+        Context context = act.getApplicationContext();
+        SharedPreferences prefs = context.getSharedPreferences("WidgetData", Context.MODE_PRIVATE);
+        prefs.edit().putString("data", jsonStr).apply();
+
+        Intent intent = new Intent(context, DailyWidgetProvider.class);
+        intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+        int[] ids = AppWidgetManager.getInstance(context).getAppWidgetIds(
+                new ComponentName(context, DailyWidgetProvider.class)
+        );
+        intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids);
+        context.sendBroadcast(intent);
+    }
+
     @JavascriptInterface
     public void startNativeWalkTimer(int seconds) {
         Context context = act.getApplicationContext();
@@ -254,7 +272,7 @@ public class JsBridge {
         context.stopService(intent);
     }
 
-    // ============ 桌面卡片数据同步 ============
+    // ============ ★ 新增：供 H5 调用：同步最新的进度给桌面卡片 ============
     @JavascriptInterface
     public void syncWidgetData(String studyProgress, String monthExpense) {
         SharedPreferences sp = act.getApplicationContext()
@@ -274,7 +292,7 @@ public class JsBridge {
         act.getApplicationContext().sendBroadcast(intent);
     }
 
-    // ============ 桌面打卡状态读取 ============
+    // ============ ★ 新增：供 H5 调用：获取桌面端打卡状态 ============
     @JavascriptInterface
     public boolean getNativeCheckInStatus() {
         SharedPreferences sp = act.getApplicationContext()
@@ -282,6 +300,7 @@ public class JsBridge {
         return sp.getBoolean("is_checked_in", false);
     }
 
+    // ============ 销毁清理 ============
     public void destroy() {
         tts.destroy();
         recorder.destroy();
