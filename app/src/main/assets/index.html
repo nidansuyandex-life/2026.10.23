@@ -424,7 +424,21 @@ window.jumpFromNative = function(route) {
 
 window.onWidgetCheckin = function(key, done) {
     try {
-        setCheck(key, done);
+        if (key.startsWith('todo_')) {
+            const payloadStr = key.substring(5);
+            try {
+                const payload = JSON.parse(decodeURIComponent(payloadStr));
+                const item = (state.calendarData[payload.date] || []).find(x => x.time === payload.time && x.title === payload.title);
+                if (item) {
+                    const m = getTodoStatusMap();
+                    const k = getTodoKey(payload.date, item);
+                    if (done) m[k] = true; else delete m[k];
+                    saveTodoStatusMap(m);
+                }
+            } catch(err) { console.error('parse todo error', err); }
+        } else {
+            setCheck(key, done);
+        }
         render({ keepScroll: true });
         syncToNativeWidget();
     } catch (e) { console.error('onWidgetCheckin error:', e); }
@@ -433,33 +447,60 @@ window.onWidgetCheckin = function(key, done) {
 function syncToNativeWidget() {
     try {
         if (window.AndroidBridge && window.AndroidBridge.syncWidgetData) {
+            const t = todayStr();
+            const checks = getChecks();
+            const manualTodos = ((state.calendarData[t] || []).filter(x => x.manual)).slice();
+            const ov = getOverride(new Date());
+            const ovMap = { swim:'游泳', reduced:'减量训练', period:'经期休息', leave:'请假', rest:'休息' };
+            const plan = currentPlan();
+            let sportText = plan.label; if (ov && ovMap[ov]) sportText = ovMap[ov];
+            const showProtein = (!ov) || ov === 'swim' || ov === 'reduced';
+
+            const fixedItems = [
+                { time:'07:40', text:'起床', checkKey: `home_${t}_wake` },
+                { time:'07:45', text:'护肤', checkKey: `home_${t}_skin_am` },
+                { time:'07:50', text:'早饭', checkKey: `home_${t}_breakfast` },
+                { time:'08:00', text:'上班', checkKey: `home_${t}_commute` },
+                { time:'12:00', text:'中饭', checkKey: `home_${t}_lunch` },
+                { time:'12:30', text:'学习', checkKey: `home_${t}_study` },
+                { time:'18:00', text:'晚饭', checkKey: `home_${t}_dinner` },
+                { time:'19:30', text: sportText, checkKey: `home_${t}_sport` },
+                { time:'22:00', text:'洗漱', checkKey: `home_${t}_skin_pm` },
+                { time:'22:30', text:'睡前呼吸', checkKey: `home_${t}_breathe` }
+            ];
+            if (showProtein){
+                fixedItems.push({ time:'20:30', text:'吃蛋白粉', checkKey: `home_${t}_protein` });
+            }
+            
+            const todoItems = manualTodos.map(mt => {
+                return {
+                    time: mt.time || '99:99',
+                    text: mt.title,
+                    key: 'todo_' + encodeURIComponent(JSON.stringify({ date: t, time: mt.time, title: mt.title })),
+                    done: !!mt.done
+                };
+            });
+            
+            const allTimeline = fixedItems.map(it => ({
+                time: it.time,
+                text: it.text,
+                key: it.checkKey,
+                done: !!checks[it.checkKey]
+            }));
+            
+            const finalTimeline = [...allTimeline, ...todoItems].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+            
+            if (window.AndroidBridge.syncTimelineData) {
+                window.AndroidBridge.syncTimelineData(JSON.stringify(finalTimeline));
+            }
+
+            // 依然保留原有的数据同步
             const tasks = LearnStore.getTodayTasks();
             const doneTasks = tasks.filter(x => x.done).length;
             const studyText = `今日学习：${doneTasks}/${tasks.length}`;
-
-            const t = todayStr();
             const monthTx = transactions.filter(x => x.date.startsWith(t.slice(0,7)));
             const monthExp = monthTx.filter(x => x.type === 'expense').reduce((s,x) => s + x.amount, 0);
             const expenseText = `本月支出：¥${monthExp.toFixed(0)}`;
-
-            // 提取前 4 个核心时间线
-            const checks = getChecks();
-            const timelineItems = [
-                { time:'07:40', text:'起床', key:`home_${t}_wake` },
-                { time:'07:45', text:'护肤', key:`home_${t}_skin_am` },
-                { time:'07:50', text:'早饭', key:`home_${t}_breakfast` },
-                { time:'08:00', text:'上班', key:`home_${t}_commute` }
-            ];
-            const timelineJson = JSON.stringify(timelineItems.map(it => ({
-                time: it.time,
-                text: it.text,
-                key: it.key,
-                done: !!checks[it.key]
-            })));
-
-            if (window.AndroidBridge.syncTimelineData) {
-                window.AndroidBridge.syncTimelineData(timelineJson);
-            }
             window.AndroidBridge.syncWidgetData(studyText, expenseText);
         }
     } catch (e) { console.error('syncToNativeWidget error:', e); }
