@@ -347,6 +347,7 @@ select,input[type=text],input[type=password]{width:100%;border:1px solid #e6e8f0
 .routine-step .rs-days{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px;background:#EAF3FF;color:var(--blue);flex-shrink:0;margin-top:1px;}
 .routine-step .rs-days.warn{background:#FFF4E0;color:#D98A0B;}
 .routine-step .rs-days.danger{background:#FFEDEA;color:var(--hot);}
+#fatal-error{display:none;padding:20px;color:#dc2626;background:#fef2f2;font-size:14px;line-height:1.6;word-break:break-all;}
 </style>
 </head>
 <body>
@@ -355,7 +356,9 @@ select,input[type=text],input[type=password]{width:100%;border:1px solid #e6e8f0
     <div class="brand"><span class="dot"></span>日常 · 健康生活</div>
     <div class="today" id="todayLabel"></div>
   </header>
-  <main id="view"></main>
+  <main id="view">
+    <div id="fatal-error"></div>
+  </main>
   <button class="fab" id="fab">🤖</button>
   <nav class="tabbar" id="tabbar"></nav>
   <div id="sheet"></div>
@@ -373,6 +376,16 @@ select,input[type=text],input[type=password]{width:100%;border:1px solid #e6e8f0
   <audio id="ttsPlayer" preload="auto"></audio>
 </div>
 <script>
+// === 终极白屏防御：如果发生错误，直接在页面显示 ===
+window.onerror = function(msg, url, line, col, error) {
+    var el = document.getElementById('fatal-error');
+    if (el) {
+        el.style.display = 'block';
+        el.innerHTML += '脚本错误: ' + msg + '<br>位置: ' + line + ':' + col + '<br><br>';
+    }
+    return false;
+};
+
 window.addEventListener('error', e => console.error('Error:', e.message));
 window.addEventListener('unhandledrejection', e => console.error('Promise:', e.reason));
 
@@ -423,7 +436,6 @@ function syncToNativeWidget() {
             let sportText = plan.label; if (ov && ovMap[ov]) sportText = ovMap[ov];
             const showProtein = (!ov) || ov === 'swim' || ov === 'reduced';
 
-            // 核心：给每个固定任务配上可爱的 Emoji！
             const fixedItems = [
                 { time:'07:40', text:'起床', checkKey: `home_${t}_wake`, icon: '🌅' },
                 { time:'07:45', text:'护肤', checkKey: `home_${t}_skin_am`, icon: '🧴' },
@@ -446,7 +458,7 @@ function syncToNativeWidget() {
                     text: mt.title,
                     key: 'todo_' + encodeURIComponent(JSON.stringify({ date: t, time: mt.time, title: mt.title })),
                     done: !!mt.done,
-                    icon: '📝' // 自定义待办统一用这个图标
+                    icon: '📝'
                 };
             });
             
@@ -464,7 +476,6 @@ function syncToNativeWidget() {
                 window.AndroidBridge.syncTimelineData(JSON.stringify(finalTimeline));
             }
 
-            // 同步金额（左边大数字）
             const tasks = LearnStore.getTodayTasks();
             const doneTasks = tasks.filter(x => x.done).length;
             const studyText = `今日学习：${doneTasks}/${tasks.length}`;
@@ -496,7 +507,6 @@ const LS = {
 };
 const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-// ============ 固定的自定义分类操作函数 ============
 function getCustomCats(){
   const v = LS.get('app_h_customCats', null);
   if (!v || typeof v !== 'object') return { expense: [], income: [] };
@@ -1417,7 +1427,6 @@ function parseTransactionText(text){
   const dict = type === 'income' ? INCOME_CATS : EXPENSE_CATS;
   for (const [cat, re] of dict) { if (re.test(t)) { category = cat; break; } }
   
-  // 安全获取自定义分类，彻底摆脱外部函数依赖
   const customObj = LS.get('app_h_customCats', { expense: [], income: [] });
   const customs = (customObj && Array.isArray(customObj[type])) ? customObj[type] : [];
   for (const c of customs){ if (c && t.includes(c)){ category = c; break; } }
@@ -1429,7 +1438,6 @@ function parseTransactionText(text){
 function getCatList(type){
   const base = (type === 'income' ? INCOME_CATS : EXPENSE_CATS).map(x => x[0]);
   
-  // 安全获取自定义分类，彻底摆脱外部函数依赖
   const customObj = LS.get('app_h_customCats', { expense: [], income: [] });
   const custom = (customObj && Array.isArray(customObj[type])) ? customObj[type] : [];
   
@@ -2620,7 +2628,7 @@ async function render(options){
   renderTabs(); updateTopbar();
   if (!keepScroll){ view.scrollTop = 0; view.innerHTML = SKELETON[tab] || '<div class="sk" style="height:200px"></div>'; }
   let html;
-  try { html = await VIEWS[tab](); } catch(e){ console.error(e); html = `<div class="tip-card">加载失败：${esc(e.message)}</div>`; }
+  try { html = await VIEWS[tab](); } catch(e){ console.error(e); html = `<div class="tip-card" style="color:red;">加载失败：${esc(e.message)}</div>`; }
   if (token !== renderToken || state.tab !== tab) return;
   view.innerHTML = html;
   requestAnimationFrame(() => {
@@ -2770,7 +2778,7 @@ function doImportConfirm(text){
       if (Array.isArray(health.clothes)){ clothes = health.clothes; LS.set('app_h_clothes', clothes); }
       if (Array.isArray(health.productLibrary)){ saveProductLibrary(health.productLibrary); }
       if (health.dailyChecks) saveChecks(health.dailyChecks);
-      if (health.customCats && typeof health.customCats === 'object'){ const cur = getCustomCats(); const merged = { expense: Array.from(new Set([...(cur.expense||[]), ...(health.customCats.expense||[])])), income: Array.from(new Set([...(cur.income||[]), ...(health.customCats.income||[])]) }; saveCustomCats(merged); }
+      if (health.customCats && typeof health.customCats === 'object'){ const cur = getCustomCats(); const merged = { expense: Array.from(new Set([...(cur.expense||[]), ...(health.customCats.expense||[])])), income: Array.from(new Set([...(cur.income||[]), ...(health.customCats.income||[])])) }; saveCustomCats(merged); }
       imported++;
     }
     if (learn){
@@ -3079,47 +3087,56 @@ function checkWalkReminder(force){ if (!force && !isInWalkWindow()) return; cons
 function initWalkReminder(){ requestNotifPermission(); setTimeout(() => checkWalkReminder(false), 3000); if (_walkTimerHandle) clearInterval(_walkTimerHandle); _walkTimerHandle = setInterval(() => checkWalkReminder(false), 60 * 1000); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkWalkReminder(false); }); }
 
 (function init(){
-  loadDataFromGlobals();
-  migrateOldSkinProducts();
-  buildCalendarFromPlans();
-  LearnStore.checkIn();
-  render();
-  initWalkReminder();
-  // 启动后：同步一次桌面卡片 + 读取桌面打卡状态
-  setTimeout(() => {
-    try {
-      if (window.AndroidBridge && window.AndroidBridge.getWidgetTimelineData) {
-          const nativeJson = window.AndroidBridge.getWidgetTimelineData();
-          if (nativeJson && nativeJson !== "[]") {
-              const arr = JSON.parse(nativeJson);
-              const checks = getChecks();
-              let changed = false;
-              arr.forEach(item => {
-                  if (item.key && item.done && !checks[item.key]) {
-                      checks[item.key] = true;
-                      changed = true;
-                  }
-              });
-              if (changed) { saveChecks(checks); render(); }
-          }
+  try {
+    loadDataFromGlobals();
+    migrateOldSkinProducts();
+    buildCalendarFromPlans();
+    LearnStore.checkIn();
+    render();
+    initWalkReminder();
+    setTimeout(() => {
+      try {
+        if (window.AndroidBridge && window.AndroidBridge.getWidgetTimelineData) {
+            const nativeJson = window.AndroidBridge.getWidgetTimelineData();
+            if (nativeJson && nativeJson !== "[]") {
+                const arr = JSON.parse(nativeJson);
+                const checks = getChecks();
+                let changed = false;
+                arr.forEach(item => {
+                    if (item.key && item.done && !checks[item.key]) {
+                        checks[item.key] = true;
+                        changed = true;
+                    }
+                });
+                if (changed) { saveChecks(checks); render(); }
+            }
+        }
+        syncToNativeWidget();
+      } catch (e) { console.error('init widget sync error:', e); }
+    }, 1200);
+    setInterval(() => {
+      const el = document.getElementById('sportTimer');
+      if (el){
+        const sess = getSportSession();
+        if (sess && !sess.endTs && !sess.pausedAt){
+          let elapsed = Date.now() - sess.startTs - (sess.pausedTotal || 0);
+          const total = Math.floor(elapsed / 1000);
+          const h = Math.floor(total/3600), m = Math.floor((total%3600)/60), s = total%60;
+          el.textContent = h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+          const sc = document.getElementById('sportSetCount');
+          if (sc) sc.textContent = Object.values(sess.sets || {}).reduce((a,b) => a + b.length, 0);
+        }
       }
-      syncToNativeWidget();
-    } catch (e) { console.error('init widget sync error:', e); }
-  }, 1200);
-  setInterval(() => {
-    const el = document.getElementById('sportTimer');
-    if (el){
-      const sess = getSportSession();
-      if (sess && !sess.endTs && !sess.pausedAt){
-        let elapsed = Date.now() - sess.startTs - (sess.pausedTotal || 0);
-        const total = Math.floor(elapsed / 1000);
-        const h = Math.floor(total/3600), m = Math.floor((total%3600)/60), s = total%60;
-        el.textContent = h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
-        const sc = document.getElementById('sportSetCount');
-        if (sc) sc.textContent = Object.values(sess.sets || {}).reduce((a,b) => a + b.length, 0);
-      }
+    }, 1000);
+  } catch (err) {
+    var el = document.getElementById('fatal-error');
+    if (el) {
+        el.style.display = 'block';
+        el.innerHTML = '启动失败：' + err.message + '<br><br>' + err.stack;
+    } else {
+        document.getElementById('view').innerHTML = '<div style="padding:20px;color:red;">启动失败：' + err.message + '</div>';
     }
-  }, 1000);
+  }
 })();
 </script>
 </body>
