@@ -377,51 +377,6 @@ window.addEventListener('error', e => console.error('Error:', e.message));
 window.addEventListener('unhandledrejection', e => console.error('Promise:', e.reason));
 
 // ============ 桌面卡片桥接（桌面 → App / App → 桌面） ============
-window.jumpFromNative = function(route) {
-    try {
-        // 处理从桌面点击待办项的事件
-        if (route.startsWith('toggleTodo&key=')) {
-            const key = decodeURIComponent(route.split('key=')[1]);
-            
-            // 如果是打卡项 (home_xxx)
-            if (key.startsWith('home_')) {
-                const c = getChecks();
-                if (c[key]) delete c[key]; else c[key] = true;
-                saveChecks(c);
-            } 
-            // 如果是手动添加的待办项 (日期|时间|标题)
-            else if (key.includes('|')) {
-                const parts = key.split('|');
-                const date = parts[0], time = parts[1], title = parts[2];
-                const m = getTodoStatusMap();
-                const payloadStr = `${date}|${time}|${title}`;
-                if (m[payloadStr]) delete m[payloadStr]; else m[payloadStr] = true;
-                saveTodoStatusMap(m);
-            }
-            
-            // 重新渲染页面并同步数据到桌面
-            render({ keepScroll: true });
-            syncToNativeWidget();
-            return;
-        }
-
-        // 普通的路由跳转
-        if (route === 'money') {
-            state.tab = 'life';
-            state.lifeSub = 'money';
-            state.moneySub = 'record';
-            render();
-        } else if (route === 'study') {
-            state.tab = 'study';
-            state.studySub = 'today';
-            render();
-        } else {
-            state.tab = 'home';
-            render();
-        }
-    } catch (e) { console.error('jumpFromNative error:', e); }
-};
-
 window.onWidgetCheckin = function(key, done) {
     try {
         if (key.startsWith('todo_')) {
@@ -442,6 +397,18 @@ window.onWidgetCheckin = function(key, done) {
         render({ keepScroll: true });
         syncToNativeWidget();
     } catch (e) { console.error('onWidgetCheckin error:', e); }
+};
+
+window.jumpFromNative = function(route) {
+    try {
+        if (route === 'money') {
+            state.tab = 'life'; state.lifeSub = 'money'; state.moneySub = 'record'; render();
+        } else if (route === 'study') {
+            state.tab = 'study'; state.studySub = 'today'; render();
+        } else {
+            state.tab = 'home'; render();
+        }
+    } catch (e) { console.error('jumpFromNative error:', e); }
 };
 
 function syncToNativeWidget() {
@@ -3137,10 +3104,6 @@ function initWalkReminder(){ requestNotifPermission(); setTimeout(() => checkWal
           }
       }
       syncToNativeWidget();
-      if (window.AndroidBridge && window.AndroidBridge.getNativeCheckInStatus) {
-        const isChecked = window.AndroidBridge.getNativeCheckInStatus();
-        if (isChecked) LS.set('native-checkin:' + todayStr(), true);
-      }
     } catch (e) { console.error('init widget sync error:', e); }
   }, 1200);
   setInterval(() => {
