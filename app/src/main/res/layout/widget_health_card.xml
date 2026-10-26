@@ -6,7 +6,7 @@
     android:padding="12dp"
     android:orientation="vertical">
 
-    <!-- 顶栏：标题 + 打卡 + 打开APP -->
+    <!-- 顶栏 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -30,8 +30,8 @@
             android:background="#1FBFA9"
             android:paddingLeft="10dp"
             android:paddingRight="10dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
             android:textColor="#FFFFFF"
             android:textSize="11sp"
             android:layout_marginRight="8dp"/>
@@ -44,18 +44,17 @@
             android:background="#4A9EFF"
             android:paddingLeft="10dp"
             android:paddingRight="10dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
             android:textColor="#FFFFFF"
             android:textSize="11sp" />
     </LinearLayout>
 
-    <!-- 进度和支出 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginTop="8dp">
+        android:layout_marginTop="6dp">
         <TextView
             android:id="@+id/widget_progress"
             android:layout_width="0dp"
@@ -73,111 +72,51 @@
             android:textSize="12sp" />
     </LinearLayout>
 
-    <!-- 分割线（用TextView伪装，最安全） -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="#E5E7EB"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="4dp" />
 
-    <!-- 时间线 1（使用系统自带的安全图标 @android:drawable/...） -->
-    <LinearLayout
-        android:id="@+id/widget_item_1_layout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingTop="6dp"
-        android:paddingBottom="6dp">
-        <ImageView
-            android:id="@+id/widget_item_1_check"
-            android:layout_width="18dp"
-            android:layout_height="18dp"
-            android:src="@android:drawable/checkbox_off_background" />
-        <TextView
-            android:id="@+id/widget_item_1_text"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="8dp"
-            android:text="07:40 起床"
-            android:textColor="#1B1F2A"
-            android:textSize="13sp" />
+    <!-- 8 个时间线槽位 (动态显示) -->
+    <LinearLayout android:id="@+id/widget_item_1_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp">
+        <ImageView android:id="@+id/widget_item_1_check" android:layout_width="18dp" android:layout_height="18dp" android:src="@android:drawable/checkbox_off_background" />
+        <TextView android:id="@+id/widget_item_1_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:text="加载中..." android:textColor="#1B1F2A" android:textSize="13sp" />
     </LinearLayout>
 
-    <!-- 时间线 2 -->
-    <LinearLayout
-        android:id="@+id/widget_item_2_layout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingTop="6dp"
-        android:paddingBottom="6dp">
-        <ImageView
-            android:id="@+id/widget_item_2_check"
-            android:layout_width="18dp"
-            android:layout_height="18dp"
-            android:src="@android:drawable/checkbox_off_background" />
-        <TextView
-            android:id="@+id/widget_item_2_text"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="8dp"
-            android:text="07:45 护肤"
-            android:textColor="#1B1F2A"
-            android:textSize="13sp" />
+    <LinearLayout android:id="@+id/widget_item_2_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp">
+        <ImageView android:id="@+id/widget_item_2_check" android:layout_width="18dp" android:layout_height="18dp" android:src="@android:drawable/checkbox_off_background" />
+        <TextView android:id="@+id/widget_item_2_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:text="" android:textColor="#1B1F2A" android:textSize="13sp" />
     </LinearLayout>
 
-    <!-- 时间线 3 -->
-    <LinearLayout
-        android:id="@+id/widget_item_3_layout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingTop="6dp"
-        android:paddingBottom="6dp">
-        <ImageView
-            android:id="@+id/widget_item_3_check"
-            android:layout_width="18dp"
-            android:layout_height="18dp"
-            android:src="@android:drawable/checkbox_off_background" />
-        <TextView
-            android:id="@+id/widget_item_3_text"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="8dp"
-            android:text="07:50 早饭"
-            android:textColor="#1B1F2A"
-            android:textSize="13sp" />
+    <LinearLayout android:id="@+id/widget_item_3_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp">
+        <ImageView android:id="@+id/widget_item_3_check" android:layout_width="18dp" android:layout_height="18dp" android:src="@android:drawable/checkbox_off_background" />
+        <TextView android:id="@+id/widget_item_3_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:text="" android:textColor="#1B1F2A" android:textSize="13sp" />
     </LinearLayout>
 
-    <!-- 时间线 4 -->
-    <LinearLayout
-        android:id="@+id/widget_item_4_layout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingTop="6dp"
-        android:paddingBottom="6dp">
-        <ImageView
-            android:id="@+id/widget_item_4_check"
-            android:layout_width="18dp"
-            android:layout_height="18dp"
-            android:src="@android:drawable/checkbox_off_background" />
-        <TextView
-            android:id="@+id/widget_item_4_text"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="8dp"
-            android:text="08:00 上班"
-            android:textColor="#1B1F2A"
-            android:textSize="13sp" />
+    <LinearLayout android:id="@+id/widget_item_4_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp">
+        <ImageView android:id="@+id/widget_item_4_check" android:layout_width="18dp" android:layout_height="18dp" android:src="@android:drawable/checkbox_off_background" />
+        <TextView android:id="@+id/widget_item_4_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:text="" android:textColor="#1B1F2A" android:textSize="13sp" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/widget_item_5_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp">
+        <ImageView android:id="@+id/widget_item_5_check" android:layout_width="18dp" android:layout_height="18dp" android:src="@android:drawable/checkbox_off_background" />
+        <TextView android:id="@+id/widget_item_5_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:text="" android:textColor="#1B1F2A" android:textSize="13sp" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/widget_item_6_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp">
+        <ImageView android:id="@+id/widget_item_6_check" android:layout_width="18dp" android:layout_height="18dp" android:src="@android:drawable/checkbox_off_background" />
+        <TextView android:id="@+id/widget_item_6_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:text="" android:textColor="#1B1F2A" android:textSize="13sp" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/widget_item_7_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp">
+        <ImageView android:id="@+id/widget_item_7_check" android:layout_width="18dp" android:layout_height="18dp" android:src="@android:drawable/checkbox_off_background" />
+        <TextView android:id="@+id/widget_item_7_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:text="" android:textColor="#1B1F2A" android:textSize="13sp" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/widget_item_8_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp">
+        <ImageView android:id="@+id/widget_item_8_check" android:layout_width="18dp" android:layout_height="18dp" android:src="@android:drawable/checkbox_off_background" />
+        <TextView android:id="@+id/widget_item_8_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginLeft="8dp" android:text="" android:textColor="#1B1F2A" android:textSize="13sp" />
     </LinearLayout>
 </LinearLayout>
