@@ -7,7 +7,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.Uri;
 import android.view.View;
 import android.widget.RemoteViews;
 import org.json.JSONArray;
@@ -71,13 +70,10 @@ public class HealthWidgetProvider extends AppWidgetProvider {
 
         SharedPreferences sp = context.getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
         String expenseText = sp.getString("month_expense", "0");
-        // 只取数字部分，比如把 "本月支出：¥15" 变成 "15"
         String expenseNum = expenseText.replaceAll("[^0-9.]", "");
         if (expenseNum.isEmpty()) expenseNum = "0";
-
         views.setTextViewText(R.id.widget_expense, expenseNum);
 
-        // 打开APP
         Intent openAppIntent = new Intent(context, MainActivity.class);
         openAppIntent.setAction(Intent.ACTION_MAIN);
         openAppIntent.addCategory(Intent.CATEGORY_LAUNCHER);
@@ -85,7 +81,6 @@ public class HealthWidgetProvider extends AppWidgetProvider {
         PendingIntent openAppPi = PendingIntent.getActivity(context, 4, openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         views.setOnClickPendingIntent(R.id.widget_btn_open_app, openAppPi);
 
-        // 读取时间线
         String timelineJson = sp.getString("timeline_data", "[]");
         try {
             JSONArray arr = new JSONArray(timelineJson);
@@ -94,27 +89,44 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                 list.add(arr.getJSONObject(i));
             }
             
-            // 核心逻辑：未完成的排前面，已完成的沉底，同样状态按时间排序
+            // 防止白屏：如果没数据，给5个空壳填充
+            if (list.isEmpty()) {
+                for (int i = 0; i < 5; i++) {
+                    JSONObject dummy = new JSONObject();
+                    dummy.put("text", "请打开App同步数据");
+                    dummy.put("icon", "⚠️");
+                    dummy.put("time", "");
+                    dummy.put("key", "dummy_" + i);
+                    list.add(dummy);
+                }
+            }
+            
+            // 第一步：先按时间排序
             Collections.sort(list, new Comparator<JSONObject>() {
                 @Override
                 public int compare(JSONObject o1, JSONObject o2) {
-                    boolean d1 = o1.optBoolean("done");
-                    boolean d2 = o2.optBoolean("done");
-                    if (d1 == d2) {
-                        return o1.optString("time").compareTo(o2.optString("time"));
-                    }
-                    return d1 ? 1 : -1;
+                    return o1.optString("time").compareTo(o2.optString("time"));
                 }
             });
+
+            // 第二步：核心逻辑！未完成的全部挑出来，已完成的下沉到底部
+            List<JSONObject> sortedList = new ArrayList<>();
+            for (JSONObject item : list) {
+                if (!item.optBoolean("done", false)) sortedList.add(item);
+            }
+            for (JSONObject item : list) {
+                if (item.optBoolean("done", false)) sortedList.add(item);
+            }
 
             int[] layouts = {R.id.widget_item_1_layout, R.id.widget_item_2_layout, R.id.widget_item_3_layout, R.id.widget_item_4_layout, R.id.widget_item_5_layout};
             int[] icons = {R.id.widget_item_1_icon, R.id.widget_item_2_icon, R.id.widget_item_3_icon, R.id.widget_item_4_icon, R.id.widget_item_5_icon};
             int[] textIds = {R.id.widget_item_1_text, R.id.widget_item_2_text, R.id.widget_item_3_text, R.id.widget_item_4_text, R.id.widget_item_5_text};
             int[] checkIds = {R.id.widget_item_1_check, R.id.widget_item_2_check, R.id.widget_item_3_check, R.id.widget_item_4_check, R.id.widget_item_5_check};
 
+            // 只显示前 5 个
             for (int i = 0; i < 5; i++) {
-                if (i < list.size()) {
-                    JSONObject item = list.get(i);
+                if (i < sortedList.size()) {
+                    JSONObject item = sortedList.get(i);
                     String time = item.optString("time", "");
                     String text = item.optString("text", "");
                     String icon = item.optString("icon", "✅");
@@ -122,32 +134,30 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                     boolean done = item.optBoolean("done", false);
 
                     views.setViewVisibility(layouts[i], View.VISIBLE);
-                    
-                    // 如果只有时间没有文字，比如 "07:40 "，就显示时间。如果有文字就 "时间 文字"
                     views.setTextViewText(icons[i], icon);
-                    views.setTextViewText(textIds[i], time + " " + text);
+                    views.setTextViewText(textIds[i], (time.isEmpty() ? "" : time + " ") + text);
                     
                     if (done) {
-                        views.setImageViewResource(checkIds[i], android.R.drawable.checkbox_on_background);
+                        views.setImageViewResource(checkIds[i], android.R.drawable.radiobutton_on_background);
                         views.setTextColor(textIds[i], 0xFF9CA3AF); 
                     } else {
-                        views.setImageViewResource(checkIds[i], android.R.drawable.checkbox_off_background);
+                        views.setImageViewResource(checkIds[i], android.R.drawable.radiobutton_off_background);
                         views.setTextColor(textIds[i], 0xFF1B1F2A);
                     }
 
-                    Intent toggleIntent = new Intent(context, HealthWidgetProvider.class);
-                    toggleIntent.setAction(ACTION_WIDGET_TOGGLE_ITEM);
-                    toggleIntent.putExtra("item_key", key);
-                    toggleIntent.putExtra("item_done", !done);
-                    PendingIntent pi = PendingIntent.getBroadcast(context, 10 + i, toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-                    views.setOnClickPendingIntent(layouts[i], pi);
+                    if (!key.startsWith("dummy_")) {
+                        Intent toggleIntent = new Intent(context, HealthWidgetProvider.class);
+                        toggleIntent.setAction(ACTION_WIDGET_TOGGLE_ITEM);
+                        toggleIntent.putExtra("item_key", key);
+                        toggleIntent.putExtra("item_done", !done);
+                        PendingIntent pi = PendingIntent.getBroadcast(context, 10 + i, toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                        views.setOnClickPendingIntent(layouts[i], pi);
+                    }
                 } else {
                     views.setViewVisibility(layouts[i], View.GONE);
                 }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception e) { e.printStackTrace(); }
 
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
