@@ -6,7 +6,7 @@
     android:padding="12dp"
     android:orientation="vertical">
 
-    <!-- 顶栏：标题 + 打卡按钮 + 打开APP按钮 -->
+    <!-- 顶栏：标题 + 打卡 + 打开APP -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -30,8 +30,8 @@
             android:background="#1FBFA9"
             android:paddingLeft="10dp"
             android:paddingRight="10dp"
-            android:paddingTop="3dp"
-            android:paddingBottom="3dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
             android:textColor="#FFFFFF"
             android:textSize="11sp"
             android:layout_marginRight="8dp"/>
@@ -44,8 +44,8 @@
             android:background="#4A9EFF"
             android:paddingLeft="10dp"
             android:paddingRight="10dp"
-            android:paddingTop="3dp"
-            android:paddingBottom="3dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
             android:textColor="#FFFFFF"
             android:textSize="11sp" />
     </LinearLayout>
@@ -73,27 +73,28 @@
             android:textSize="12sp" />
     </LinearLayout>
 
-    <View
+    <!-- 分割线（用TextView伪装，最安全） -->
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="#E5E7EB"
         android:layout_marginTop="8dp"
         android:layout_marginBottom="8dp" />
 
-    <!-- 时间线 1 -->
+    <!-- 时间线 1（使用系统自带的安全图标 @android:drawable/...） -->
     <LinearLayout
         android:id="@+id/widget_item_1_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp">
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
         <ImageView
             android:id="@+id/widget_item_1_check"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:src="@drawable/widget_checkbox_bg" />
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@android:drawable/checkbox_off_background" />
         <TextView
             android:id="@+id/widget_item_1_text"
             android:layout_width="0dp"
@@ -112,13 +113,13 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp">
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
         <ImageView
             android:id="@+id/widget_item_2_check"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:src="@drawable/widget_checkbox_bg" />
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@android:drawable/checkbox_off_background" />
         <TextView
             android:id="@+id/widget_item_2_text"
             android:layout_width="0dp"
@@ -137,13 +138,13 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp">
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
         <ImageView
             android:id="@+id/widget_item_3_check"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:src="@drawable/widget_checkbox_bg" />
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@android:drawable/checkbox_off_background" />
         <TextView
             android:id="@+id/widget_item_3_text"
             android:layout_width="0dp"
@@ -162,13 +163,13 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp">
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
         <ImageView
             android:id="@+id/widget_item_4_check"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:src="@drawable/widget_checkbox_bg" />
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@android:drawable/checkbox_off_background" />
         <TextView
             android:id="@+id/widget_item_4_text"
             android:layout_width="0dp"
