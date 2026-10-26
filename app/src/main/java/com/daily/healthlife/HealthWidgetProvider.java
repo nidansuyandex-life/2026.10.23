@@ -85,14 +85,12 @@ public class HealthWidgetProvider extends AppWidgetProvider {
         try {
             JSONArray arr = new JSONArray(timelineJson);
             List<JSONObject> list = new ArrayList<>();
-            for (int i = 0; i < arr.length(); i++) {
-                list.add(arr.getJSONObject(i));
-            }
+            for (int i = 0; i < arr.length(); i++) list.add(arr.getJSONObject(i));
             
             if (list.isEmpty()) {
                 for (int i = 0; i < 5; i++) {
                     JSONObject dummy = new JSONObject();
-                    dummy.put("text", "请打开App同步数据");
+                    dummy.put("text", "请打开App同步");
                     dummy.put("icon", "⚠️");
                     dummy.put("time", "");
                     dummy.put("key", "dummy_" + i);
@@ -100,7 +98,7 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                 }
             }
             
-            // 先按时间排序
+            // 按时间排序
             Collections.sort(list, new Comparator<JSONObject>() {
                 @Override
                 public int compare(JSONObject o1, JSONObject o2) {
@@ -108,17 +106,14 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                 }
             });
 
-            // 未完成的任务排前面，已完成的下沉
+            // 未完成的往上顶，已完成的下沉
             List<JSONObject> sortedList = new ArrayList<>();
-            for (JSONObject item : list) {
-                if (!item.optBoolean("done", false)) sortedList.add(item);
-            }
-            for (JSONObject item : list) {
-                if (item.optBoolean("done", false)) sortedList.add(item);
-            }
+            for (JSONObject item : list) if (!item.optBoolean("done", false)) sortedList.add(item);
+            for (JSONObject item : list) if (item.optBoolean("done", false)) sortedList.add(item);
 
             int[] layouts = {R.id.widget_item_1_layout, R.id.widget_item_2_layout, R.id.widget_item_3_layout, R.id.widget_item_4_layout, R.id.widget_item_5_layout};
             int[] icons = {R.id.widget_item_1_icon, R.id.widget_item_2_icon, R.id.widget_item_3_icon, R.id.widget_item_4_icon, R.id.widget_item_5_icon};
+            int[] timeIds = {R.id.widget_item_1_time, R.id.widget_item_2_time, R.id.widget_item_3_time, R.id.widget_item_4_time, R.id.widget_item_5_time};
             int[] textIds = {R.id.widget_item_1_text, R.id.widget_item_2_text, R.id.widget_item_3_text, R.id.widget_item_4_text, R.id.widget_item_5_text};
             int[] checkIds = {R.id.widget_item_1_check, R.id.widget_item_2_check, R.id.widget_item_3_check, R.id.widget_item_4_check, R.id.widget_item_5_check};
 
@@ -133,15 +128,17 @@ public class HealthWidgetProvider extends AppWidgetProvider {
 
                     views.setViewVisibility(layouts[i], View.VISIBLE);
                     views.setTextViewText(icons[i], icon);
-                    views.setTextViewText(textIds[i], (time.isEmpty() ? "" : time + " ") + text);
                     
-                    // 使用你自己的自定义图标
+                    // 时间拆分显示，没有时间则留空
+                    views.setTextViewText(timeIds[i], time);
+                    views.setTextViewText(textIds[i], text);
+                    
                     if (done) {
                         views.setImageViewResource(checkIds[i], R.drawable.widget_checkbox_bg_done);
                         views.setTextColor(textIds[i], 0xFF9CA3AF); 
                     } else {
                         views.setImageViewResource(checkIds[i], R.drawable.widget_checkbox_bg);
-                        views.setTextColor(textIds[i], 0xFF1B1F2A);
+                        views.setTextColor(textIds[i], 0xFF111827);
                     }
 
                     if (!key.startsWith("dummy_")) {
