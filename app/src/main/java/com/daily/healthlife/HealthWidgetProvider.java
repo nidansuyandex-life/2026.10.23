@@ -128,16 +128,15 @@ public class HealthWidgetProvider extends AppWidgetProvider {
 
                     views.setViewVisibility(layouts[i], View.VISIBLE);
                     views.setTextViewText(icons[i], icon);
-                    
-                    // 时间拆分显示，没有时间则留空
                     views.setTextViewText(timeIds[i], time);
                     views.setTextViewText(textIds[i], text);
                     
+                    // 换回最安全的系统图标，防止崩溃
                     if (done) {
-                        views.setImageViewResource(checkIds[i], R.drawable.widget_checkbox_bg_done);
+                        views.setImageViewResource(checkIds[i], android.R.drawable.radiobutton_on_background);
                         views.setTextColor(textIds[i], 0xFF9CA3AF); 
                     } else {
-                        views.setImageViewResource(checkIds[i], R.drawable.widget_checkbox_bg);
+                        views.setImageViewResource(checkIds[i], android.R.drawable.radiobutton_off_background);
                         views.setTextColor(textIds[i], 0xFF111827);
                     }
 
