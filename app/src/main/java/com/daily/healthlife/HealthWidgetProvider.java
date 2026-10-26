@@ -62,7 +62,6 @@ public class HealthWidgetProvider extends AppWidgetProvider {
             
             refreshAll(context);
             
-            // 广播通知 MainActivity（如果 App 在运行），让 H5 实时更新
             Intent broadcast = new Intent(ACTION_WIDGET_TOGGLE_ITEM);
             broadcast.putExtra("item_key", key);
             broadcast.putExtra("item_done", done);
@@ -94,7 +93,7 @@ public class HealthWidgetProvider extends AppWidgetProvider {
         views.setTextViewText(R.id.widget_expense, expenseText);
         views.setTextViewText(R.id.widget_btn_checkin, isTodayChecked ? "已打卡" : "打卡");
 
-        // 1. 打卡按钮
+        // 1. 打卡按钮广播
         Intent checkinIntent = new Intent(context, HealthWidgetProvider.class);
         checkinIntent.setAction(ACTION_WIDGET_CHECKIN);
         PendingIntent checkinPi = PendingIntent.getBroadcast(context, 1, checkinIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
