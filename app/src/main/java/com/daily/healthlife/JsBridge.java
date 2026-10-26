@@ -196,7 +196,7 @@ public class JsBridge {
                     .setSmallIcon(android.R.drawable.ic_dialog_info)
                     .setContentTitle(title)
                     .setContentText(body)
-                    .setPriority(Compat.PRIORITY_HIGH)
+                    .setPriority(NotificationCompat.PRIORITY_HIGH) // 这里修复了
                     .setAutoCancel(true);
             nm.notify((int) (System.currentTimeMillis() % 100000), b.build());
         } catch (Exception e) {}
