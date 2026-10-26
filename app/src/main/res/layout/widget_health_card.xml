@@ -60,7 +60,7 @@
         android:layout_marginLeft="4dp"
         android:layout_marginRight="8dp" />
 
-    <!-- 右侧：时间线（5个） -->
+    <!-- 右侧：5 个时间线槽位 -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_weight="1"
