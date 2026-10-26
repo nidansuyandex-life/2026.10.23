@@ -6,32 +6,48 @@
     android:padding="12dp"
     android:orientation="vertical">
 
-    <!-- 顶部：标题和打开APP按钮 -->
+    <!-- 顶栏：标题 + 打卡按钮 + 打开APP按钮 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical">
+        
         <TextView
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="日常 · 健康生活"
+            android:text="日常 · 健康"
             android:textColor="#1B1F2A"
-            android:textSize="16sp"
+            android:textSize="15sp"
             android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_btn_checkin"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="打卡"
+            android:background="#1FBFA9"
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
+            android:textColor="#FFFFFF"
+            android:textSize="11sp"
+            android:layout_marginRight="8dp"/>
+            
         <TextView
             android:id="@+id/widget_btn_open_app"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="打开APP"
             android:background="#4A9EFF"
-            android:paddingLeft="12dp"
-            android:paddingRight="12dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
             android:textColor="#FFFFFF"
-            android:textSize="12sp" />
+            android:textSize="11sp" />
     </LinearLayout>
 
     <!-- 进度和支出 -->
@@ -163,5 +179,4 @@
             android:textColor="#1B1F2A"
             android:textSize="13sp" />
     </LinearLayout>
-
 </LinearLayout>
