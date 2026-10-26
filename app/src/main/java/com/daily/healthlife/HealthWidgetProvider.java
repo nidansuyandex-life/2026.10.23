@@ -13,7 +13,11 @@ import android.widget.RemoteViews;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 public class HealthWidgetProvider extends AppWidgetProvider {
@@ -23,11 +27,7 @@ public class HealthWidgetProvider extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         for (int appWidgetId : appWidgetIds) {
-            try {
-                updateWidget(context, appWidgetManager, appWidgetId);
-            } catch (Exception e) {
-                e.printStackTrace(); // 防止任何小错导致桌面报错
-            }
+            try { updateWidget(context, appWidgetManager, appWidgetId); } catch (Exception e) { e.printStackTrace(); }
         }
     }
 
@@ -71,9 +71,7 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                 broadcast.putExtra("item_done", done);
                 context.sendBroadcast(broadcast);
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception e) { e.printStackTrace(); }
     }
 
     private void refreshAll(Context context) {
@@ -81,9 +79,7 @@ public class HealthWidgetProvider extends AppWidgetProvider {
             AppWidgetManager manager = AppWidgetManager.getInstance(context);
             ComponentName componentName = new ComponentName(context, HealthWidgetProvider.class);
             int[] ids = manager.getAppWidgetIds(componentName);
-            for (int id : ids) {
-                updateWidget(context, manager, id);
-            }
+            for (int id : ids) { updateWidget(context, manager, id); }
         } catch (Exception e) { e.printStackTrace(); }
     }
 
@@ -129,13 +125,30 @@ public class HealthWidgetProvider extends AppWidgetProvider {
         String timelineJson = sp.getString("timeline_data", "[]");
         try {
             JSONArray arr = new JSONArray(timelineJson);
-            int[] layouts = {R.id.widget_item_1_layout, R.id.widget_item_2_layout, R.id.widget_item_3_layout, R.id.widget_item_4_layout};
-            int[] checkIds = {R.id.widget_item_1_check, R.id.widget_item_2_check, R.id.widget_item_3_check, R.id.widget_item_4_check};
-            int[] textIds = {R.id.widget_item_1_text, R.id.widget_item_2_text, R.id.widget_item_3_text, R.id.widget_item_4_text};
+            List<JSONObject> list = new ArrayList<>();
+            for (int i = 0; i < arr.length(); i++) {
+                list.add(arr.getJSONObject(i));
+            }
+            // 核心逻辑：未完成的排前面，已完成的沉底，同样状态按时间排序
+            Collections.sort(list, new Comparator<JSONObject>() {
+                @Override
+                public int compare(JSONObject o1, JSONObject o2) {
+                    boolean d1 = o1.optBoolean("done");
+                    boolean d2 = o2.optBoolean("done");
+                    if (d1 == d2) {
+                        return o1.optString("time").compareTo(o2.optString("time"));
+                    }
+                    return d1 ? 1 : -1;
+                }
+            });
 
-            for (int i = 0; i < 4; i++) {
-                if (i < arr.length()) {
-                    JSONObject item = arr.getJSONObject(i);
+            int[] layouts = {R.id.widget_item_1_layout, R.id.widget_item_2_layout, R.id.widget_item_3_layout, R.id.widget_item_4_layout, R.id.widget_item_5_layout, R.id.widget_item_6_layout, R.id.widget_item_7_layout, R.id.widget_item_8_layout};
+            int[] checkIds = {R.id.widget_item_1_check, R.id.widget_item_2_check, R.id.widget_item_3_check, R.id.widget_item_4_check, R.id.widget_item_5_check, R.id.widget_item_6_check, R.id.widget_item_7_check, R.id.widget_item_8_check};
+            int[] textIds = {R.id.widget_item_1_text, R.id.widget_item_2_text, R.id.widget_item_3_text, R.id.widget_item_4_text, R.id.widget_item_5_text, R.id.widget_item_6_text, R.id.widget_item_7_text, R.id.widget_item_8_text};
+
+            for (int i = 0; i < 8; i++) {
+                if (i < list.size()) {
+                    JSONObject item = list.get(i);
                     String time = item.optString("time", "");
                     String text = item.optString("text", "");
                     String key = item.optString("key", "");
