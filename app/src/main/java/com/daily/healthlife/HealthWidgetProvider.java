@@ -23,59 +23,68 @@ public class HealthWidgetProvider extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         for (int appWidgetId : appWidgetIds) {
-            updateWidget(context, appWidgetManager, appWidgetId);
+            try {
+                updateWidget(context, appWidgetManager, appWidgetId);
+            } catch (Exception e) {
+                e.printStackTrace(); // 防止任何小错导致桌面报错
+            }
         }
     }
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        super.onReceive(context, intent);
-        
-        if (ACTION_WIDGET_CHECKIN.equals(intent.getAction())) {
-            SharedPreferences sp = context.getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
-            String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-            String lastCheckin = sp.getString("last_checkin_date", "");
-            if (!today.equals(lastCheckin)) {
-                sp.edit().putBoolean("is_checked_in", true).putString("last_checkin_date", today).apply();
-            } else {
-                boolean isCheckedIn = sp.getBoolean("is_checked_in", false);
-                sp.edit().putBoolean("is_checked_in", !isCheckedIn).apply();
-            }
-            refreshAll(context);
-        } else if (ACTION_WIDGET_TOGGLE_ITEM.equals(intent.getAction())) {
-            String key = intent.getStringExtra("item_key");
-            boolean done = intent.getBooleanExtra("item_done", false);
-            
-            SharedPreferences sp = context.getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
-            String timelineJson = sp.getString("timeline_data", "[]");
-            try {
-                JSONArray arr = new JSONArray(timelineJson);
-                for (int i = 0; i < arr.length(); i++) {
-                    JSONObject item = arr.getJSONObject(i);
-                    if (key.equals(item.optString("key"))) {
-                        item.put("done", done);
-                        break;
-                    }
+        try {
+            super.onReceive(context, intent);
+            if (ACTION_WIDGET_CHECKIN.equals(intent.getAction())) {
+                SharedPreferences sp = context.getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
+                String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+                String lastCheckin = sp.getString("last_checkin_date", "");
+                if (!today.equals(lastCheckin)) {
+                    sp.edit().putBoolean("is_checked_in", true).putString("last_checkin_date", today).apply();
+                } else {
+                    boolean isCheckedIn = sp.getBoolean("is_checked_in", false);
+                    sp.edit().putBoolean("is_checked_in", !isCheckedIn).apply();
                 }
-                sp.edit().putString("timeline_data", arr.toString()).apply();
-            } catch (Exception e) {}
-            
-            refreshAll(context);
-            
-            Intent broadcast = new Intent(ACTION_WIDGET_TOGGLE_ITEM);
-            broadcast.putExtra("item_key", key);
-            broadcast.putExtra("item_done", done);
-            context.sendBroadcast(broadcast);
+                refreshAll(context);
+            } else if (ACTION_WIDGET_TOGGLE_ITEM.equals(intent.getAction())) {
+                String key = intent.getStringExtra("item_key");
+                boolean done = intent.getBooleanExtra("item_done", false);
+                
+                SharedPreferences sp = context.getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
+                String timelineJson = sp.getString("timeline_data", "[]");
+                try {
+                    JSONArray arr = new JSONArray(timelineJson);
+                    for (int i = 0; i < arr.length(); i++) {
+                        JSONObject item = arr.getJSONObject(i);
+                        if (key != null && key.equals(item.optString("key"))) {
+                            item.put("done", done);
+                            break;
+                        }
+                    }
+                    sp.edit().putString("timeline_data", arr.toString()).apply();
+                } catch (Exception e) { e.printStackTrace(); }
+                
+                refreshAll(context);
+                
+                Intent broadcast = new Intent(ACTION_WIDGET_TOGGLE_ITEM);
+                broadcast.putExtra("item_key", key);
+                broadcast.putExtra("item_done", done);
+                context.sendBroadcast(broadcast);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
     private void refreshAll(Context context) {
-        AppWidgetManager manager = AppWidgetManager.getInstance(context);
-        ComponentName componentName = new ComponentName(context, HealthWidgetProvider.class);
-        int[] ids = manager.getAppWidgetIds(componentName);
-        for (int id : ids) {
-            updateWidget(context, manager, id);
-        }
+        try {
+            AppWidgetManager manager = AppWidgetManager.getInstance(context);
+            ComponentName componentName = new ComponentName(context, HealthWidgetProvider.class);
+            int[] ids = manager.getAppWidgetIds(componentName);
+            for (int id : ids) {
+                updateWidget(context, manager, id);
+            }
+        } catch (Exception e) { e.printStackTrace(); }
     }
 
     private void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
@@ -93,27 +102,23 @@ public class HealthWidgetProvider extends AppWidgetProvider {
         views.setTextViewText(R.id.widget_expense, expenseText);
         views.setTextViewText(R.id.widget_btn_checkin, isTodayChecked ? "已打卡" : "打卡");
 
-        // 1. 打卡按钮广播
         Intent checkinIntent = new Intent(context, HealthWidgetProvider.class);
         checkinIntent.setAction(ACTION_WIDGET_CHECKIN);
         PendingIntent checkinPi = PendingIntent.getBroadcast(context, 1, checkinIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         views.setOnClickPendingIntent(R.id.widget_btn_checkin, checkinPi);
 
-        // 2. 点击支出跳转
         Intent moneyIntent = new Intent(context, MainActivity.class);
         moneyIntent.setAction(Intent.ACTION_VIEW);
         moneyIntent.setData(Uri.parse("healthlife://jump?route=money"));
         PendingIntent moneyPi = PendingIntent.getActivity(context, 2, moneyIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         views.setOnClickPendingIntent(R.id.widget_expense, moneyPi);
 
-        // 3. 点击学习跳转
         Intent studyIntent = new Intent(context, MainActivity.class);
         studyIntent.setAction(Intent.ACTION_VIEW);
         studyIntent.setData(Uri.parse("healthlife://jump?route=study"));
         PendingIntent studyPi = PendingIntent.getActivity(context, 3, studyIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         views.setOnClickPendingIntent(R.id.widget_progress, studyPi);
 
-        // 4. 打开APP按钮
         Intent openAppIntent = new Intent(context, MainActivity.class);
         openAppIntent.setAction(Intent.ACTION_MAIN);
         openAppIntent.addCategory(Intent.CATEGORY_LAUNCHER);
@@ -121,7 +126,6 @@ public class HealthWidgetProvider extends AppWidgetProvider {
         PendingIntent openAppPi = PendingIntent.getActivity(context, 4, openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         views.setOnClickPendingIntent(R.id.widget_btn_open_app, openAppPi);
 
-        // 5. 时间线打卡项
         String timelineJson = sp.getString("timeline_data", "[]");
         try {
             JSONArray arr = new JSONArray(timelineJson);
@@ -141,10 +145,10 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                     views.setTextViewText(textIds[i], time + " " + text);
                     
                     if (done) {
-                        views.setImageViewResource(checkIds[i], R.drawable.widget_checkbox_bg_done);
+                        views.setImageViewResource(checkIds[i], android.R.drawable.checkbox_on_background);
                         views.setTextColor(textIds[i], 0xFF9CA3AF); 
                     } else {
-                        views.setImageViewResource(checkIds[i], R.drawable.widget_checkbox_bg);
+                        views.setImageViewResource(checkIds[i], android.R.drawable.checkbox_off_background);
                         views.setTextColor(textIds[i], 0xFF1B1F2A);
                     }
 
