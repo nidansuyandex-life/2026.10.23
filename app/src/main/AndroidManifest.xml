@@ -1,67 +1,82 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.daily.healthlife">
 
     <!-- 基础权限 -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    
+    <!-- 后台服务与定时器权限 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SHORT_SERVICE" />
-
-    <!-- ★ 修复 TTS：允许查询系统语音引擎（Android 11+ 必须） -->
-    <queries>
-        <intent>
-            <action android:name="android.intent.action.TTS_SERVICE" />
-        </intent>
-    </queries>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application
         android:allowBackup="true"
-        android:icon="@drawable/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@drawable/ic_launcher"
+        android:icon="@mipmap/ic_launcher"
+        android:label="日常 · 健康生活"
+        android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
-        android:theme="@style/Theme.HealthLife"
-        android:usesCleartextTraffic="true">
+        android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+        android:usesCleartextTraffic="true"> 
+        <!-- 注意：如果你的项目里原本有 android:theme，请保留原本的 theme，不要用上面这个 -->
 
-        <!-- 主界面 -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:configChanges="orientation|keyboardHidden|screenSize">
+            android:configChanges="orientation|screenSize|keyboardHidden">
+            
+            <!-- 正常启动 -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            
-            <!-- 桌面卡片点击跳转的必要配置 -->
+
+            <!-- 接收桌面卡片点击跳转 (healthlife://jump?route=xxx) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="healthlife" />
+                <data android:scheme="healthlife" android:host="jump" />
             </intent-filter>
         </activity>
 
-        <!-- ★ 桌面小组件配置 -->
+        <!-- 1. 我们的健康卡片小部件 -->
         <receiver
             android:name=".HealthWidgetProvider"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <!-- 打卡按钮的广播 -->
+                <action android:name="com.daily.healthlife.WIDGET_CHECKIN" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_health_card_info" />
         </receiver>
 
-        <!-- 走动倒计时后台服务 -->
+        <!-- 2. 如果你原本项目里有 DailyWidgetProvider，也要留着注册，否则 JsBridge 里调用会崩溃 -->
+        <receiver
+            android:name=".DailyWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <!-- 如果你有这个 xml，就解除注释；没有的话删掉这行 meta-data -->
+            <!-- <meta-data android:name="android.appwidget.provider" android:resource="@xml/daily_widget_info" /> -->
+        </receiver>
+
+        <!-- 3. 散步倒计时服务 -->
         <service
             android:name=".WalkTimerService"
             android:exported="false"
-            android:foregroundServiceType="shortService" />
+            android:foregroundServiceType="dataSync" />
 
     </application>
+
 </manifest>
