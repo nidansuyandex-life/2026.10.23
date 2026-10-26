@@ -2,14 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.daily.healthlife">
 
-    <!-- 基础权限 -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    
-    <!-- 后台服务与定时器权限 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -21,23 +18,17 @@
         android:label="日常 · 健康生活"
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.Light.NoActionBar"
-        android:usesCleartextTraffic="true"> 
-        <!-- 注意：如果你的项目里原本有 android:theme，请保留原本的 theme，不要用上面这个 -->
+        android:usesCleartextTraffic="true"
+        android:theme="@style/Theme.AppCompat.Light.NoActionBar">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTask"
-            android:configChanges="orientation|screenSize|keyboardHidden">
-            
-            <!-- 正常启动 -->
+            android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
-            <!-- 接收桌面卡片点击跳转 (healthlife://jump?route=xxx) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -46,13 +37,13 @@
             </intent-filter>
         </activity>
 
-        <!-- 1. 我们的健康卡片小部件 -->
+        <!-- 小部件: 注意这里的 exported 必须是 true，否则系统发广播会被拦截报错 -->
         <receiver
             android:name=".HealthWidgetProvider"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <!-- 打卡按钮的广播 -->
+                <!-- 我们的自定义打卡广播 -->
                 <action android:name="com.daily.healthlife.WIDGET_CHECKIN" />
             </intent-filter>
             <meta-data
@@ -60,23 +51,18 @@
                 android:resource="@xml/widget_health_card_info" />
         </receiver>
 
-        <!-- 2. 如果你原本项目里有 DailyWidgetProvider，也要留着注册，否则 JsBridge 里调用会崩溃 -->
+        <!-- 如果原项目有这个，保留它并设为 true -->
         <receiver
             android:name=".DailyWidgetProvider"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
-            <!-- 如果你有这个 xml，就解除注释；没有的话删掉这行 meta-data -->
-            <!-- <meta-data android:name="android.appwidget.provider" android:resource="@xml/daily_widget_info" /> -->
         </receiver>
 
-        <!-- 3. 散步倒计时服务 -->
         <service
             android:name=".WalkTimerService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
-
     </application>
-
 </manifest>
