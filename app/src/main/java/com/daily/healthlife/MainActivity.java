@@ -1,12 +1,14 @@
 package com.daily.healthlife;
 
 import android.annotation.SuppressLint;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.webkit.ConsoleMessage;
 import android.webkit.PermissionRequest;
@@ -27,6 +29,22 @@ public class MainActivity extends AppCompatActivity {
     private ValueCallback<Uri[]> filePathCallback;
     private static final int FILE_CHOOSER_CODE = 1001;
     private static final int REQ_PERMS = 1002;
+
+    private BroadcastReceiver widgetReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (HealthWidgetProvider.ACTION_WIDGET_TOGGLE_ITEM.equals(intent.getAction())) {
+                String key = intent.getStringExtra("item_key");
+                boolean done = intent.getBooleanExtra("item_done", false);
+                if (webView != null) {
+                    webView.post(() -> {
+                        String js = "if(window.onWidgetCheckin) window.onWidgetCheckin('" + key + "', " + done + ");";
+                        webView.evaluateJavascript(js, null);
+                    });
+                }
+            }
+        }
+    };
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     @Override
@@ -73,7 +91,6 @@ public class MainActivity extends AppCompatActivity {
             public void onPermissionRequest(final PermissionRequest request) {
                 runOnUiThread(() -> request.grant(request.getResources()));
             }
-
             @Override
             public boolean onShowFileChooser(WebView wv, ValueCallback<Uri[]> cb, FileChooserParams params) {
                 if (filePathCallback != null) filePathCallback.onReceiveValue(null);
@@ -82,14 +99,8 @@ public class MainActivity extends AppCompatActivity {
                     Intent i = new Intent(Intent.ACTION_GET_CONTENT);
                     i.addCategory(Intent.CATEGORY_OPENABLE);
                     i.setType("*/*");
-                    String[] extraTypes = new String[]{"application/json", "text/csv", "text/comma-separated-values", "text/plain", "application/vnd.ms-excel", "application/octet-stream"};
-                    i.putExtra(Intent.EXTRA_MIME_TYPES, extraTypes);
-                    i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     startActivityForResult(Intent.createChooser(i, "选择文件"), FILE_CHOOSER_CODE);
-                } catch (Exception e) {
-                    filePathCallback = null;
-                    return false;
-                }
+                } catch (Exception e) { filePathCallback = null; return false; }
                 return true;
             }
             @Override
@@ -98,11 +109,16 @@ public class MainActivity extends AppCompatActivity {
 
         webView.loadUrl("file:///android_asset/index.html");
 
-        // ★ 处理桌面卡片点击跳转
         handleIntent(getIntent());
+
+        IntentFilter filter = new IntentFilter(HealthWidgetProvider.ACTION_WIDGET_TOGGLE_ITEM);
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(widgetReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(widgetReceiver, filter);
+        }
     }
 
-    // ★ 处理卡片点击传来的路由
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -114,7 +130,6 @@ public class MainActivity extends AppCompatActivity {
         if (intent != null && intent.getData() != null) {
             String route = intent.getData().getQueryParameter("route");
             if (route != null && webView != null) {
-                // 延迟 500ms，确保 WebView 和 H5 页面已完全加载
                 webView.postDelayed(() -> {
                     String js = "if(window.jumpFromNative) window.jumpFromNative('" + route + "');";
                     webView.evaluateJavascript(js, null);
@@ -142,8 +157,8 @@ public class MainActivity extends AppCompatActivity {
         if (req == FILE_CHOOSER_CODE) {
             if (filePathCallback != null) {
                 Uri[] results = null;
-                if (res == RESULT_OK && data != null) {
-                    if (data.getData() != null) results = new Uri[]{ data.getData() };
+                if (res == RESULT_OK && data != null && data.getData() != null) {
+                    results = new Uri[]{ data.getData() };
                 }
                 filePathCallback.onReceiveValue(results);
                 filePathCallback = null;
@@ -156,7 +171,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
-            // 拦截返回键：如果 HTML 有打开的弹窗，先关闭弹窗
             webView.evaluateJavascript(
                 "(function(){ if(document.getElementById('sheet').classList.contains('open')){ closeSheet(); return 'true'; } return 'false'; })()",
                 value -> {
@@ -172,6 +186,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        try { unregisterReceiver(widgetReceiver); } catch (Exception e) {}
         if (jsBridge != null) jsBridge.destroy();
         if (webView != null) { webView.loadUrl("about:blank"); webView.destroy(); }
         super.onDestroy();
