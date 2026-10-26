@@ -66,8 +66,6 @@ public class JsBridge {
     @JavascriptInterface
     public void stopRecognize() { recorder.stop(); }
 
-    public VoiceRecorder getVoiceRecorder() { return recorder; }
-
     private static String jsString(String s) {
         if (s == null) return "''";
         StringBuilder sb = new StringBuilder("'");
@@ -83,7 +81,6 @@ public class JsBridge {
         return sb.append("'").toString();
     }
 
-    // ============ 图片文件存储 ============
     @JavascriptInterface
     public String saveImage(String base64Data, String filename) {
         try {
@@ -95,10 +92,7 @@ public class JsBridge {
             fos.write(bytes);
             fos.close();
             return f.getAbsolutePath();
-        } catch (Exception e) {
-            Log.e("JsBridge", "saveImage error", e);
-            return "";
-        }
+        } catch (Exception e) { return ""; }
     }
 
     private boolean existsDir(File dir) {
@@ -116,11 +110,8 @@ public class JsBridge {
             byte[] bytes = new byte[(int) f.length()];
             fis.read(bytes);
             fis.close();
-            String base64 = Base64.encodeToString(bytes, Base64.NO_WRAP);
-            return "data:image/jpeg;base64," + base64;
-        } catch (Exception e) {
-            return "";
-        }
+            return "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP);
+        } catch (Exception e) { return ""; }
     }
 
     @JavascriptInterface
@@ -131,7 +122,6 @@ public class JsBridge {
         } catch (Exception ignored) {}
     }
 
-    // ============ 文件保存 ============
     @JavascriptInterface
     public void saveFile(String content, String filename, String mime) {
         try {
@@ -158,7 +148,7 @@ public class JsBridge {
                 try {
                     new AlertDialog.Builder(act)
                         .setTitle("✓ 文件已保存")
-                        .setMessage("文件名：\n" + fname + "\n\n已保存到系统的「下载」文件夹。\n\n查看方式：打开手机自带的「文件管理」APP，\n切换到「分类」或「下载」视图即可找到。")
+                        .setMessage("文件名：\n" + fname + "\n\n已保存到系统的「下载」文件夹。")
                         .setPositiveButton("打开下载文件夹", (d, w) -> openDownloadFolder())
                         .setNegativeButton("知道了", null)
                         .show();
@@ -168,7 +158,6 @@ public class JsBridge {
             });
             act.runOnUiThread(() -> webView.evaluateJavascript("window.onFileSaved && window.onFileSaved(true," + jsString(filename) + ")", null));
         } catch (Exception e) {
-            Log.e("saveFile", "err", e);
             final String msg = e.getMessage();
             act.runOnUiThread(() -> {
                 Toast.makeText(act, "保存失败：" + msg, Toast.LENGTH_LONG).show();
@@ -191,17 +180,10 @@ public class JsBridge {
                 i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 act.startActivity(i); return;
             } catch (Exception ignored) {}
-            try {
-                Intent i = new Intent(Intent.ACTION_MAIN);
-                i.addCategory(Intent.CATEGORY_APP_FILES);
-                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                act.startActivity(i); return;
-            } catch (Exception ignored) {}
             Toast.makeText(act, "请手动打开「文件管理」APP → 分类 → 下载", Toast.LENGTH_LONG).show();
         });
     }
 
-    // ============ 通知与震动 ============
     @JavascriptInterface
     public void notify(String title, String body) {
         try {
@@ -214,12 +196,10 @@ public class JsBridge {
                     .setSmallIcon(android.R.drawable.ic_dialog_info)
                     .setContentTitle(title)
                     .setContentText(body)
-                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .setPriority(Compat.PRIORITY_HIGH)
                     .setAutoCancel(true);
             nm.notify((int) (System.currentTimeMillis() % 100000), b.build());
-        } catch (Exception e) {
-            Log.e("notify", "err", e);
-        }
+        } catch (Exception e) {}
     }
 
     @JavascriptInterface
@@ -235,29 +215,32 @@ public class JsBridge {
         } catch (Exception ignored) {}
     }
 
-    // ============ 最新桌面卡片数据同步 ============
     @JavascriptInterface
     public void syncWidgetData(String studyProgress, String monthExpense) {
-        SharedPreferences sp = act.getApplicationContext()
-                .getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
-        sp.edit()
-          .putString("study_progress", studyProgress)
-          .putString("month_expense", monthExpense)
-          .apply();
-
+        SharedPreferences sp = act.getApplicationContext().getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
+        sp.edit().putString("study_progress", studyProgress).putString("month_expense", monthExpense).apply();
         Intent intent = new Intent(act.getApplicationContext(), HealthWidgetProvider.class);
         intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
-        int[] ids = AppWidgetManager.getInstance(act.getApplicationContext()).getAppWidgetIds(
-                new ComponentName(act.getApplicationContext(), HealthWidgetProvider.class)
-        );
+        int[] ids = AppWidgetManager.getInstance(act.getApplicationContext()).getAppWidgetIds(new ComponentName(act.getApplicationContext(), HealthWidgetProvider.class));
         intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids);
         act.getApplicationContext().sendBroadcast(intent);
     }
 
     @JavascriptInterface
+    public void syncTimelineData(String json) {
+        SharedPreferences sp = act.getApplicationContext().getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
+        sp.edit().putString("timeline_data", json).apply();
+    }
+
+    @JavascriptInterface
+    public String getWidgetTimelineData() {
+        SharedPreferences sp = act.getApplicationContext().getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
+        return sp.getString("timeline_data", "[]");
+    }
+
+    @JavascriptInterface
     public boolean getNativeCheckInStatus() {
-        SharedPreferences sp = act.getApplicationContext()
-                .getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
+        SharedPreferences sp = act.getApplicationContext().getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
         return sp.getBoolean("is_checked_in", false);
     }
 
