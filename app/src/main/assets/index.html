@@ -422,6 +422,14 @@ window.jumpFromNative = function(route) {
     } catch (e) { console.error('jumpFromNative error:', e); }
 };
 
+window.onWidgetCheckin = function(key, done) {
+    try {
+        setCheck(key, done);
+        render({ keepScroll: true });
+        syncToNativeWidget();
+    } catch (e) { console.error('onWidgetCheckin error:', e); }
+};
+
 function syncToNativeWidget() {
     try {
         if (window.AndroidBridge && window.AndroidBridge.syncWidgetData) {
@@ -434,51 +442,25 @@ function syncToNativeWidget() {
             const monthExp = monthTx.filter(x => x.type === 'expense').reduce((s,x) => s + x.amount, 0);
             const expenseText = `本月支出：¥${monthExp.toFixed(0)}`;
 
-            window.AndroidBridge.syncWidgetData(studyText, expenseText);
+            // 提取前 4 个核心时间线
+            const checks = getChecks();
+            const timelineItems = [
+                { time:'07:40', text:'起床', key:`home_${t}_wake` },
+                { time:'07:45', text:'护肤', key:`home_${t}_skin_am` },
+                { time:'07:50', text:'早饭', key:`home_${t}_breakfast` },
+                { time:'08:00', text:'上班', key:`home_${t}_commute` }
+            ];
+            const timelineJson = JSON.stringify(timelineItems.map(it => ({
+                time: it.time,
+                text: it.text,
+                key: it.key,
+                done: !!checks[it.key]
+            })));
 
-            // 同步时间线全量数据给桌面卡片
-            if (window.AndroidBridge.syncWidgetTimeline) {
-                const checks = getChecks();
-                const manualTodos = ((state.calendarData[t] || []).filter(x => x.manual)).slice();
-                
-                // 1. 固定的常规任务（与 homeView 里的时间线对应）
-                const fixedItems = [
-                    { time:'07:40', text:'晨间呼吸', checkKey: `home_${t}_wake` },
-                    { time:'07:45', text:'护肤（早）', checkKey: `home_${t}_skin_am` },
-                    { time:'07:50', text:'早饭', checkKey: `home_${t}_breakfast` },
-                    { time:'08:00', text:'上班/通勤', checkKey: `home_${t}_commute` },
-                    { time:'12:00', text:'中饭', checkKey: `home_${t}_lunch` },
-                    { time:'12:30', text:'学习', checkKey: `home_${t}_study` },
-                    { time:'18:00', text:'晚饭', checkKey: `home_${t}_dinner` },
-                    { time:'19:30', text:'运动打卡', checkKey: `home_${t}_sport` },
-                    { time:'20:30', text:'吃蛋白粉', checkKey: `home_${t}_protein` },
-                    { time:'22:00', text:'护肤（晚）', checkKey: `home_${t}_skin_pm` },
-                    { time:'22:30', text:'睡前呼吸', checkKey: `home_${t}_breathe` }
-                ];
-                
-                // 2. 用户手动添加的待办任务
-                const todoItems = manualTodos.map(mt => ({
-                    time: mt.time || '99:99',
-                    text: mt.title,
-                    key: `${t}|${mt.time}|${mt.title}`,
-                    isTodo: true,
-                    done: !!mt.done
-                }));
-
-                // 3. 合并、排序并生成最终 JSON（全量发送，不截断）
-                const allItems = [...fixedItems, ...todoItems].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-                
-                const timelineData = allItems.map(it => {
-                    return {
-                        time: it.time,
-                        title: it.text,
-                        done: it.isTodo ? it.done : !!(it.checkKey && checks[it.checkKey]),
-                        key: it.isTodo ? it.key : it.checkKey
-                    };
-                });
-
-                window.AndroidBridge.syncWidgetTimeline(JSON.stringify(timelineData));
+            if (window.AndroidBridge.syncTimelineData) {
+                window.AndroidBridge.syncTimelineData(timelineJson);
             }
+            window.AndroidBridge.syncWidgetData(studyText, expenseText);
         }
     } catch (e) { console.error('syncToNativeWidget error:', e); }
 }
@@ -3095,13 +3077,25 @@ function initWalkReminder(){ requestNotifPermission(); setTimeout(() => checkWal
   // 启动后：同步一次桌面卡片 + 读取桌面打卡状态
   setTimeout(() => {
     try {
+      if (window.AndroidBridge && window.AndroidBridge.getWidgetTimelineData) {
+          const nativeJson = window.AndroidBridge.getWidgetTimelineData();
+          if (nativeJson && nativeJson !== "[]") {
+              const arr = JSON.parse(nativeJson);
+              const checks = getChecks();
+              let changed = false;
+              arr.forEach(item => {
+                  if (item.key && item.done && !checks[item.key]) {
+                      checks[item.key] = true;
+                      changed = true;
+                  }
+              });
+              if (changed) { saveChecks(checks); render(); }
+          }
+      }
       syncToNativeWidget();
       if (window.AndroidBridge && window.AndroidBridge.getNativeCheckInStatus) {
         const isChecked = window.AndroidBridge.getNativeCheckInStatus();
-        if (isChecked) {
-          LS.set('native-checkin:' + todayStr(), true);
-          console.log('用户已在桌面完成打卡');
-        }
+        if (isChecked) LS.set('native-checkin:' + todayStr(), true);
       }
     } catch (e) { console.error('init widget sync error:', e); }
   }, 1200);
