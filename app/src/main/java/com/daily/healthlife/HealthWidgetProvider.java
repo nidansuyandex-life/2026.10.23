@@ -97,7 +97,7 @@ public class HealthWidgetProvider extends AppWidgetProvider {
             if (list.isEmpty()) {
                 for (int i = 0; i < 5; i++) {
                     JSONObject dummy = new JSONObject();
-                    dummy.put("text", "请打开App同步数据");
+                    dummy.put("text", "请打开App同步");
                     dummy.put("icon", "⚠️");
                     dummy.put("time", "");
                     dummy.put("key", "dummy_" + i);
@@ -137,14 +137,15 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                     views.setTextViewText(timeIds[i], time);
                     views.setTextViewText(textIds[i], text);
                     
+                    // 纯文本切换打卡状态
                     if (done) {
-                        // 换成你的实心绿圈
-                        views.setImageViewResource(checkIds[i], R.drawable.widget_checkbox_bg_done);
-                        views.setTextColor(textIds[i], 0xFF9CA3AF); 
+                        views.setTextViewText(checkIds[i], "✅");
+                        views.setTextColor(checkIds[i], 0xFF1FBFA9); // 绿色
+                        views.setTextColor(textIds[i], 0xFF9CA3AF); // 文字变灰
                     } else {
-                        // 换成你的细线空心圈
-                        views.setImageViewResource(checkIds[i], R.drawable.widget_checkbox_bg);
-                        views.setTextColor(textIds[i], 0xFF111827);
+                        views.setTextViewText(checkIds[i], "○");
+                        views.setTextColor(checkIds[i], 0xFF6B7280); // 灰色细圈
+                        views.setTextColor(textIds[i], 0xFF111827); // 文字变黑
                     }
 
                     if (!key.startsWith("dummy_")) {
