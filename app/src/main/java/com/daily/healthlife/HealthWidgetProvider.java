@@ -131,7 +131,6 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                     views.setTextViewText(timeIds[i], time);
                     views.setTextViewText(textIds[i], text);
                     
-                    // 极简系统图标，保证 100% 兼容
                     if (done) {
                         views.setImageViewResource(checkIds[i], android.R.drawable.checkbox_on_background);
                         views.setTextColor(textIds[i], 0xFF9CA3AF); 
@@ -146,7 +145,9 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                         toggleIntent.putExtra("item_key", key);
                         toggleIntent.putExtra("item_done", !done);
                         PendingIntent pi = PendingIntent.getBroadcast(context, 10 + i, toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-                        views.setOnClickListener(layouts[i], pi);
+                        
+                        // 这一行已经修正为 setOnClickPendingIntent
+                        views.setOnClickPendingIntent(layouts[i], pi);
                     }
                 } else {
                     views.setViewVisibility(layouts[i], View.GONE);
