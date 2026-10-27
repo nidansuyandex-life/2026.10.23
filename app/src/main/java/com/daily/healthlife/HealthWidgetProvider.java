@@ -97,7 +97,6 @@ public class HealthWidgetProvider extends AppWidgetProvider {
             List<JSONObject> list = new ArrayList<>();
             for (int i = 0; i < arr.length(); i++) list.add(arr.getJSONObject(i));
             
-            // 防空展示
             if (list.isEmpty()) {
                 for (int i = 0; i < 5; i++) {
                     JSONObject dummy = new JSONObject();
@@ -110,7 +109,6 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                 }
             }
             
-            // 按时间排序
             Collections.sort(list, new Comparator<JSONObject>() {
                 @Override
                 public int compare(JSONObject o1, JSONObject o2) {
@@ -118,12 +116,10 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                 }
             });
 
-            // 未完成优先，完成下沉
             List<JSONObject> sortedList = new ArrayList<>();
             for (JSONObject item : list) if (!item.optBoolean("done", false)) sortedList.add(item);
             for (JSONObject item : list) if (item.optBoolean("done", false)) sortedList.add(item);
 
-            // 完美对应 XML 里的 ID
             int[] layouts = {R.id.widget_item_1_layout, R.id.widget_item_2_layout, R.id.widget_item_3_layout, R.id.widget_item_4_layout, R.id.widget_item_5_layout};
             int[] icons = {R.id.widget_item_1_icon, R.id.widget_item_2_icon, R.id.widget_item_3_icon, R.id.widget_item_4_icon, R.id.widget_item_5_icon};
             int[] timeIds = {R.id.widget_item_1_time, R.id.widget_item_2_time, R.id.widget_item_3_time, R.id.widget_item_4_time, R.id.widget_item_5_time};
@@ -144,15 +140,15 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                     views.setTextViewText(timeIds[i], time);
                     views.setTextViewText(textIds[i], text);
                     
+                    // 变成黑色空心圆(radiobutton_off) 或 绿色实心圆(radiobutton_on)
                     if (done) {
-                        views.setImageViewResource(checkIds[i], android.R.drawable.checkbox_on_background);
+                        views.setImageViewResource(checkIds[i], android.R.drawable.radiobutton_on_background);
                         views.setTextColor(textIds[i], 0xFF9CA3AF); 
                     } else {
-                        views.setImageViewResource(checkIds[i], android.R.drawable.checkbox_off_background);
+                        views.setImageViewResource(checkIds[i], android.R.drawable.radiobutton_off_background);
                         views.setTextColor(textIds[i], 0xFF111827);
                     }
 
-                    // 点击事件绑定
                     if (!key.startsWith("dummy_")) {
                         Intent toggleIntent = new Intent(context, HealthWidgetProvider.class);
                         toggleIntent.setAction(ACTION_WIDGET_TOGGLE_ITEM);
