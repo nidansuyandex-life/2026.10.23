@@ -70,6 +70,7 @@ public class HealthWidgetProvider extends AppWidgetProvider {
     private void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_health_card);
 
+        // 1. 设置本月支出金额
         try {
             SharedPreferences sp = context.getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
             String expenseText = sp.getString("month_expense", "0");
@@ -78,6 +79,7 @@ public class HealthWidgetProvider extends AppWidgetProvider {
             views.setTextViewText(R.id.widget_expense, expenseNum);
         } catch (Exception ignored) {}
 
+        // 2. 绑定打开APP按钮
         try {
             Intent openAppIntent = new Intent(context, MainActivity.class);
             openAppIntent.setAction(Intent.ACTION_MAIN);
@@ -87,6 +89,7 @@ public class HealthWidgetProvider extends AppWidgetProvider {
             views.setOnClickPendingIntent(R.id.widget_btn_open_app, openAppPi);
         } catch (Exception ignored) {}
 
+        // 3. 渲染时间线列表
         try {
             SharedPreferences sp = context.getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
             String timelineJson = sp.getString("timeline_data", "[]");
@@ -94,10 +97,11 @@ public class HealthWidgetProvider extends AppWidgetProvider {
             List<JSONObject> list = new ArrayList<>();
             for (int i = 0; i < arr.length(); i++) list.add(arr.getJSONObject(i));
             
+            // 防空展示
             if (list.isEmpty()) {
                 for (int i = 0; i < 5; i++) {
                     JSONObject dummy = new JSONObject();
-                    dummy.put("text", "暂无数据");
+                    dummy.put("text", "请打开App同步数据");
                     dummy.put("icon", "⚠️");
                     dummy.put("time", "");
                     dummy.put("key", "dummy_" + i);
@@ -106,6 +110,7 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                 }
             }
             
+            // 按时间排序
             Collections.sort(list, new Comparator<JSONObject>() {
                 @Override
                 public int compare(JSONObject o1, JSONObject o2) {
@@ -113,10 +118,12 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                 }
             });
 
+            // 未完成优先，完成下沉
             List<JSONObject> sortedList = new ArrayList<>();
             for (JSONObject item : list) if (!item.optBoolean("done", false)) sortedList.add(item);
             for (JSONObject item : list) if (item.optBoolean("done", false)) sortedList.add(item);
 
+            // 完美对应 XML 里的 ID
             int[] layouts = {R.id.widget_item_1_layout, R.id.widget_item_2_layout, R.id.widget_item_3_layout, R.id.widget_item_4_layout, R.id.widget_item_5_layout};
             int[] icons = {R.id.widget_item_1_icon, R.id.widget_item_2_icon, R.id.widget_item_3_icon, R.id.widget_item_4_icon, R.id.widget_item_5_icon};
             int[] timeIds = {R.id.widget_item_1_time, R.id.widget_item_2_time, R.id.widget_item_3_time, R.id.widget_item_4_time, R.id.widget_item_5_time};
@@ -145,6 +152,7 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                         views.setTextColor(textIds[i], 0xFF111827);
                     }
 
+                    // 点击事件绑定
                     if (!key.startsWith("dummy_")) {
                         Intent toggleIntent = new Intent(context, HealthWidgetProvider.class);
                         toggleIntent.setAction(ACTION_WIDGET_TOGGLE_ITEM);
