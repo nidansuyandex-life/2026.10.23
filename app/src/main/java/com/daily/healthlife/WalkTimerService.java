@@ -22,10 +22,12 @@ public class WalkTimerService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        // 初始化原生语音引擎
         tts = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) tts.setLanguage(Locale.CHINA);
         });
-        // 必须开启前台通知，否则锁屏后会被系统杀掉
+        
+        // 开启前台通知，保活服务
         String channelId = "walk_timer";
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(channelId, "站立倒计时", NotificationManager.IMPORTANCE_LOW);
@@ -44,6 +46,12 @@ public class WalkTimerService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && intent.hasExtra("duration")) {
             int seconds = intent.getIntExtra("duration", 200);
+            
+            // ★ 倒计时开始时：原生语音播报 + 震动
+            if (tts != null) {
+                tts.speak("该站起来走动了，活动两到三分钟", TextToSpeech.QUEUE_FLUSH, null, "start");
+            }
+            
             startTimer(seconds * 1000L);
         }
         return START_NOT_STICKY;
@@ -54,16 +62,23 @@ public class WalkTimerService extends Service {
         timer = new CountDownTimer(ms, 1000) {
             @Override
             public void onTick(long millisUntilFinished) {}
+            
             @Override
             public void onFinish() {
-                // 播放系统提示音
-                ToneGenerator toneG = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
-                toneG.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 2000);
-                // 语音播报
+                // ★ 倒计时结束时：播放系统提示音 + 语音播报
+                try {
+                    ToneGenerator toneG = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
+                    toneG.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 2000);
+                } catch (Exception ignored) {}
+                
                 if (tts != null) {
-                    tts.speak("时间到，请站起来活动一下", TextToSpeech.QUEUE_FLUSH, null, "wake");
+                    tts.speak("时间到，请站起来活动一下", TextToSpeech.QUEUE_FLUSH, null, "end");
                 }
-                stopSelf(); // 播报完关闭服务
+                
+                // 播放完后延迟销毁服务
+                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                    stopSelf();
+                }, 5000);
             }
         }.start();
     }
