@@ -42,12 +42,14 @@ public class JsBridge {
         this.recorder = new VoiceRecorder(a);
     }
 
+    // ============ TTS 语音 ============
     @JavascriptInterface
     public void speak(String text, String lang) { tts.speak(text, lang); }
 
     @JavascriptInterface
     public void stopSpeak() { tts.stop(); }
 
+    // ============ 语音识别 ============
     @JavascriptInterface
     public void startRecognize(int durationSec) {
         act.runOnUiThread(() -> recorder.start(durationSec, new VoiceRecorder.Callback() {
@@ -81,24 +83,20 @@ public class JsBridge {
         return sb.append("'").toString();
     }
 
+    // ============ 文件与图片 ============
     @JavascriptInterface
     public String saveImage(String base64Data, String filename) {
         try {
             byte[] bytes = Base64.decode(base64Data.split(",")[1], Base64.DEFAULT);
             File dir = act.getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-            if (!existsDir(dir)) return "";
+            if (dir != null && !dir.exists()) dir.mkdirs();
+            if (dir == null) return "";
             File f = new File(dir, filename);
             FileOutputStream fos = new FileOutputStream(f);
             fos.write(bytes);
             fos.close();
             return f.getAbsolutePath();
         } catch (Exception e) { return ""; }
-    }
-
-    private boolean existsDir(File dir) {
-        if (dir == null) return false;
-        if (!dir.exists()) return dir.mkdirs();
-        return true;
     }
 
     @JavascriptInterface
@@ -184,6 +182,7 @@ public class JsBridge {
         });
     }
 
+    // ============ 通知与震动 ============
     @JavascriptInterface
     public void notify(String title, String body) {
         try {
@@ -196,7 +195,7 @@ public class JsBridge {
                     .setSmallIcon(android.R.drawable.ic_dialog_info)
                     .setContentTitle(title)
                     .setContentText(body)
-                    .setPriority(NotificationCompat.PRIORITY_HIGH) // 这里修复了
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
                     .setAutoCancel(true);
             nm.notify((int) (System.currentTimeMillis() % 100000), b.build());
         } catch (Exception e) {}
@@ -215,6 +214,7 @@ public class JsBridge {
         } catch (Exception ignored) {}
     }
 
+    // ============ 小部件数据同步 ============
     @JavascriptInterface
     public void syncWidgetData(String studyProgress, String monthExpense) {
         SharedPreferences sp = act.getApplicationContext().getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
@@ -238,10 +238,24 @@ public class JsBridge {
         return sp.getString("timeline_data", "[]");
     }
 
+    // ============ 原生倒计时后台保活服务 ============
     @JavascriptInterface
-    public boolean getNativeCheckInStatus() {
-        SharedPreferences sp = act.getApplicationContext().getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
-        return sp.getBoolean("is_checked_in", false);
+    public void startNativeWalkTimer(int seconds) {
+        Context context = act.getApplicationContext();
+        Intent intent = new Intent(context, WalkTimerService.class);
+        intent.putExtra("duration", seconds);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent);
+        } else {
+            context.startService(intent);
+        }
+    }
+
+    @JavascriptInterface
+    public void stopNativeWalkTimer() {
+        Context context = act.getApplicationContext();
+        Intent intent = new Intent(context, WalkTimerService.class);
+        context.stopService(intent);
     }
 
     public void destroy() {
