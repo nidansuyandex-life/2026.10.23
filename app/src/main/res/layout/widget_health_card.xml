@@ -3,12 +3,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#FFFFFF"
-    android:padding="12dp"
+    android:padding="16dp"
     android:orientation="horizontal">
 
-    <!-- 左侧：极简数据栏 -->
+    <!-- 左侧：固定 75dp 宽度，留出更多空间给右侧大字 -->
     <LinearLayout
-        android:layout_width="85dp"
+        android:layout_width="75dp"
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:gravity="center">
@@ -17,7 +17,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="💰"
-            android:textSize="32sp" />
+            android:textSize="32dp" />
             
         <TextView
             android:id="@+id/widget_expense"
@@ -26,7 +26,7 @@
             android:layout_marginTop="4dp"
             android:text="0"
             android:textColor="#FF6B5B"
-            android:textSize="28sp"
+            android:textSize="26dp"
             android:textStyle="bold" />
 
         <TextView
@@ -35,7 +35,7 @@
             android:layout_marginTop="2dp"
             android:text="本月支出"
             android:textColor="#9CA3AF"
-            android:textSize="12sp" />
+            android:textSize="12dp" />
 
         <TextView
             android:id="@+id/widget_btn_open_app"
@@ -49,10 +49,10 @@
             android:paddingTop="6dp"
             android:paddingBottom="6dp"
             android:textColor="#4A9EFF"
-            android:textSize="12sp" />
+            android:textSize="12dp" />
     </LinearLayout>
 
-    <!-- 右侧：5 个时间线 -->
+    <!-- 右侧：时间线 -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_weight="1"
@@ -62,43 +62,44 @@
         android:gravity="center_vertical">
 
         <!-- 1 -->
-        <LinearLayout android:id="@+id/widget_item_1_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="5dp" android:paddingBottom="5dp">
-            <TextView android:id="@+id/widget_item_1_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🏃" android:textSize="16sp" android:layout_marginRight="6dp" />
-            <TextView android:id="@+id/widget_item_1_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="07:40" android:textColor="#6B7280" android:textSize="12sp" android:layout_marginRight="8dp" />
-            <TextView android:id="@+id/widget_item_1_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="起床" android:textColor="#111827" android:textSize="16sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-            <ImageView android:id="@+id/widget_item_1_check" android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/widget_checkbox_bg" />
+        <LinearLayout android:id="@+id/widget_item_1_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="8dp" android:paddingBottom="8dp">
+            <TextView android:id="@+id/widget_item_1_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🏃" android:textSize="20dp" android:layout_marginRight="8dp" />
+            <TextView android:id="@+id/widget_item_1_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="07:40" android:textColor="#6B7280" android:textSize="14dp" android:layout_marginRight="8dp" />
+            <TextView android:id="@+id/widget_item_1_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="起床" android:textColor="#111827" android:textSize="18dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+            <!-- 纯文本圈圈，绝对不崩 -->
+            <TextView android:id="@+id/widget_item_1_check" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="○" android:textColor="#9CA3AF" android:textSize="26dp" />
         </LinearLayout>
 
         <!-- 2 -->
-        <LinearLayout android:id="@+id/widget_item_2_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="5dp" android:paddingBottom="5dp">
-            <TextView android:id="@+id/widget_item_2_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🐱" android:textSize="16sp" android:layout_marginRight="6dp" />
-            <TextView android:id="@+id/widget_item_2_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="08:00" android:textColor="#6B7280" android:textSize="12sp" android:layout_marginRight="8dp" />
-            <TextView android:id="@+id/widget_item_2_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="16sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-            <ImageView android:id="@+id/widget_item_2_check" android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/widget_checkbox_bg" />
+        <LinearLayout android:id="@+id/widget_item_2_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="8dp" android:paddingBottom="8dp">
+            <TextView android:id="@+id/widget_item_2_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🐱" android:textSize="20dp" android:layout_marginRight="8dp" />
+            <TextView android:id="@+id/widget_item_2_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="08:00" android:textColor="#6B7280" android:textSize="14dp" android:layout_marginRight="8dp" />
+            <TextView android:id="@+id/widget_item_2_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="18dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+            <TextView android:id="@+id/widget_item_2_check" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="○" android:textColor="#9CA3AF" android:textSize="26dp" />
         </LinearLayout>
 
         <!-- 3 -->
-        <LinearLayout android:id="@+id/widget_item_3_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="5dp" android:paddingBottom="5dp">
-            <TextView android:id="@+id/widget_item_3_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📝" android:textSize="16sp" android:layout_marginRight="6dp" />
-            <TextView android:id="@+id/widget_item_3_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#6B7280" android:textSize="12sp" android:layout_marginRight="8dp" />
-            <TextView android:id="@+id/widget_item_3_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="16sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-            <ImageView android:id="@+id/widget_item_3_check" android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/widget_checkbox_bg" />
+        <LinearLayout android:id="@+id/widget_item_3_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="8dp" android:paddingBottom="8dp">
+            <TextView android:id="@+id/widget_item_3_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📝" android:textSize="20dp" android:layout_marginRight="8dp" />
+            <TextView android:id="@+id/widget_item_3_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#6B7280" android:textSize="14dp" android:layout_marginRight="8dp" />
+            <TextView android:id="@+id/widget_item_3_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="18dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+            <TextView android:id="@+id/widget_item_3_check" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="○" android:textColor="#9CA3AF" android:textSize="26dp" />
         </LinearLayout>
 
         <!-- 4 -->
-        <LinearLayout android:id="@+id/widget_item_4_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="5dp" android:paddingBottom="5dp">
-            <TextView android:id="@+id/widget_item_4_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📚" android:textSize="16sp" android:layout_marginRight="6dp" />
-            <TextView android:id="@+id/widget_item_4_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#6B7280" android:textSize="12sp" android:layout_marginRight="8dp" />
-            <TextView android:id="@+id/widget_item_4_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="16sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-            <ImageView android:id="@+id/widget_item_4_check" android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/widget_checkbox_bg" />
+        <LinearLayout android:id="@+id/widget_item_4_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="8dp" android:paddingBottom="8dp">
+            <TextView android:id="@+id/widget_item_4_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📚" android:textSize="20dp" android:layout_marginRight="8dp" />
+            <TextView android:id="@+id/widget_item_4_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#6B7280" android:textSize="14dp" android:layout_marginRight="8dp" />
+            <TextView android:id="@+id/widget_item_4_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="18dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+            <TextView android:id="@+id/widget_item_4_check" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="○" android:textColor="#9CA3AF" android:textSize="26dp" />
         </LinearLayout>
 
         <!-- 5 -->
-        <LinearLayout android:id="@+id/widget_item_5_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="5dp" android:paddingBottom="5dp">
-            <TextView android:id="@+id/widget_item_5_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🧴" android:textSize="16sp" android:layout_marginRight="6dp" />
-            <TextView android:id="@+id/widget_item_5_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#6B7280" android:textSize="12sp" android:layout_marginRight="8dp" />
-            <TextView android:id="@+id/widget_item_5_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="16sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-            <ImageView android:id="@+id/widget_item_5_check" android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/widget_checkbox_bg" />
+        <LinearLayout android:id="@+id/widget_item_5_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="8dp" android:paddingBottom="8dp">
+            <TextView android:id="@+id/widget_item_5_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🧴" android:textSize="20dp" android:layout_marginRight="8dp" />
+            <TextView android:id="@+id/widget_item_5_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#6B7280" android:textSize="14dp" android:layout_marginRight="8dp" />
+            <TextView android:id="@+id/widget_item_5_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="18dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+            <TextView android:id="@+id/widget_item_5_check" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="○" android:textColor="#9CA3AF" android:textSize="26dp" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>
