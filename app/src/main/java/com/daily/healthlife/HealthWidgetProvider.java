@@ -3,169 +3,164 @@ package com.daily.healthlife;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.util.Log;
 import android.view.View;
 import android.widget.RemoteViews;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
 public class HealthWidgetProvider extends AppWidgetProvider {
-
-    private static final String TAG = "HealthWidget";
-    // 这里的 Action 必须和 Manifest 里 receiver 的 intent-filter 对应
-    private static final String ACTION_CHECKIN = "com.daily.healthlife.WIDGET_CHECKIN";
-    
-    // 【重要】这里必须换成你 JsBridge 存数据用的 SP 名和 Key
-    private static final String SP_NAME = "HealthWidgetData"; 
-    private static final String SP_KEY_DATA = "timeline_data";
+    public static final String ACTION_WIDGET_TOGGLE_ITEM = "com.daily.healthlife.WIDGET_TOGGLE_ITEM";
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         for (int appWidgetId : appWidgetIds) {
-            try {
-                updateWidget(context, appWidgetManager, appWidgetId);
-            } catch (Exception e) {
-                Log.e(TAG, "onUpdate crash prevented: " + e.getMessage());
-            }
+            try { updateWidget(context, appWidgetManager, appWidgetId); } catch (Throwable t) { t.printStackTrace(); }
         }
     }
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        super.onReceive(context, intent);
-        // 监听打卡点击事件
-        if (ACTION_CHECKIN.equals(intent.getAction())) {
-            try {
-                String taskKey = intent.getStringExtra("task_key");
-                if (taskKey != null) {
-                    // 1. 翻转状态并保存
-                    toggleTask(context, taskKey);
-                    // 2. 刷新所有小部件
-                    AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
-                    int[] appWidgetIds = appWidgetManager.getAppWidgetIds(new android.content.ComponentName(context, HealthWidgetProvider.class));
-                    for (int appWidgetId : appWidgetIds) {
-                        updateWidget(context, appWidgetManager, appWidgetId);
-                    }
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "onReceive crash prevented: " + e.getMessage());
-            }
-        }
-    }
-
-    // 翻转打卡状态
-    private void toggleTask(Context context, String taskKey) {
         try {
-            SharedPreferences sp = context.getSharedPreferences(SP_NAME, Context.MODE_PRIVATE);
-            String jsonStr = sp.getString(SP_KEY_DATA, "[]");
-            JSONArray array = new JSONArray(jsonStr);
-            
-            for (int i = 0; i < array.length(); i++) {
-                JSONObject obj = array.getJSONObject(i);
-                if (obj.optString("key").equals(taskKey)) {
-                    boolean done = obj.optBoolean("done", false);
-                    obj.put("done", !done); // 翻转状态
-                    break;
-                }
+            super.onReceive(context, intent);
+            if (ACTION_WIDGET_TOGGLE_ITEM.equals(intent.getAction())) {
+                String key = intent.getStringExtra("item_key");
+                boolean done = intent.getBooleanExtra("item_done", false);
+                
+                SharedPreferences sp = context.getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
+                String timelineJson = sp.getString("timeline_data", "[]");
+                try {
+                    JSONArray arr = new JSONArray(timelineJson);
+                    for (int i = 0; i < arr.length(); i++) {
+                        JSONObject item = arr.getJSONObject(i);
+                        if (key != null && key.equals(item.optString("key"))) {
+                            item.put("done", done);
+                            break;
+                        }
+                    }
+                    sp.edit().putString("timeline_data", arr.toString()).apply();
+                } catch (Exception ignored) {}
+                
+                refreshAll(context);
+                
+                Intent broadcast = new Intent(ACTION_WIDGET_TOGGLE_ITEM);
+                broadcast.putExtra("item_key", key);
+                broadcast.putExtra("item_done", done);
+                context.sendBroadcast(broadcast);
             }
-            sp.edit().putString(SP_KEY_DATA, array.toString()).apply();
-
-            // 发送广播通知 MainActivity 让 H5 同步（显式指定包名，Android 8.0+ 必备）
-            Intent intent = new Intent("com.daily.healthlife.ACTION_SYNC_TO_H5");
-            intent.setPackage(context.getPackageName());
-            intent.putExtra("data", array.toString());
-            context.sendBroadcast(intent);
-
-        } catch (Exception e) {
-            Log.e(TAG, "toggleTask error: " + e.getMessage());
-        }
+        } catch (Throwable t) { t.printStackTrace(); }
     }
 
-    // 核心渲染方法
+    private void refreshAll(Context context) {
+        try {
+            AppWidgetManager manager = AppWidgetManager.getInstance(context);
+            ComponentName componentName = new ComponentName(context, HealthWidgetProvider.class);
+            int[] ids = manager.getAppWidgetIds(componentName);
+            for (int id : ids) { updateWidget(context, manager, id); }
+        } catch (Throwable t) { t.printStackTrace(); }
+    }
+
     private void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_health_card);
 
         try {
-            // 1. 打开APP按钮点击事件
-            Intent openIntent = new Intent(context, MainActivity.class);
-            PendingIntent openPi = PendingIntent.getActivity(context, 0, openIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-            views.setOnClickPendingIntent(R.id.tv_open_app, openPi);
+            SharedPreferences sp = context.getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
+            String expenseText = sp.getString("month_expense", "0");
+            String expenseNum = expenseText.replaceAll("[^0-9.]", "");
+            if (expenseNum.isEmpty()) expenseNum = "0";
+            views.setTextViewText(R.id.widget_expense, expenseNum);
+        } catch (Exception ignored) {}
 
-            // 2. 读取 SP 数据
-            SharedPreferences sp = context.getSharedPreferences(SP_NAME, Context.MODE_PRIVATE);
-            String jsonStr = sp.getString(SP_KEY_DATA, "[]");
-            JSONArray array = new JSONArray(jsonStr);
+        try {
+            Intent openAppIntent = new Intent(context, MainActivity.class);
+            openAppIntent.setAction(Intent.ACTION_MAIN);
+            openAppIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+            openAppIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            PendingIntent openAppPi = PendingIntent.getActivity(context, 4, openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            views.setOnClickPendingIntent(R.id.widget_btn_open_app, openAppPi);
+        } catch (Exception ignored) {}
+
+        try {
+            SharedPreferences sp = context.getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
+            String timelineJson = sp.getString("timeline_data", "[]");
+            JSONArray arr = new JSONArray(timelineJson);
+            List<JSONObject> list = new ArrayList<>();
+            for (int i = 0; i < arr.length(); i++) list.add(arr.getJSONObject(i));
             
-            List<JSONObject> taskList = new ArrayList<>();
-            for (int i = 0; i < array.length(); i++) {
-                taskList.add(array.getJSONObject(i));
+            if (list.isEmpty()) {
+                for (int i = 0; i < 5; i++) {
+                    JSONObject dummy = new JSONObject();
+                    dummy.put("text", "暂无数据");
+                    dummy.put("icon", "⚠️");
+                    dummy.put("time", "");
+                    dummy.put("key", "dummy_" + i);
+                    dummy.put("done", false);
+                    list.add(dummy);
+                }
             }
-
-            // 3. 【智能下沉】未完成在前 (false=0)，完成在后 (true=1)
-            Collections.sort(taskList, new Comparator<JSONObject>() {
+            
+            Collections.sort(list, new Comparator<JSONObject>() {
                 @Override
                 public int compare(JSONObject o1, JSONObject o2) {
-                    boolean done1 = o1.optBoolean("done", false);
-                    boolean done2 = o2.optBoolean("done", false);
-                    return Boolean.compare(done1, done2);
+                    return o1.optString("time").compareTo(o2.optString("time"));
                 }
             });
 
-            // 4. 渲染前 5 个任务
-            int[] rowIds = {R.id.row_0, R.id.row_1, R.id.row_2, R.id.row_3, R.id.row_4};
-            int[] iconIds = {R.id.icon_0, R.id.icon_1, R.id.icon_2, R.id.icon_3, R.id.icon_4};
-            int[] textIds = {R.id.text_0, R.id.text_1, R.id.text_2, R.id.text_3, R.id.text_4};
-            int[] scoreIds = {R.id.score_0, R.id.score_1, R.id.score_2, R.id.score_3, R.id.score_4};
-            int[] btnIds = {R.id.btn_0, R.id.btn_1, R.id.btn_2, R.id.btn_3, R.id.btn_4};
+            List<JSONObject> sortedList = new ArrayList<>();
+            for (JSONObject item : list) if (!item.optBoolean("done", false)) sortedList.add(item);
+            for (JSONObject item : list) if (item.optBoolean("done", false)) sortedList.add(item);
+
+            int[] layouts = {R.id.widget_item_1_layout, R.id.widget_item_2_layout, R.id.widget_item_3_layout, R.id.widget_item_4_layout, R.id.widget_item_5_layout};
+            int[] icons = {R.id.widget_item_1_icon, R.id.widget_item_2_icon, R.id.widget_item_3_icon, R.id.widget_item_4_icon, R.id.widget_item_5_icon};
+            int[] timeIds = {R.id.widget_item_1_time, R.id.widget_item_2_time, R.id.widget_item_3_time, R.id.widget_item_4_time, R.id.widget_item_5_time};
+            int[] textIds = {R.id.widget_item_1_text, R.id.widget_item_2_text, R.id.widget_item_3_text, R.id.widget_item_4_text, R.id.widget_item_5_text};
+            int[] checkIds = {R.id.widget_item_1_check, R.id.widget_item_2_check, R.id.widget_item_3_check, R.id.widget_item_4_check, R.id.widget_item_5_check};
 
             for (int i = 0; i < 5; i++) {
-                if (i < taskList.size()) {
-                    JSONObject task = taskList.get(i);
-                    views.setViewVisibility(rowIds[i], View.VISIBLE);
-                    
-                    views.setTextViewText(iconIds[i], task.optString("icon", "📌"));
-                    
-                    // 拼接时间和任务文字，比如 "07:40 起床"
-                    String time = task.optString("time", "");
-                    String text = task.optString("text", "");
-                    views.setTextViewText(textIds[i], time + " " + text);
-                    
-                    // 分数（假设 JSON 里有 score 字段，没有就显示默认）
-                    views.setTextViewText(scoreIds[i], "+" + task.optInt("score", 1));
+                if (i < sortedList.size()) {
+                    JSONObject item = sortedList.get(i);
+                    String time = item.optString("time", "");
+                    String text = item.optString("text", "");
+                    String icon = item.optString("icon", "✅");
+                    String key = item.optString("key", "");
+                    boolean done = item.optBoolean("done", false);
 
-                    // 改变打勾圆圈样式
-                    boolean done = task.optBoolean("done", false);
-                    views.setImageViewResource(btnIds[i], done ? android.R.drawable.checkbox_on_background : android.R.drawable.checkbox_off_background);
+                    views.setViewVisibility(layouts[i], View.VISIBLE);
+                    views.setTextViewText(icons[i], icon);
+                    views.setTextViewText(timeIds[i], time);
+                    views.setTextViewText(textIds[i], text);
+                    
+                    if (done) {
+                        views.setImageViewResource(checkIds[i], android.R.drawable.checkbox_on_background);
+                        views.setTextColor(textIds[i], 0xFF9CA3AF); 
+                    } else {
+                        views.setImageViewResource(checkIds[i], android.R.drawable.checkbox_off_background);
+                        views.setTextColor(textIds[i], 0xFF111827);
+                    }
 
-                    // 【核心】绑定打卡点击事件
-                    Intent toggleIntent = new Intent(context, HealthWidgetProvider.class);
-                    toggleIntent.setAction(ACTION_CHECKIN);
-                    toggleIntent.putExtra("task_key", task.optString("key", ""));
-                    // requestCode 用 1000 + i，防止5行点击事件互相覆盖
-                    PendingIntent togglePi = PendingIntent.getBroadcast(context, 1000 + i, toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-                    // 整行都可以点击
-                    views.setOnClickPendingIntent(rowIds[i], togglePi); 
-
+                    if (!key.startsWith("dummy_")) {
+                        Intent toggleIntent = new Intent(context, HealthWidgetProvider.class);
+                        toggleIntent.setAction(ACTION_WIDGET_TOGGLE_ITEM);
+                        toggleIntent.putExtra("item_key", key);
+                        toggleIntent.putExtra("item_done", !done);
+                        PendingIntent pi = PendingIntent.getBroadcast(context, 10 + i, toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                        views.setOnClickPendingIntent(layouts[i], pi);
+                    }
                 } else {
-                    // 数据不足 5 条，隐藏对应行
-                    views.setViewVisibility(rowIds[i], View.GONE);
+                    views.setViewVisibility(layouts[i], View.GONE);
                 }
             }
-
-        } catch (Exception e) {
-            Log.e(TAG, "updateWidget parse data error: " + e.getMessage());
+        } catch (Throwable t) { 
+            t.printStackTrace(); 
         }
-        
-        // 无论如何，都要更新小部件，防止显示 "载入失败"
+
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
 }
