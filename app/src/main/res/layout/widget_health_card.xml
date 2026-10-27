@@ -2,104 +2,75 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
-    android:padding="16dp"
-    android:orientation="horizontal">
+    android:background="@drawable/widget_bg_transparent"
+    android:padding="20dp"
+    android:orientation="vertical">
 
-    <!-- 左侧：固定 75dp 宽度，留出更多空间给右侧大字 -->
+    <!-- 顶栏：Today + 打开APP -->
     <LinearLayout
-        android:layout_width="75dp"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="center">
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
         
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="💰"
-            android:textSize="32dp" />
-            
-        <TextView
-            android:id="@+id/widget_expense"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="0"
-            android:textColor="#FF6B5B"
-            android:textSize="26dp"
+            android:text="Today"
+            android:textColor="#111827"
+            android:textSize="22dp"
             android:textStyle="bold" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="本月支出"
-            android:textColor="#9CA3AF"
-            android:textSize="12dp" />
-
+        <!-- 把原来的时间换成打开APP按钮 -->
         <TextView
             android:id="@+id/widget_btn_open_app"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
             android:text="打开 APP"
             android:background="#EAF3FF"
-            android:paddingLeft="10dp"
-            android:paddingRight="10dp"
+            android:paddingLeft="14dp"
+            android:paddingRight="14dp"
             android:paddingTop="6dp"
             android:paddingBottom="6dp"
             android:textColor="#4A9EFF"
-            android:textSize="12dp" />
+            android:textSize="13dp"
+            android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- 右侧：时间线 -->
-    <LinearLayout
-        android:layout_width="0dp"
-        android:layout_weight="1"
-        android:layout_height="match_parent"
-        android:layout_marginLeft="12dp"
-        android:orientation="vertical"
-        android:gravity="center_vertical">
+    <!-- 列表 1 -->
+    <LinearLayout android:id="@+id/widget_item_1_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="6dp" android:paddingBottom="6dp">
+        <TextView android:id="@+id/widget_item_1_check" android:layout_width="26dp" android:layout_height="26dp" android:background="@drawable/widget_square_bg" android:text="1" android:textColor="#9CA3AF" android:textSize="13dp" android:gravity="center" android:layout_marginRight="12dp" />
+        <TextView android:id="@+id/widget_item_1_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="加载中..." android:textColor="#111827" android:textSize="18dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/widget_item_1_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🌅" android:textSize="18dp" android:layout_marginLeft="8dp" />
+    </LinearLayout>
 
-        <!-- 1 -->
-        <LinearLayout android:id="@+id/widget_item_1_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="8dp" android:paddingBottom="8dp">
-            <TextView android:id="@+id/widget_item_1_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🏃" android:textSize="20dp" android:layout_marginRight="8dp" />
-            <TextView android:id="@+id/widget_item_1_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="07:40" android:textColor="#6B7280" android:textSize="14dp" android:layout_marginRight="8dp" />
-            <TextView android:id="@+id/widget_item_1_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="起床" android:textColor="#111827" android:textSize="18dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-            <!-- 纯文本圈圈，绝对不崩 -->
-            <TextView android:id="@+id/widget_item_1_check" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="○" android:textColor="#9CA3AF" android:textSize="26dp" />
-        </LinearLayout>
+    <!-- 列表 2 -->
+    <LinearLayout android:id="@+id/widget_item_2_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="6dp" android:paddingBottom="6dp">
+        <TextView android:id="@+id/widget_item_2_check" android:layout_width="26dp" android:layout_height="26dp" android:background="@drawable/widget_square_bg" android:text="2" android:textColor="#9CA3AF" android:textSize="13dp" android:gravity="center" android:layout_marginRight="12dp" />
+        <TextView android:id="@+id/widget_item_2_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="18dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/widget_item_2_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🐱" android:textSize="18dp" android:layout_marginLeft="8dp" />
+    </LinearLayout>
 
-        <!-- 2 -->
-        <LinearLayout android:id="@+id/widget_item_2_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="8dp" android:paddingBottom="8dp">
-            <TextView android:id="@+id/widget_item_2_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🐱" android:textSize="20dp" android:layout_marginRight="8dp" />
-            <TextView android:id="@+id/widget_item_2_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="08:00" android:textColor="#6B7280" android:textSize="14dp" android:layout_marginRight="8dp" />
-            <TextView android:id="@+id/widget_item_2_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="18dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-            <TextView android:id="@+id/widget_item_2_check" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="○" android:textColor="#9CA3AF" android:textSize="26dp" />
-        </LinearLayout>
+    <!-- 列表 3 -->
+    <LinearLayout android:id="@+id/widget_item_3_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="6dp" android:paddingBottom="6dp">
+        <TextView android:id="@+id/widget_item_3_check" android:layout_width="26dp" android:layout_height="26dp" android:background="@drawable/widget_square_bg" android:text="3" android:textColor="#9CA3AF" android:textSize="13dp" android:gravity="center" android:layout_marginRight="12dp" />
+        <TextView android:id="@+id/widget_item_3_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="18dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/widget_item_3_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📝" android:textSize="18dp" android:layout_marginLeft="8dp" />
+    </LinearLayout>
 
-        <!-- 3 -->
-        <LinearLayout android:id="@+id/widget_item_3_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="8dp" android:paddingBottom="8dp">
-            <TextView android:id="@+id/widget_item_3_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📝" android:textSize="20dp" android:layout_marginRight="8dp" />
-            <TextView android:id="@+id/widget_item_3_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#6B7280" android:textSize="14dp" android:layout_marginRight="8dp" />
-            <TextView android:id="@+id/widget_item_3_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="18dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-            <TextView android:id="@+id/widget_item_3_check" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="○" android:textColor="#9CA3AF" android:textSize="26dp" />
-        </LinearLayout>
+    <!-- 列表 4 -->
+    <LinearLayout android:id="@+id/widget_item_4_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="6dp" android:paddingBottom="6dp">
+        <TextView android:id="@+id/widget_item_4_check" android:layout_width="26dp" android:layout_height="26dp" android:background="@drawable/widget_square_bg" android:text="4" android:textColor="#9CA3AF" android:textSize="13dp" android:gravity="center" android:layout_marginRight="12dp" />
+        <TextView android:id="@+id/widget_item_4_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="18dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/widget_item_4_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📚" android:textSize="18dp" android:layout_marginLeft="8dp" />
+    </LinearLayout>
 
-        <!-- 4 -->
-        <LinearLayout android:id="@+id/widget_item_4_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="8dp" android:paddingBottom="8dp">
-            <TextView android:id="@+id/widget_item_4_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📚" android:textSize="20dp" android:layout_marginRight="8dp" />
-            <TextView android:id="@+id/widget_item_4_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#6B7280" android:textSize="14dp" android:layout_marginRight="8dp" />
-            <TextView android:id="@+id/widget_item_4_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="18dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-            <TextView android:id="@+id/widget_item_4_check" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="○" android:textColor="#9CA3AF" android:textSize="26dp" />
-        </LinearLayout>
-
-        <!-- 5 -->
-        <LinearLayout android:id="@+id/widget_item_5_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="8dp" android:paddingBottom="8dp">
-            <TextView android:id="@+id/widget_item_5_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🧴" android:textSize="20dp" android:layout_marginRight="8dp" />
-            <TextView android:id="@+id/widget_item_5_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#6B7280" android:textSize="14dp" android:layout_marginRight="8dp" />
-            <TextView android:id="@+id/widget_item_5_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="18dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-            <TextView android:id="@+id/widget_item_5_check" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="○" android:textColor="#9CA3AF" android:textSize="26dp" />
-        </LinearLayout>
+    <!-- 列表 5 -->
+    <LinearLayout android:id="@+id/widget_item_5_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="6dp" android:paddingBottom="6dp">
+        <TextView android:id="@+id/widget_item_5_check" android:layout_width="26dp" android:layout_height="26dp" android:background="@drawable/widget_square_bg" android:text="5" android:textColor="#9CA3AF" android:textSize="13dp" android:gravity="center" android:layout_marginRight="12dp" />
+        <TextView android:id="@+id/widget_item_5_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="18dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/widget_item_5_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🧴" android:textSize="18dp" android:layout_marginLeft="8dp" />
     </LinearLayout>
 </LinearLayout>
