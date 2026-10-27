@@ -70,7 +70,6 @@ public class HealthWidgetProvider extends AppWidgetProvider {
     private void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_health_card);
 
-        // 1. 设置本月支出金额
         try {
             SharedPreferences sp = context.getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
             String expenseText = sp.getString("month_expense", "0");
@@ -79,7 +78,6 @@ public class HealthWidgetProvider extends AppWidgetProvider {
             views.setTextViewText(R.id.widget_expense, expenseNum);
         } catch (Exception ignored) {}
 
-        // 2. 绑定打开APP按钮
         try {
             Intent openAppIntent = new Intent(context, MainActivity.class);
             openAppIntent.setAction(Intent.ACTION_MAIN);
@@ -89,7 +87,6 @@ public class HealthWidgetProvider extends AppWidgetProvider {
             views.setOnClickPendingIntent(R.id.widget_btn_open_app, openAppPi);
         } catch (Exception ignored) {}
 
-        // 3. 渲染时间线列表
         try {
             SharedPreferences sp = context.getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
             String timelineJson = sp.getString("timeline_data", "[]");
@@ -140,12 +137,13 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                     views.setTextViewText(timeIds[i], time);
                     views.setTextViewText(textIds[i], text);
                     
-                    // 变成黑色空心圆(radiobutton_off) 或 绿色实心圆(radiobutton_on)
                     if (done) {
-                        views.setImageViewResource(checkIds[i], android.R.drawable.radiobutton_on_background);
+                        // 换成你的实心绿圈
+                        views.setImageViewResource(checkIds[i], R.drawable.widget_checkbox_bg_done);
                         views.setTextColor(textIds[i], 0xFF9CA3AF); 
                     } else {
-                        views.setImageViewResource(checkIds[i], android.R.drawable.radiobutton_off_background);
+                        // 换成你的细线空心圈
+                        views.setImageViewResource(checkIds[i], R.drawable.widget_checkbox_bg);
                         views.setTextColor(textIds[i], 0xFF111827);
                     }
 
