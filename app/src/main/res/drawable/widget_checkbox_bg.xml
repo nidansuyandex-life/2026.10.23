@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
-    <stroke android:width="2dp" android:color="#D1D5DB" />
-    <solid android:color="#FFFFFF" />
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <!-- 2dp 的深灰色细线，内部透明，完美还原图2 -->
+    <stroke android:width="2dp" android:color="#9CA3AF" />
+    <solid android:color="#00000000" />
 </shape>
