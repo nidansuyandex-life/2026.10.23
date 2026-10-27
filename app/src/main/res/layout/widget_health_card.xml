@@ -3,12 +3,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#FFFFFF"
-    android:padding="14dp"
+    android:padding="16dp"
     android:orientation="horizontal">
 
-    <!-- 左侧侧边栏 -->
+    <!-- 左侧：金额和打开APP -->
     <LinearLayout
-        android:layout_width="85dp"
+        android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:gravity="center">
@@ -17,7 +17,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="💰"
-            android:textSize="28sp" />
+            android:textSize="30sp" />
             
         <TextView
             android:id="@+id/widget_expense"
@@ -26,8 +26,7 @@
             android:layout_marginTop="4dp"
             android:text="0"
             android:textColor="#FF6B5B"
-            android:textSize="26sp"
-            android:textStyle="bold" />
+            android:textSize="26sp" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -37,7 +36,6 @@
             android:textColor="#9CA3AF"
             android:textSize="11sp" />
 
-        <!-- 去掉了容易崩溃的 @drawable/widget_bg，改用最安全的十六进制背景色 -->
         <TextView
             android:id="@+id/widget_btn_open_app"
             android:layout_width="wrap_content"
@@ -45,70 +43,61 @@
             android:layout_marginTop="12dp"
             android:text="打开 APP"
             android:background="#EAF3FF"
-            android:paddingLeft="10dp"
-            android:paddingRight="10dp"
-            android:paddingTop="5dp"
-            android:paddingBottom="5dp"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
             android:textColor="#4A9EFF"
-            android:textSize="11sp"
-            android:textStyle="bold" />
+            android:textSize="12sp" />
     </LinearLayout>
-
-    <!-- 分割线（用安全的 TextView 实现） -->
-    <TextView
-        android:layout_width="1dp"
-        android:layout_height="match_parent"
-        android:background="#F3F5F9"
-        android:layout_marginLeft="8dp"
-        android:layout_marginRight="12dp" />
 
     <!-- 右侧：5 个时间线 -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_weight="1"
         android:layout_height="match_parent"
+        android:layout_marginLeft="20dp"
         android:orientation="vertical"
         android:gravity="center_vertical">
 
         <!-- 槽位 1 -->
-        <LinearLayout android:id="@+id/widget_item_1_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp">
+        <LinearLayout android:id="@+id/widget_item_1_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="6dp" android:paddingBottom="6dp">
             <TextView android:id="@+id/widget_item_1_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🏃" android:textSize="16sp" android:layout_marginRight="6dp" />
-            <TextView android:id="@+id/widget_item_1_time" android:layout_width="36dp" android:layout_height="wrap_content" android:text="07:40" android:textColor="#9CA3AF" android:textSize="11sp" />
-            <TextView android:id="@+id/widget_item_1_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="起床" android:textColor="#111827" android:textSize="15sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-            <!-- 使用绝对安全的系统原生空心圆 -->
-            <ImageView android:id="@+id/widget_item_1_check" android:layout_width="22dp" android:layout_height="22dp" android:src="@android:drawable/radiobutton_off_background" />
+            <TextView android:id="@+id/widget_item_1_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="07:40" android:textColor="#6B7280" android:textSize="12sp" android:layout_marginRight="10dp" />
+            <TextView android:id="@+id/widget_item_1_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="起床" android:textColor="#111827" android:textSize="16sp" android:maxLines="1" android:ellipsize="end" />
+            <ImageView android:id="@+id/widget_item_1_check" android:layout_width="24dp" android:layout_height="24dp" android:src="@android:drawable/checkbox_off_background" />
         </LinearLayout>
 
         <!-- 槽位 2 -->
-        <LinearLayout android:id="@+id/widget_item_2_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp">
+        <LinearLayout android:id="@+id/widget_item_2_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="6dp" android:paddingBottom="6dp">
             <TextView android:id="@+id/widget_item_2_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🐱" android:textSize="16sp" android:layout_marginRight="6dp" />
-            <TextView android:id="@+id/widget_item_2_time" android:layout_width="36dp" android:layout_height="wrap_content" android:text="08:00" android:textColor="#9CA3AF" android:textSize="11sp" />
-            <TextView android:id="@+id/widget_item_2_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="15sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-            <ImageView android:id="@+id/widget_item_2_check" android:layout_width="22dp" android:layout_height="22dp" android:src="@android:drawable/radiobutton_off_background" />
+            <TextView android:id="@+id/widget_item_2_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="08:00" android:textColor="#6B7280" android:textSize="12sp" android:layout_marginRight="10dp" />
+            <TextView android:id="@+id/widget_item_2_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="16sp" android:maxLines="1" android:ellipsize="end" />
+            <ImageView android:id="@+id/widget_item_2_check" android:layout_width="24dp" android:layout_height="24dp" android:src="@android:drawable/checkbox_off_background" />
         </LinearLayout>
 
         <!-- 槽位 3 -->
-        <LinearLayout android:id="@+id/widget_item_3_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp">
+        <LinearLayout android:id="@+id/widget_item_3_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="6dp" android:paddingBottom="6dp">
             <TextView android:id="@+id/widget_item_3_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📝" android:textSize="16sp" android:layout_marginRight="6dp" />
-            <TextView android:id="@+id/widget_item_3_time" android:layout_width="36dp" android:layout_height="wrap_content" android:text="" android:textColor="#9CA3AF" android:textSize="11sp" />
-            <TextView android:id="@+id/widget_item_3_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="15sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-            <ImageView android:id="@+id/widget_item_3_check" android:layout_width="22dp" android:layout_height="22dp" android:src="@android:drawable/radiobutton_off_background" />
+            <TextView android:id="@+id/widget_item_3_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#6B7280" android:textSize="12sp" android:layout_marginRight="10dp" />
+            <TextView android:id="@+id/widget_item_3_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="16sp" android:maxLines="1" android:ellipsize="end" />
+            <ImageView android:id="@+id/widget_item_3_check" android:layout_width="24dp" android:layout_height="24dp" android:src="@android:drawable/checkbox_off_background" />
         </LinearLayout>
 
         <!-- 槽位 4 -->
-        <LinearLayout android:id="@+id/widget_item_4_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp">
+        <LinearLayout android:id="@+id/widget_item_4_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="6dp" android:paddingBottom="6dp">
             <TextView android:id="@+id/widget_item_4_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📚" android:textSize="16sp" android:layout_marginRight="6dp" />
-            <TextView android:id="@+id/widget_item_4_time" android:layout_width="36dp" android:layout_height="wrap_content" android:text="" android:textColor="#9CA3AF" android:textSize="11sp" />
-            <TextView android:id="@+id/widget_item_4_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="15sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-            <ImageView android:id="@+id/widget_item_4_check" android:layout_width="22dp" android:layout_height="22dp" android:src="@android:drawable/radiobutton_off_background" />
+            <TextView android:id="@+id/widget_item_4_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#6B7280" android:textSize="12sp" android:layout_marginRight="10dp" />
+            <TextView android:id="@+id/widget_item_4_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="16sp" android:maxLines="1" android:ellipsize="end" />
+            <ImageView android:id="@+id/widget_item_4_check" android:layout_width="24dp" android:layout_height="24dp" android:src="@android:drawable/checkbox_off_background" />
         </LinearLayout>
 
         <!-- 槽位 5 -->
-        <LinearLayout android:id="@+id/widget_item_5_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp" android:paddingBottom="4dp">
+        <LinearLayout android:id="@+id/widget_item_5_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="6dp" android:paddingBottom="6dp">
             <TextView android:id="@+id/widget_item_5_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🧴" android:textSize="16sp" android:layout_marginRight="6dp" />
-            <TextView android:id="@+id/widget_item_5_time" android:layout_width="36dp" android:layout_height="wrap_content" android:text="" android:textColor="#9CA3AF" android:textSize="11sp" />
-            <TextView android:id="@+id/widget_item_5_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="15sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-            <ImageView android:id="@+id/widget_item_5_check" android:layout_width="22dp" android:layout_height="22dp" android:src="@android:drawable/radiobutton_off_background" />
+            <TextView android:id="@+id/widget_item_5_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#6B7280" android:textSize="12sp" android:layout_marginRight="10dp" />
+            <TextView android:id="@+id/widget_item_5_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="16sp" android:maxLines="1" android:ellipsize="end" />
+            <ImageView android:id="@+id/widget_item_5_check" android:layout_width="24dp" android:layout_height="24dp" android:src="@android:drawable/checkbox_off_background" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>
