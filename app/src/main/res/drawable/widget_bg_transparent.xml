@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- E6 代表 90% 不透明度，产生毛玻璃效果 -->
-    <solid android:color="#E6FFFFFF" />
-    <corners android:radius="24dp" />
-</shape>
