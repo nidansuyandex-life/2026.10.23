@@ -70,14 +70,7 @@ public class HealthWidgetProvider extends AppWidgetProvider {
     private void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_health_card);
 
-        try {
-            SharedPreferences sp = context.getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
-            String expenseText = sp.getString("month_expense", "0");
-            String expenseNum = expenseText.replaceAll("[^0-9.]", "");
-            if (expenseNum.isEmpty()) expenseNum = "0";
-            views.setTextViewText(R.id.widget_expense, expenseNum);
-        } catch (Exception ignored) {}
-
+        // 打开APP按钮
         try {
             Intent openAppIntent = new Intent(context, MainActivity.class);
             openAppIntent.setAction(Intent.ACTION_MAIN);
@@ -87,6 +80,7 @@ public class HealthWidgetProvider extends AppWidgetProvider {
             views.setOnClickPendingIntent(R.id.widget_btn_open_app, openAppPi);
         } catch (Exception ignored) {}
 
+        // 渲染列表
         try {
             SharedPreferences sp = context.getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
             String timelineJson = sp.getString("timeline_data", "[]");
@@ -97,15 +91,15 @@ public class HealthWidgetProvider extends AppWidgetProvider {
             if (list.isEmpty()) {
                 for (int i = 0; i < 5; i++) {
                     JSONObject dummy = new JSONObject();
-                    dummy.put("text", "请打开App同步");
+                    dummy.put("text", "请打开App同步数据");
                     dummy.put("icon", "⚠️");
-                    dummy.put("time", "");
                     dummy.put("key", "dummy_" + i);
                     dummy.put("done", false);
                     list.add(dummy);
                 }
             }
             
+            // 按时间排序
             Collections.sort(list, new Comparator<JSONObject>() {
                 @Override
                 public int compare(JSONObject o1, JSONObject o2) {
@@ -113,38 +107,37 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                 }
             });
 
+            // 未完成优先，完成下沉
             List<JSONObject> sortedList = new ArrayList<>();
             for (JSONObject item : list) if (!item.optBoolean("done", false)) sortedList.add(item);
             for (JSONObject item : list) if (item.optBoolean("done", false)) sortedList.add(item);
 
             int[] layouts = {R.id.widget_item_1_layout, R.id.widget_item_2_layout, R.id.widget_item_3_layout, R.id.widget_item_4_layout, R.id.widget_item_5_layout};
             int[] icons = {R.id.widget_item_1_icon, R.id.widget_item_2_icon, R.id.widget_item_3_icon, R.id.widget_item_4_icon, R.id.widget_item_5_icon};
-            int[] timeIds = {R.id.widget_item_1_time, R.id.widget_item_2_time, R.id.widget_item_3_time, R.id.widget_item_4_time, R.id.widget_item_5_time};
             int[] textIds = {R.id.widget_item_1_text, R.id.widget_item_2_text, R.id.widget_item_3_text, R.id.widget_item_4_text, R.id.widget_item_5_text};
             int[] checkIds = {R.id.widget_item_1_check, R.id.widget_item_2_check, R.id.widget_item_3_check, R.id.widget_item_4_check, R.id.widget_item_5_check};
 
             for (int i = 0; i < 5; i++) {
                 if (i < sortedList.size()) {
                     JSONObject item = sortedList.get(i);
-                    String time = item.optString("time", "");
                     String text = item.optString("text", "");
                     String icon = item.optString("icon", "✅");
                     String key = item.optString("key", "");
                     boolean done = item.optBoolean("done", false);
 
                     views.setViewVisibility(layouts[i], View.VISIBLE);
-                    views.setTextViewText(icons[i], icon);
-                    views.setTextViewText(timeIds[i], time);
                     views.setTextViewText(textIds[i], text);
+                    views.setTextViewText(icons[i], icon);
                     
-                    // 纯文本切换打卡状态
                     if (done) {
-                        views.setTextViewText(checkIds[i], "✅");
-                        views.setTextColor(checkIds[i], 0xFF1FBFA9); // 绿色
+                        views.setTextViewText(checkIds[i], "✓");
+                        views.setTextColor(checkIds[i], 0xFFFFFFFF); // 勾是白色
+                        views.setInt(checkIds[i], "setBackgroundResource", R.drawable.widget_square_bg_done);
                         views.setTextColor(textIds[i], 0xFF9CA3AF); // 文字变灰
                     } else {
-                        views.setTextViewText(checkIds[i], "○");
-                        views.setTextColor(checkIds[i], 0xFF6B7280); // 灰色细圈
+                        views.setTextViewText(checkIds[i], String.valueOf(i + 1)); // 显示 1,2,3,4,5
+                        views.setTextColor(checkIds[i], 0xFF9CA3AF);
+                        views.setInt(checkIds[i], "setBackgroundResource", R.drawable.widget_square_bg);
                         views.setTextColor(textIds[i], 0xFF111827); // 文字变黑
                     }
 
