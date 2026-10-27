@@ -90,7 +90,7 @@ public class HealthWidgetProvider extends AppWidgetProvider {
             if (list.isEmpty()) {
                 for (int i = 0; i < 5; i++) {
                     JSONObject dummy = new JSONObject();
-                    dummy.put("text", "请打开App同步");
+                    dummy.put("text", "请打开App同步数据");
                     dummy.put("icon", "⚠️");
                     dummy.put("time", "");
                     dummy.put("key", "dummy_" + i);
@@ -98,7 +98,7 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                 }
             }
             
-            // 按时间排序
+            // 时间排序
             Collections.sort(list, new Comparator<JSONObject>() {
                 @Override
                 public int compare(JSONObject o1, JSONObject o2) {
@@ -106,7 +106,7 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                 }
             });
 
-            // 未完成的往上顶，已完成的下沉
+            // 未完成优先
             List<JSONObject> sortedList = new ArrayList<>();
             for (JSONObject item : list) if (!item.optBoolean("done", false)) sortedList.add(item);
             for (JSONObject item : list) if (item.optBoolean("done", false)) sortedList.add(item);
@@ -131,12 +131,12 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                     views.setTextViewText(timeIds[i], time);
                     views.setTextViewText(textIds[i], text);
                     
-                    // 换回最安全的系统图标，防止崩溃
+                    // 极简系统图标，保证 100% 兼容
                     if (done) {
-                        views.setImageViewResource(checkIds[i], android.R.drawable.radiobutton_on_background);
+                        views.setImageViewResource(checkIds[i], android.R.drawable.checkbox_on_background);
                         views.setTextColor(textIds[i], 0xFF9CA3AF); 
                     } else {
-                        views.setImageViewResource(checkIds[i], android.R.drawable.radiobutton_off_background);
+                        views.setImageViewResource(checkIds[i], android.R.drawable.checkbox_off_background);
                         views.setTextColor(textIds[i], 0xFF111827);
                     }
 
@@ -146,7 +146,7 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                         toggleIntent.putExtra("item_key", key);
                         toggleIntent.putExtra("item_done", !done);
                         PendingIntent pi = PendingIntent.getBroadcast(context, 10 + i, toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-                        views.setOnClickPendingIntent(layouts[i], pi);
+                        views.setOnClickListener(layouts[i], pi);
                     }
                 } else {
                     views.setViewVisibility(layouts[i], View.GONE);
