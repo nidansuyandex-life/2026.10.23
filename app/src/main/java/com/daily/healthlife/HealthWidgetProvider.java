@@ -3,137 +3,96 @@ package com.daily.healthlife;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.net.Uri;
-import android.view.View;
 import android.widget.RemoteViews;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
 
 public class HealthWidgetProvider extends AppWidgetProvider {
-    public static final String ACTION_WIDGET_TOGGLE_ITEM = "com.daily.healthlife.WIDGET_TOGGLE_ITEM";
 
-    @Override public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
-        for (int id : appWidgetIds) { try { updateWidget(context, appWidgetManager, id); } catch (Throwable t) { t.printStackTrace(); } }
-    }
+    @Override
+    public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
+        for (int appWidgetId : appWidgetIds) {
+            RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_health_card);
 
-    @Override public void onReceive(Context context, Intent intent) {
-        try {
-            super.onReceive(context, intent);
-            if (ACTION_WIDGET_TOGGLE_ITEM.equals(intent.getAction())) {
-                String key = intent.getStringExtra("item_key"); boolean done = intent.getBooleanExtra("item_done", false);
-                SharedPreferences sp = context.getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
-                try {
-                    JSONArray arr = new JSONArray(sp.getString("timeline_data", "[]"));
-                    for (int i = 0; i < arr.length(); i++) {
-                        JSONObject item = arr.getJSONObject(i);
-                        if (key != null && key.equals(item.optString("key"))) { item.put("done", done); break; }
-                    }
-                    sp.edit().putString("timeline_data", arr.toString()).apply();
-                } catch (Exception ignored) {}
-                refreshAll(context);
-            }
-        } catch (Throwable t) { t.printStackTrace(); }
-    }
+            // 1. 设置点击打开 APP 的按钮
+            Intent intent = new Intent(context, MainActivity.class);
+            PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            views.setOnClickPendingIntent(R.id.widget_btn_open_app, pendingIntent);
 
-    private void refreshAll(Context context) {
-        try {
-            AppWidgetManager manager = AppWidgetManager.getInstance(context);
-            for (int id : manager.getAppWidgetIds(new ComponentName(context, HealthWidgetProvider.class))) updateWidget(context, manager, id);
-        } catch (Throwable t) { t.printStackTrace(); }
-    }
-
-    private void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
-        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_health_card);
-        try {
-            Intent openAppIntent = new Intent(context, MainActivity.class).setAction(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            views.setOnClickPendingIntent(R.id.widget_btn_open_app, PendingIntent.getActivity(context, 4, openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
-        } catch (Exception ignored) {}
-
-        try {
-            SharedPreferences sp = context.getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
-            String timelineJson = sp.getString("timeline_data", "[]");
-            String lastSyncDate = sp.getString("last_sync_date", "");
-            String today = new SimpleDateFormat("yyyy-MM-dd", Locale.CHINA).format(new Date());
-            
-            JSONArray arr = new JSONArray(timelineJson);
-            List<JSONObject> list = new ArrayList<>();
-            boolean isCrossDay = !today.equals(lastSyncDate);
-            
-            for (int i = 0; i < arr.length(); i++) {
-                JSONObject item = arr.getJSONObject(i);
-                if (isCrossDay) item.put("done", false);
-                list.add(item);
-            }
-            if (isCrossDay && !list.isEmpty()) sp.edit().putString("timeline_data", new JSONArray(list).toString()).putString("last_sync_date", today).apply();
-
-            if (list.isEmpty()) {
-                for (int i = 0; i < 5; i++) {
-                    JSONObject dummy = new JSONObject();
-                    dummy.put("text", "请打开App同步数据"); dummy.put("icon", "⚠️"); dummy.put("key", "dummy_" + i); dummy.put("done", false); dummy.put("time", "99:99");
-                    list.add(dummy);
-                }
-            }
-
-            Collections.sort(list, (o1, o2) -> o1.optString("time").compareTo(o2.optString("time")));
-            List<JSONObject> sortedList = new ArrayList<>();
-            for (JSONObject item : list) if (!item.optBoolean("done", false)) sortedList.add(item);
-            for (JSONObject item : list) if (item.optBoolean("done", false)) sortedList.add(item);
-
-            int[] layouts = {R.id.widget_item_1_layout, R.id.widget_item_2_layout, R.id.widget_item_3_layout, R.id.widget_item_4_layout, R.id.widget_item_5_layout};
-            int[] icons = {R.id.widget_item_1_icon, R.id.widget_item_2_icon, R.id.widget_item_3_icon, R.id.widget_item_4_icon, R.id.widget_item_5_icon};
+            // 2. 设置默认的静态文案和图标
             int[] textIds = {R.id.widget_item_1_text, R.id.widget_item_2_text, R.id.widget_item_3_text, R.id.widget_item_4_text, R.id.widget_item_5_text};
+            int[] iconIds = {R.id.widget_item_1_icon, R.id.widget_item_2_icon, R.id.widget_item_3_icon, R.id.widget_item_4_icon, R.id.widget_item_5_icon};
             int[] checkIds = {R.id.widget_item_1_check, R.id.widget_item_2_check, R.id.widget_item_3_check, R.id.widget_item_4_check, R.id.widget_item_5_check};
 
+            String[] defaultTexts = {"起床", "护肤", "早饭", "上班", "学习"};
+            String[] defaultIcons = {"🌅", "🐱", "📝", "📚", "🧴"};
+
             for (int i = 0; i < 5; i++) {
-                if (i < sortedList.size()) {
-                    JSONObject item = sortedList.get(i);
-                    String text = item.optString("text", ""); String icon = item.optString("icon", "✅");
-                    String key = item.optString("key", ""); boolean done = item.optBoolean("done", false);
-
-                    views.setViewVisibility(layouts[i], View.VISIBLE);
-                    views.setTextViewText(textIds[i], text); views.setTextViewText(icons[i], icon);
-                    
-                    if (done) {
-                        views.setTextViewText(checkIds[i], "✓"); views.setTextColor(checkIds[i], 0xFFFFFFFF);
-                        views.setInt(checkIds[i], "setBackgroundResource", R.drawable.widget_square_bg_done);
-                        views.setTextColor(textIds[i], 0xFF9CA3AF);
-                    } else {
-                        views.setTextViewText(checkIds[i], String.valueOf(i + 1)); views.setTextColor(checkIds[i], 0xFF9CA3AF);
-                        views.setInt(checkIds[i], "setBackgroundResource", R.drawable.widget_square_bg);
-                        views.setTextColor(textIds[i], 0xFF111827);
-                    }
-
-                    if (!key.startsWith("dummy_")) {
-                        Intent toggleIntent = new Intent(context, HealthWidgetProvider.class).setAction(ACTION_WIDGET_TOGGLE_ITEM).putExtra("item_key", key).putExtra("item_done", !done);
-                        views.setOnClickPendingIntent(checkIds[i], PendingIntent.getBroadcast(context, 10 + i, toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
-
-                        String route = getRouteFromKey(key);
-                        Intent jumpIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("healthlife://jump?route=" + route)).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                        views.setOnClickPendingIntent(layouts[i], PendingIntent.getActivity(context, 200 + i, jumpIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
-                    }
-                } else views.setViewVisibility(layouts[i], View.GONE);
+                views.setTextViewText(textIds[i], defaultTexts[i]);
+                views.setTextViewText(iconIds[i], defaultIcons[i]);
+                // 默认全是未完成状态
+                views.setInt(checkIds[i], "setBackgroundResource", R.drawable.widget_checkbox_bg);
             }
-        } catch (Throwable t) { t.printStackTrace(); }
-        appWidgetManager.updateAppWidget(appWidgetId, views);
+
+            appWidgetManager.updateAppWidget(appWidgetId, views);
+        }
     }
 
-    private String getRouteFromKey(String key) {
-        if (key == null) return "home";
-        if (key.contains("study") || key.contains("commute")) return "study";
-        if (key.contains("skin")) return "care_skin";
-        if (key.contains("breakfast") || key.contains("lunch") || key.contains("dinner") || key.contains("protein")) return "care_supp";
-        if (key.contains("sport")) return "sport";
-        if (key.contains("todo")) return "calendar";
-        return "home";
+    // 这个方法是供你的 JsBridge 或者外部代码调用的，用来根据 JS 传来的数据更新小部件
+    public static void updateWidgetData(Context context, String timelineJson) {
+        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+        int[] appWidgetIds = appWidgetManager.getAppWidgetIds(new android.content.ComponentName(context, HealthWidgetProvider.class));
+
+        if (appWidgetIds == null || appWidgetIds.length == 0) return;
+
+        for (int appWidgetId : appWidgetIds) {
+            RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_health_card);
+
+            // 点击打开 APP 的按钮
+            Intent intent = new Intent(context, MainActivity.class);
+            PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            views.setOnClickPendingIntent(R.id.widget_btn_open_app, pendingIntent);
+
+            int[] textIds = {R.id.widget_item_1_text, R.id.widget_item_2_text, R.id.widget_item_3_text, R.id.widget_item_4_text, R.id.widget_item_5_text};
+            int[] iconIds = {R.id.widget_item_1_icon, R.id.widget_item_2_icon, R.id.widget_item_3_icon, R.id.widget_item_4_icon, R.id.widget_item_5_icon};
+            int[] checkIds = {R.id.widget_item_1_check, R.id.widget_item_2_check, R.id.widget_item_3_check, R.id.widget_item_4_check, R.id.widget_item_5_check};
+
+            try {
+                JSONArray array = new JSONArray(timelineJson);
+                int count = Math.min(array.length(), 5);
+
+                for (int i = 0; i < 5; i++) {
+                    if (i < count) {
+                        JSONObject item = array.getJSONObject(i);
+                        String text = item.optString("text", "");
+                        String icon = item.optString("icon", "📝");
+                        boolean isDone = item.optBoolean("done", false);
+
+                        // 更新文字和图标
+                        views.setTextViewText(textIds[i], text);
+                        views.setTextViewText(iconIds[i], icon);
+
+                        // 核心修复点：根据状态切换背景，使用你项目中实际存在的文件
+                        if (isDone) {
+                            views.setInt(checkIds[i], "setBackgroundResource", R.drawable.widget_checkbox_bg_done);
+                        } else {
+                            views.setInt(checkIds[i], "setBackgroundResource", R.drawable.widget_checkbox_bg);
+                        }
+                    } else {
+                        // 如果数据不足 5 条，隐藏多余的
+                        views.setTextViewText(textIds[i], "");
+                        views.setTextViewText(iconIds[i], "");
+                        views.setInt(checkIds[i], "setBackgroundResource", R.drawable.widget_checkbox_bg);
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            appWidgetManager.updateAppWidget(appWidgetId, views);
+        }
     }
 }
