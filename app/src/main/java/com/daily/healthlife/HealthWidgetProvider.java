@@ -69,7 +69,6 @@ public class HealthWidgetProvider extends AppWidgetProvider {
     private void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_health_card);
 
-        // 1. 打开APP按钮
         try {
             Intent openAppIntent = new Intent(context, MainActivity.class);
             openAppIntent.setAction(Intent.ACTION_MAIN);
@@ -79,28 +78,24 @@ public class HealthWidgetProvider extends AppWidgetProvider {
             views.setOnClickPendingIntent(R.id.widget_btn_open_app, openAppPi);
         } catch (Exception ignored) {}
 
-        // 2. 渲染列表
         try {
             SharedPreferences sp = context.getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
             String timelineJson = sp.getString("timeline_data", "[]");
             String lastSyncDate = sp.getString("last_sync_date", "");
             String today = new SimpleDateFormat("yyyy-MM-dd", Locale.CHINA).format(new Date());
+            String currentTime = new SimpleDateFormat("HH:mm", Locale.CHINA).format(new Date());
             
             JSONArray arr = new JSONArray(timelineJson);
             List<JSONObject> list = new ArrayList<>();
-            
-            // 3. ★ 核心逻辑：每天自动刷新（如果是跨天，把所有 done 状态清空）
             boolean isCrossDay = !today.equals(lastSyncDate);
             
             for (int i = 0; i < arr.length(); i++) {
                 JSONObject item = arr.getJSONObject(i);
-                if (isCrossDay) {
-                    item.put("done", false); // 新的一天，全部重置为未完成
-                }
+                if (isCrossDay) item.put("done", false);
                 list.add(item);
             }
             
-            if (isCrossDay && list.size() > 0) {
+            if (isCrossDay && !list.isEmpty()) {
                 sp.edit().putString("timeline_data", new JSONArray(list).toString()).putString("last_sync_date", today).apply();
             }
 
@@ -111,21 +106,19 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                     dummy.put("icon", "⚠️");
                     dummy.put("key", "dummy_" + i);
                     dummy.put("done", false);
+                    dummy.put("time", "99:99");
                     list.add(dummy);
                 }
             }
             
-            // 排序：先按时间
-            Collections.sort(list, new Comparator<JSONObject>() {
-                @Override
-                public int compare(JSONObject o1, JSONObject o2) {
-                    return o1.optString("time").compareTo(o2.optString("time"));
-                }
-            });
+            // 第一层排序：时间顺序
+            Collections.sort(list, (o1, o2) -> o1.optString("time").compareTo(o2.optString("time")));
 
-            // 排序：未完成移上来，已完成下沉
+            // 第二层排序：未完成优先，已完成下沉；且过去时间且已完成的任务优先级最低
             List<JSONObject> sortedList = new ArrayList<>();
+            // 先装：未完成的任务（按时间）
             for (JSONObject item : list) if (!item.optBoolean("done", false)) sortedList.add(item);
+            // 再装：已完成的任务（按时间）
             for (JSONObject item : list) if (item.optBoolean("done", false)) sortedList.add(item);
 
             int[] layouts = {R.id.widget_item_1_layout, R.id.widget_item_2_layout, R.id.widget_item_3_layout, R.id.widget_item_4_layout, R.id.widget_item_5_layout};
@@ -158,7 +151,6 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                     }
 
                     if (!key.startsWith("dummy_")) {
-                        // A. 点击左侧勾选框 -> 切换状态
                         Intent toggleIntent = new Intent(context, HealthWidgetProvider.class);
                         toggleIntent.setAction(ACTION_WIDGET_TOGGLE_ITEM);
                         toggleIntent.putExtra("item_key", key);
@@ -166,7 +158,6 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                         PendingIntent togglePi = PendingIntent.getBroadcast(context, 10 + i, toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
                         views.setOnClickPendingIntent(checkIds[i], togglePi);
 
-                        // B. 点击整行 -> 跳转 APP 指定页面
                         String route = getRouteFromKey(key);
                         Intent jumpIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("healthlife://jump?route=" + route));
                         jumpIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -177,14 +168,11 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                     views.setViewVisibility(layouts[i], View.GONE);
                 }
             }
-        } catch (Throwable t) { 
-            t.printStackTrace(); 
-        }
+        } catch (Throwable t) { t.printStackTrace(); }
 
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
 
-    // 根据 Key 决定跳转到哪个页面
     private String getRouteFromKey(String key) {
         if (key == null) return "home";
         if (key.contains("study") || key.contains("commute")) return "study";
@@ -192,6 +180,6 @@ public class HealthWidgetProvider extends AppWidgetProvider {
         if (key.contains("breakfast") || key.contains("lunch") || key.contains("dinner") || key.contains("protein")) return "care_supp";
         if (key.contains("sport")) return "sport";
         if (key.contains("todo")) return "calendar";
-        return "home"; // 默认回首页
+        return "home";
     }
 }
