@@ -15,7 +15,6 @@ import org.json.JSONObject;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -23,35 +22,24 @@ import java.util.Locale;
 public class HealthWidgetProvider extends AppWidgetProvider {
     public static final String ACTION_WIDGET_TOGGLE_ITEM = "com.daily.healthlife.WIDGET_TOGGLE_ITEM";
 
-    @Override
-    public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
-        for (int appWidgetId : appWidgetIds) {
-            try { updateWidget(context, appWidgetManager, appWidgetId); } catch (Throwable t) { t.printStackTrace(); }
-        }
+    @Override public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
+        for (int id : appWidgetIds) { try { updateWidget(context, appWidgetManager, id); } catch (Throwable t) { t.printStackTrace(); } }
     }
 
-    @Override
-    public void onReceive(Context context, Intent intent) {
+    @Override public void onReceive(Context context, Intent intent) {
         try {
             super.onReceive(context, intent);
             if (ACTION_WIDGET_TOGGLE_ITEM.equals(intent.getAction())) {
-                String key = intent.getStringExtra("item_key");
-                boolean done = intent.getBooleanExtra("item_done", false);
-                
+                String key = intent.getStringExtra("item_key"); boolean done = intent.getBooleanExtra("item_done", false);
                 SharedPreferences sp = context.getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
-                String timelineJson = sp.getString("timeline_data", "[]");
                 try {
-                    JSONArray arr = new JSONArray(timelineJson);
+                    JSONArray arr = new JSONArray(sp.getString("timeline_data", "[]"));
                     for (int i = 0; i < arr.length(); i++) {
                         JSONObject item = arr.getJSONObject(i);
-                        if (key != null && key.equals(item.optString("key"))) {
-                            item.put("done", done);
-                            break;
-                        }
+                        if (key != null && key.equals(item.optString("key"))) { item.put("done", done); break; }
                     }
                     sp.edit().putString("timeline_data", arr.toString()).apply();
                 } catch (Exception ignored) {}
-                
                 refreshAll(context);
             }
         } catch (Throwable t) { t.printStackTrace(); }
@@ -60,22 +48,15 @@ public class HealthWidgetProvider extends AppWidgetProvider {
     private void refreshAll(Context context) {
         try {
             AppWidgetManager manager = AppWidgetManager.getInstance(context);
-            ComponentName componentName = new ComponentName(context, HealthWidgetProvider.class);
-            int[] ids = manager.getAppWidgetIds(componentName);
-            for (int id : ids) { updateWidget(context, manager, id); }
+            for (int id : manager.getAppWidgetIds(new ComponentName(context, HealthWidgetProvider.class))) updateWidget(context, manager, id);
         } catch (Throwable t) { t.printStackTrace(); }
     }
 
     private void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_health_card);
-
         try {
-            Intent openAppIntent = new Intent(context, MainActivity.class);
-            openAppIntent.setAction(Intent.ACTION_MAIN);
-            openAppIntent.addCategory(Intent.CATEGORY_LAUNCHER);
-            openAppIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            PendingIntent openAppPi = PendingIntent.getActivity(context, 4, openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-            views.setOnClickPendingIntent(R.id.widget_btn_open_app, openAppPi);
+            Intent openAppIntent = new Intent(context, MainActivity.class).setAction(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            views.setOnClickPendingIntent(R.id.widget_btn_open_app, PendingIntent.getActivity(context, 4, openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
         } catch (Exception ignored) {}
 
         try {
@@ -83,7 +64,6 @@ public class HealthWidgetProvider extends AppWidgetProvider {
             String timelineJson = sp.getString("timeline_data", "[]");
             String lastSyncDate = sp.getString("last_sync_date", "");
             String today = new SimpleDateFormat("yyyy-MM-dd", Locale.CHINA).format(new Date());
-            String currentTime = new SimpleDateFormat("HH:mm", Locale.CHINA).format(new Date());
             
             JSONArray arr = new JSONArray(timelineJson);
             List<JSONObject> list = new ArrayList<>();
@@ -94,31 +74,19 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                 if (isCrossDay) item.put("done", false);
                 list.add(item);
             }
-            
-            if (isCrossDay && !list.isEmpty()) {
-                sp.edit().putString("timeline_data", new JSONArray(list).toString()).putString("last_sync_date", today).apply();
-            }
+            if (isCrossDay && !list.isEmpty()) sp.edit().putString("timeline_data", new JSONArray(list).toString()).putString("last_sync_date", today).apply();
 
             if (list.isEmpty()) {
                 for (int i = 0; i < 5; i++) {
                     JSONObject dummy = new JSONObject();
-                    dummy.put("text", "请打开App同步数据");
-                    dummy.put("icon", "⚠️");
-                    dummy.put("key", "dummy_" + i);
-                    dummy.put("done", false);
-                    dummy.put("time", "99:99");
+                    dummy.put("text", "请打开App同步数据"); dummy.put("icon", "⚠️"); dummy.put("key", "dummy_" + i); dummy.put("done", false); dummy.put("time", "99:99");
                     list.add(dummy);
                 }
             }
-            
-            // 第一层排序：时间顺序
-            Collections.sort(list, (o1, o2) -> o1.optString("time").compareTo(o2.optString("time")));
 
-            // 第二层排序：未完成优先，已完成下沉；且过去时间且已完成的任务优先级最低
+            Collections.sort(list, (o1, o2) -> o1.optString("time").compareTo(o2.optString("time")));
             List<JSONObject> sortedList = new ArrayList<>();
-            // 先装：未完成的任务（按时间）
             for (JSONObject item : list) if (!item.optBoolean("done", false)) sortedList.add(item);
-            // 再装：已完成的任务（按时间）
             for (JSONObject item : list) if (item.optBoolean("done", false)) sortedList.add(item);
 
             int[] layouts = {R.id.widget_item_1_layout, R.id.widget_item_2_layout, R.id.widget_item_3_layout, R.id.widget_item_4_layout, R.id.widget_item_5_layout};
@@ -129,47 +97,33 @@ public class HealthWidgetProvider extends AppWidgetProvider {
             for (int i = 0; i < 5; i++) {
                 if (i < sortedList.size()) {
                     JSONObject item = sortedList.get(i);
-                    String text = item.optString("text", "");
-                    String icon = item.optString("icon", "✅");
-                    String key = item.optString("key", "");
-                    boolean done = item.optBoolean("done", false);
+                    String text = item.optString("text", ""); String icon = item.optString("icon", "✅");
+                    String key = item.optString("key", ""); boolean done = item.optBoolean("done", false);
 
                     views.setViewVisibility(layouts[i], View.VISIBLE);
-                    views.setTextViewText(textIds[i], text);
-                    views.setTextViewText(icons[i], icon);
+                    views.setTextViewText(textIds[i], text); views.setTextViewText(icons[i], icon);
                     
                     if (done) {
-                        views.setTextViewText(checkIds[i], "✓");
-                        views.setTextColor(checkIds[i], 0xFFFFFFFF);
+                        views.setTextViewText(checkIds[i], "✓"); views.setTextColor(checkIds[i], 0xFFFFFFFF);
                         views.setInt(checkIds[i], "setBackgroundResource", R.drawable.widget_square_bg_done);
                         views.setTextColor(textIds[i], 0xFF9CA3AF);
                     } else {
-                        views.setTextViewText(checkIds[i], String.valueOf(i + 1));
-                        views.setTextColor(checkIds[i], 0xFF9CA3AF);
+                        views.setTextViewText(checkIds[i], String.valueOf(i + 1)); views.setTextColor(checkIds[i], 0xFF9CA3AF);
                         views.setInt(checkIds[i], "setBackgroundResource", R.drawable.widget_square_bg);
                         views.setTextColor(textIds[i], 0xFF111827);
                     }
 
                     if (!key.startsWith("dummy_")) {
-                        Intent toggleIntent = new Intent(context, HealthWidgetProvider.class);
-                        toggleIntent.setAction(ACTION_WIDGET_TOGGLE_ITEM);
-                        toggleIntent.putExtra("item_key", key);
-                        toggleIntent.putExtra("item_done", !done);
-                        PendingIntent togglePi = PendingIntent.getBroadcast(context, 10 + i, toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-                        views.setOnClickPendingIntent(checkIds[i], togglePi);
+                        Intent toggleIntent = new Intent(context, HealthWidgetProvider.class).setAction(ACTION_WIDGET_TOGGLE_ITEM).putExtra("item_key", key).putExtra("item_done", !done);
+                        views.setOnClickPendingIntent(checkIds[i], PendingIntent.getBroadcast(context, 10 + i, toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
 
                         String route = getRouteFromKey(key);
-                        Intent jumpIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("healthlife://jump?route=" + route));
-                        jumpIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                        PendingIntent jumpPi = PendingIntent.getActivity(context, 200 + i, jumpIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-                        views.setOnClickPendingIntent(layouts[i], jumpPi);
+                        Intent jumpIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("healthlife://jump?route=" + route)).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                        views.setOnClickPendingIntent(layouts[i], PendingIntent.getActivity(context, 200 + i, jumpIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
                     }
-                } else {
-                    views.setViewVisibility(layouts[i], View.GONE);
-                }
+                } else views.setViewVisibility(layouts[i], View.GONE);
             }
         } catch (Throwable t) { t.printStackTrace(); }
-
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
 
