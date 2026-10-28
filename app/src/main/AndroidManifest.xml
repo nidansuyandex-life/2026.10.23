@@ -2,14 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.daily.healthlife">
 
-    <!-- 基础权限 -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    
-    <!-- 前台服务权限（用于锁屏保活倒计时） -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -33,6 +30,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- 必须配置这个才能接收 healthlife:// 链接 -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -41,7 +39,6 @@
             </intent-filter>
         </activity>
 
-        <!-- 桌面小部件 -->
         <receiver
             android:name=".HealthWidgetProvider"
             android:exported="true">
@@ -54,7 +51,6 @@
                 android:resource="@xml/widget_health_card_info" />
         </receiver>
 
-        <!-- 倒计时保活服务 -->
         <service
             android:name=".WalkTimerService"
             android:exported="false"
