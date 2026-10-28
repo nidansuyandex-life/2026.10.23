@@ -27,7 +27,6 @@ public class WalkTimerService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        // 初始化语音引擎
         tts = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS) {
                 int result = tts.setLanguage(Locale.CHINA);
@@ -35,7 +34,6 @@ public class WalkTimerService extends Service {
                     Log.e("WalkTimerService", "TTS 语言不支持");
                 } else {
                     isTtsReady = true;
-                    // 如果之前有等待播放的文本，现在播放
                     if (pendingText != null) {
                         tts.speak(pendingText, TextToSpeech.QUEUE_FLUSH, null, "pending");
                         pendingText = null;
@@ -43,8 +41,6 @@ public class WalkTimerService extends Service {
                 }
             }
         });
-        
-        // 前台保活通知
         String channelId = "walk_timer";
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(channelId, "站立倒计时", NotificationManager.IMPORTANCE_LOW);
@@ -52,10 +48,8 @@ public class WalkTimerService extends Service {
             if (manager != null) manager.createNotificationChannel(channel);
         }
         Notification notification = new NotificationCompat.Builder(this, channelId)
-                .setContentTitle("活动倒计时运行中")
-                .setContentText("倒计时结束后会提醒你")
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .build();
+                .setContentTitle("活动倒计时运行中").setContentText("倒计时结束后会提醒你")
+                .setSmallIcon(android.R.drawable.ic_dialog_info).build();
         startForeground(1, notification);
     }
 
@@ -63,15 +57,10 @@ public class WalkTimerService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && intent.hasExtra("duration")) {
             int seconds = intent.getIntExtra("duration", 200);
-            
-            // 播放开始语音
             String startMsg = "该站起来走动了，活动两到三分钟";
             if (tts != null) {
-                if (isTtsReady) {
-                    tts.speak(startMsg, TextToSpeech.QUEUE_FLUSH, null, "start");
-                } else {
-                    pendingText = startMsg; // 引擎没准备好，先缓存
-                }
+                if (isTtsReady) tts.speak(startMsg, TextToSpeech.QUEUE_FLUSH, null, "start");
+                else pendingText = startMsg;
             }
             startTimer(seconds * 1000L);
         }
@@ -81,38 +70,23 @@ public class WalkTimerService extends Service {
     private void startTimer(long ms) {
         if (timer != null) timer.cancel();
         timer = new CountDownTimer(ms, 1000) {
-            @Override
-            public void onTick(long millisUntilFinished) {}
-            
-            @Override
-            public void onFinish() {
+            @Override public void onTick(long millisUntilFinished) {}
+            @Override public void onFinish() {
                 try {
                     ToneGenerator toneG = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
                     toneG.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 2000);
                 } catch (Exception ignored) {}
-                
-                // 播放结束语音
                 String endMsg = "时间到，请站起来活动一下";
                 if (tts != null) {
-                    if (isTtsReady) {
-                        tts.speak(endMsg, TextToSpeech.QUEUE_FLUSH, null, "end");
-                    } else {
-                        pendingText = endMsg;
-                    }
+                    if (isTtsReady) tts.speak(endMsg, TextToSpeech.QUEUE_FLUSH, null, "end");
+                    else pendingText = endMsg;
                 }
-                
-                // 延迟关闭服务，等语音播完
-                new Handler(Looper.getMainLooper()).postDelayed(WalkTimerService.this::stopSelf, 5000);
+                new Handler(Looper.getMainLooper()).postDelayed(() -> stopSelf(), 5000);
             }
         }.start();
     }
-
-    @Nullable
-    @Override
-    public IBinder onBind(Intent intent) { return null; }
-
-    @Override
-    public void onDestroy() {
+    @Nullable @Override public IBinder onBind(Intent intent) { return null; }
+    @Override public void onDestroy() {
         if (timer != null) timer.cancel();
         if (tts != null) { tts.stop(); tts.shutdown(); }
         super.onDestroy();
