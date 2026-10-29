@@ -9,8 +9,11 @@ import android.media.AudioManager;
 import android.media.ToneGenerator;
 import android.os.Build;
 import android.os.CountDownTimer;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.speech.tts.TextToSpeech;
+import android.util.Log;
 import java.util.Locale;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
@@ -18,12 +21,25 @@ import androidx.core.app.NotificationCompat;
 public class WalkTimerService extends Service {
     private CountDownTimer timer;
     private TextToSpeech tts;
+    private boolean isTtsReady = false;
+    private String pendingText = null;
 
     @Override
     public void onCreate() {
         super.onCreate();
         tts = new TextToSpeech(this, status -> {
-            if (status == TextToSpeech.SUCCESS) tts.setLanguage(Locale.CHINA);
+            if (status == TextToSpeech.SUCCESS) {
+                int result = tts.setLanguage(Locale.CHINA);
+                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    Log.e("WalkTimerService", "TTS 语言不支持");
+                } else {
+                    isTtsReady = true;
+                    if (pendingText != null) {
+                        tts.speak(pendingText, TextToSpeech.QUEUE_FLUSH, null, "pending");
+                        pendingText = null;
+                    }
+                }
+            }
         });
         String channelId = "walk_timer";
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -32,10 +48,8 @@ public class WalkTimerService extends Service {
             if (manager != null) manager.createNotificationChannel(channel);
         }
         Notification notification = new NotificationCompat.Builder(this, channelId)
-                .setContentTitle("活动倒计时运行中")
-                .setContentText("倒计时结束后会提醒你")
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .build();
+                .setContentTitle("活动倒计时运行中").setContentText("倒计时结束后会提醒你")
+                .setSmallIcon(android.R.drawable.ic_dialog_info).build();
         startForeground(1, notification);
     }
 
@@ -43,7 +57,11 @@ public class WalkTimerService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && intent.hasExtra("duration")) {
             int seconds = intent.getIntExtra("duration", 200);
-            if (tts != null) tts.speak("该站起来走动了，活动两到三分钟", TextToSpeech.QUEUE_FLUSH, null, "start");
+            String startMsg = "该站起来走动了，活动两到三分钟";
+            if (tts != null) {
+                if (isTtsReady) tts.speak(startMsg, TextToSpeech.QUEUE_FLUSH, null, "start");
+                else pendingText = startMsg;
+            }
             startTimer(seconds * 1000L);
         }
         return START_NOT_STICKY;
@@ -58,12 +76,15 @@ public class WalkTimerService extends Service {
                     ToneGenerator toneG = new ToneGenerator(AudioManager.STREAM_ALARM, 100);
                     toneG.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 2000);
                 } catch (Exception ignored) {}
-                if (tts != null) tts.speak("时间到，请站起来活动一下", TextToSpeech.QUEUE_FLUSH, null, "end");
-                new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> stopSelf(), 5000);
+                String endMsg = "时间到，请站起来活动一下";
+                if (tts != null) {
+                    if (isTtsReady) tts.speak(endMsg, TextToSpeech.QUEUE_FLUSH, null, "end");
+                    else pendingText = endMsg;
+                }
+                new Handler(Looper.getMainLooper()).postDelayed(() -> stopSelf(), 5000);
             }
         }.start();
     }
-
     @Nullable @Override public IBinder onBind(Intent intent) { return null; }
     @Override public void onDestroy() {
         if (timer != null) timer.cancel();
