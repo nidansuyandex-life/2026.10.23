@@ -2,8 +2,8 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_bg"
-    android:padding="16dp"
+    android:background="@drawable/widget_bg_transparent"
+    android:padding="20dp"
     android:orientation="vertical">
 
     <LinearLayout
@@ -12,14 +12,14 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:layout_marginBottom="12dp">
-
+        
         <TextView
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
             android:text="Today"
             android:textColor="#111827"
-            android:textSize="20sp"
+            android:textSize="22dp"
             android:textStyle="bold" />
 
         <TextView
@@ -28,207 +28,47 @@
             android:layout_height="wrap_content"
             android:text="打开 APP"
             android:background="#EAF3FF"
-            android:paddingLeft="12dp"
-            android:paddingRight="12dp"
+            android:paddingLeft="14dp"
+            android:paddingRight="14dp"
             android:paddingTop="6dp"
             android:paddingBottom="6dp"
             android:textColor="#4A9EFF"
-            android:textSize="13sp"
+            android:textSize="13dp"
             android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- 第 1 项 -->
-    <LinearLayout
-        android:id="@+id/widget_item_1_layout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp">
-        <TextView
-            android:id="@+id/widget_item_1_check"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:background="@drawable/widget_checkbox_bg"
-            android:text="1"
-            android:textColor="#9CA3AF"
-            android:textSize="12sp"
-            android:gravity="center"
-            android:layout_marginRight="12dp" />
-        <TextView
-            android:id="@+id/widget_item_1_text"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:text="加载中..."
-            android:textColor="#111827"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:maxLines="1"
-            android:ellipsize="end" />
-        <TextView
-            android:id="@+id/widget_item_1_icon"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="🌅"
-            android:textSize="16sp"
-            android:layout_marginLeft="8dp" />
+    <!-- 1 -->
+    <LinearLayout android:id="@+id/widget_item_1_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="6dp" android:paddingBottom="6dp">
+        <TextView android:id="@+id/widget_item_1_check" android:layout_width="26dp" android:layout_height="26dp" android:background="@drawable/widget_square_bg" android:text="1" android:textColor="#9CA3AF" android:textSize="13dp" android:gravity="center" android:layout_marginRight="12dp" />
+        <TextView android:id="@+id/widget_item_1_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="加载中..." android:textColor="#111827" android:textSize="18dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/widget_item_1_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🌅" android:textSize="18dp" android:layout_marginLeft="8dp" />
     </LinearLayout>
 
-    <!-- 第 2 项 -->
-    <LinearLayout
-        android:id="@+id/widget_item_2_layout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp">
-        <TextView
-            android:id="@+id/widget_item_2_check"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:background="@drawable/widget_checkbox_bg"
-            android:text="2"
-            android:textColor="#9CA3AF"
-            android:textSize="12sp"
-            android:gravity="center"
-            android:layout_marginRight="12dp" />
-        <TextView
-            android:id="@+id/widget_item_2_text"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:text=""
-            android:textColor="#111827"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:maxLines="1"
-            android:ellipsize="end" />
-        <TextView
-            android:id="@+id/widget_item_2_icon"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="🐱"
-            android:textSize="16sp"
-            android:layout_marginLeft="8dp" />
+    <!-- 2 -->
+    <LinearLayout android:id="@+id/widget_item_2_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="6dp" android:paddingBottom="6dp">
+        <TextView android:id="@+id/widget_item_2_check" android:layout_width="26dp" android:layout_height="26dp" android:background="@drawable/widget_square_bg" android:text="2" android:textColor="#9CA3AF" android:textSize="13dp" android:gravity="center" android:layout_marginRight="12dp" />
+        <TextView android:id="@+id/widget_item_2_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="18dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/widget_item_2_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🐱" android:textSize="18dp" android:layout_marginLeft="8dp" />
     </LinearLayout>
 
-    <!-- 第 3 项 -->
-    <LinearLayout
-        android:id="@+id/widget_item_3_layout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp">
-        <TextView
-            android:id="@+id/widget_item_3_check"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:background="@drawable/widget_checkbox_bg"
-            android:text="3"
-            android:textColor="#9CA3AF"
-            android:textSize="12sp"
-            android:gravity="center"
-            android:layout_marginRight="12dp" />
-        <TextView
-            android:id="@+id/widget_item_3_text"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:text=""
-            android:textColor="#111827"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:maxLines="1"
-            android:ellipsize="end" />
-        <TextView
-            android:id="@+id/widget_item_3_icon"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="📝"
-            android:textSize="16sp"
-            android:layout_marginLeft="8dp" />
+    <!-- 3 -->
+    <LinearLayout android:id="@+id/widget_item_3_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="6dp" android:paddingBottom="6dp">
+        <TextView android:id="@+id/widget_item_3_check" android:layout_width="26dp" android:layout_height="26dp" android:background="@drawable/widget_square_bg" android:text="3" android:textColor="#9CA3AF" android:textSize="13dp" android:gravity="center" android:layout_marginRight="12dp" />
+        <TextView android:id="@+id/widget_item_3_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="18dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/widget_item_3_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📝" android:textSize="18dp" android:layout_marginLeft="8dp" />
     </LinearLayout>
 
-    <!-- 第 4 项 -->
-    <LinearLayout
-        android:id="@+id/widget_item_4_layout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp">
-        <TextView
-            android:id="@+id/widget_item_4_check"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:background="@drawable/widget_checkbox_bg"
-            android:text="4"
-            android:textColor="#9CA3AF"
-            android:textSize="12sp"
-            android:gravity="center"
-            android:layout_marginRight="12dp" />
-        <TextView
-            android:id="@+id/widget_item_4_text"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:text=""
-            android:textColor="#111827"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:maxLines="1"
-            android:ellipsize="end" />
-        <TextView
-            android:id="@+id/widget_item_4_icon"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="📚"
-            android:textSize="16sp"
-            android:layout_marginLeft="8dp" />
+    <!-- 4 -->
+    <LinearLayout android:id="@+id/widget_item_4_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="6dp" android:paddingBottom="6dp">
+        <TextView android:id="@+id/widget_item_4_check" android:layout_width="26dp" android:layout_height="26dp" android:background="@drawable/widget_square_bg" android:text="4" android:textColor="#9CA3AF" android:textSize="13dp" android:gravity="center" android:layout_marginRight="12dp" />
+        <TextView android:id="@+id/widget_item_4_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="18dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/widget_item_4_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📚" android:textSize="18dp" android:layout_marginLeft="8dp" />
     </LinearLayout>
 
-    <!-- 第 5 项 -->
-    <LinearLayout
-        android:id="@+id/widget_item_5_layout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp">
-        <TextView
-            android:id="@+id/widget_item_5_check"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:background="@drawable/widget_checkbox_bg"
-            android:text="5"
-            android:textColor="#9CA3AF"
-            android:textSize="12sp"
-            android:gravity="center"
-            android:layout_marginRight="12dp" />
-        <TextView
-            android:id="@+id/widget_item_5_text"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:text=""
-            android:textColor="#111827"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:maxLines="1"
-            android:ellipsize="end" />
-        <TextView
-            android:id="@+id/widget_item_5_icon"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="🧴"
-            android:textSize="16sp"
-            android:layout_marginLeft="8dp" />
+    <!-- 5 -->
+    <LinearLayout android:id="@+id/widget_item_5_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="6dp" android:paddingBottom="6dp">
+        <TextView android:id="@+id/widget_item_5_check" android:layout_width="26dp" android:layout_height="26dp" android:background="@drawable/widget_square_bg" android:text="5" android:textColor="#9CA3AF" android:textSize="13dp" android:gravity="center" android:layout_marginRight="12dp" />
+        <TextView android:id="@+id/widget_item_5_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="18dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/widget_item_5_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🧴" android:textSize="18dp" android:layout_marginLeft="8dp" />
     </LinearLayout>
 </LinearLayout>
