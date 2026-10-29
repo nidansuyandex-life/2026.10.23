@@ -9,6 +9,8 @@
 <script src="./data/valve.js"></script>
 <script src="./data/thinking.js"></script>
 <script src="./data/scenes.js"></script>
+<!-- 引入抽离的运动库 -->
+<script src="./data/exercise.js"></script>
 <style>
 :root{--brand:#4f46e5;--brand2:#7c3aed;--sub:#6b7280;--ok:#059669;--warn:#b45309;--err:#dc2626;--accent:#1FBFA9;--accent2:#5FD9C4;--accent-soft:#E7F9F5;--hot:#FF6B5B;--hot2:#FFA36B;--hot-soft:#FFF0EC;--purple:#8B7CF6;--purple2:#B39BFF;--purple-soft:#F1EEFF;--blue:#4A9EFF;--blue2:#7FC4FF;--blue-soft:#EAF3FF;--pink:#FF6FA5;--pink2:#FFA1C4;--pink-soft:#FFEEF5;}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -19,7 +21,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:16px;}
 .brand .dot{width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand2));box-shadow:0 0 0 4px rgba(79,70,229,.12);}
 .today{font-size:12px;color:var(--sub);display:flex;align-items:center;gap:6px;}
-.top-icon-btn{border:0;background:#fff;width:34px;height:34px;border-radius:11px;font-size:15px;cursor:pointer;box-shadow:0 1px 2px rgba(16,24,40,.06);}
 #view{flex:1;overflow-y:auto;padding:2px 16px 90px;}
 #view::-webkit-scrollbar{width:0;}
 .tabbar{flex-shrink:0;display:flex;background:rgba(255,255,255,.95);border-top:1px solid rgba(0,0,0,.06);padding:8px 2px calc(8px + env(safe-area-inset-bottom));}
@@ -405,7 +406,7 @@ window.jumpFromNative = function(route) {
 
 function syncToNativeWidget() {
     try {
-        if (window.AndroidBridge && window.AndroidBridge.syncWidgetData) {
+        if (window.AndroidBridge && window.AndroidBridge.syncTimelineData) {
             const t = todayStr(); const checks = getChecks();
             const manualTodos = ((state.calendarData[t] || []).filter(x => x.manual)).slice();
             const ov = getOverride(new Date()); const ovMap = { swim:'游泳', reduced:'减量训练', period:'经期休息', leave:'请假', rest:'休息' };
@@ -422,10 +423,7 @@ function syncToNativeWidget() {
             const todoItems = manualTodos.map(mt => ({ time: mt.time || '99:99', text: mt.title, key: 'todo_' + encodeURIComponent(JSON.stringify({ date: t, time: mt.time, title: mt.title })), done: !!mt.done, icon: '📝', route: 'calendar' }));
             const allTimeline = fixedItems.map(it => ({ time: it.time, text: it.text, icon: it.icon, key: it.checkKey, done: !!checks[it.checkKey], route: it.route }));
             const finalTimeline = [...allTimeline, ...todoItems].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-            if (window.AndroidBridge.syncTimelineData) window.AndroidBridge.syncTimelineData(JSON.stringify(finalTimeline));
-            const tasks = LearnStore.getTodayTasks(); const doneTasks = tasks.filter(x => x.done).length; const studyText = `今日学习：${doneTasks}/${tasks.length}`;
-            const monthTx = transactions.filter(x => x.date.startsWith(t.slice(0,7))); const monthExp = monthTx.filter(x => x.type === 'expense').reduce((s,x) => s + x.amount, 0); const expenseText = `本月支出：¥${monthExp.toFixed(0)}`;
-            window.AndroidBridge.syncWidgetData(studyText, expenseText);
+            window.AndroidBridge.syncTimelineData(JSON.stringify(finalTimeline));
         }
     } catch (e) { console.error('syncToNativeWidget error:', e); }
 }
@@ -478,28 +476,6 @@ SEED.VALVE_ALL = [];
 const DATA_STATUS = { valve:0, words:0, decks:0, valveOk:false, wordsOk:false, thinking:0, scenes:0 };
 
 const BODY_GROUPS = [{ title:'基础信息', fields:[{key:'height',label:'身高',unit:'cm',step:0.5},{key:'weight',label:'体重',unit:'kg',step:0.1},{key:'bodyFat',label:'体脂率',unit:'%',step:0.1}]}, { title:'肩颈与躯干', fields:[{key:'shoulder',label:'肩宽',unit:'cm',step:0.5},{key:'bust',label:'胸围',unit:'cm',step:0.5},{key:'waist',label:'腰围',unit:'cm',step:0.5},{key:'hip',label:'臀围',unit:'cm',step:0.5}]}];
-
-const EXERCISES = {
-  'P1 90/90 呼吸': { name:'P1 90/90 呼吸', target:'肋骨与腹部控制', purpose:'激活深层核心与呼吸', how:'2×5 次呼吸，肋骨和腹部轻轻扩张；不耸肩、不憋气。', detail:'1. 仰卧，双腿搭在椅子或墙上，呈 90/90 姿势。\n2. 吸气约 4 秒，肋骨和腹部向两侧轻轻扩张。\n3. 呼气约 6 秒，肚子自然下沉，不强行收腹。\n4. 肩膀完全放松。', breath:'吸 4 秒，呼 6 秒。', mistakes:'耸肩、憋气、强行吸肚子。', equipment:'瑜伽垫/墙面' },
-  'P2 下巴轻收': { name:'P2 下巴轻收', target:'颈深屈肌', purpose:'改善头前倾', how:'2×8，停 3 秒，头水平后移。', detail:'1. 坐直或站立，眼睛平视前方。\n2. 下巴水平向后平移（像做双下巴），不要低头。\n3. 保持 3 秒，颈后有轻微拉伸感。\n4. 缓慢回正。', breath:'自然呼吸。', mistakes:'低头、用力过猛、颈痛时强行做。', equipment:'无' },
-  'P3 墙面滑手': { name:'P3 墙面滑手', target:'肩胛与躯干协调', purpose:'改善圆肩', how:'2×8-10 次，肋骨不外翻，不耸肩。', detail:'1. 背对墙站立，脚后跟离墙一拳。\n2. 手臂呈“W”型贴墙，手背贴墙。\n3. 沿墙向上滑至“Y”型，肋骨不外翻。\n4. 缓慢回落。', breath:'上滑吸气，下落呼气。', mistakes:'耸肩、腰离开墙面、肋骨外翻。', equipment:'墙面' },
-  'P4 仰卧脚跟滑动': { name:'P4 仰卧脚跟滑动', target:'低负荷核心控制', purpose:'骨盆稳定', how:'2×6-8/侧，呼气脚跟滑远，腰背舒适。', detail:'1. 仰卧，双腿屈膝，双脚踩地。\n2. 呼气时一只脚贴地慢慢滑远，腰部保持贴地。\n3. 吸气缓慢收回。\n4. 如果拱腰则缩短范围。', breath:'滑出呼气，收回吸气。', mistakes:'腰部拱起、动作过快。', equipment:'瑜伽垫' },
-  'P5 小范围骨盆控制': { name:'P5 小范围骨盆控制', target:'骨盆感知', purpose:'灵活骨盆', how:'1-2×5，幅度很小、无痛、呼吸顺畅。', detail:'1. 仰卧屈膝。\n2. 骨盆非常小范围地前倾和后倾。\n3. 不追求大幅度，感受轻微移动即可。', breath:'顺畅呼吸。', mistakes:'腰部代偿、幅度过大。', equipment:'瑜伽垫' },
-  'S1 椅子坐站': { name:'S1 椅子坐站/箱式深蹲', target:'臀大肌、股四头肌', purpose:'下肢力量', how:'2-3×8-12，臀部后移，脚掌踩稳。', detail:'1. 站在椅子前，双脚与肩同宽。\n2. 臀部向后坐，轻触椅面。\n3. 脚掌发力站起。\n4. 膝盖内扣或弓腰时提高座椅。', breath:'下降吸气，起身呼气。', mistakes:'膝盖内扣、弓腰、完全坐死。', equipment:'椅子' },
-  'S2 臂桥': { name:'S2 臂桥（臀桥）', target:'臀大肌、骨盆稳定', purpose:'臀部塑形', how:'2-3×8-12，呼气抬髋，不用腰顶。', detail:'1. 仰卧屈膝，脚跟离臀部一掌。\n2. 呼气臀部发力抬起，至肩-髋-膝一条线。\n3. 顶端停 1 秒。\n4. 腰不适则缩小幅度。', breath:'抬髋呼气，下降吸气。', mistakes:'腰部代偿、过度挺腰。', equipment:'瑜伽垫' },
-  'S3 弹力带侧向走': { name:'S3 弹力带侧向走', target:'臀中肌', purpose:'骨盆水平控制', how:'2×每侧6-12步，小步、骨盆水平。', detail:'1. 弹力带套在膝盖上方或脚踝。\n2. 半蹲，向一侧迈出小步，另一脚跟随。\n3. 保持骨盆水平，不要左右晃动。', breath:'自然呼吸。', mistakes:'骨盆摇晃、膝盖内扣、牵扯骶髂关节。', equipment:'弹力带' },
-  'S4 划船': { name:'S4 划船', target:'菱形肌、中下斜方肌', purpose:'背部线条', how:'2-3×8-12，肘向后拉，肩胛骨向后下。', detail:'1. 弹力带或哑铃。\n2. 背部挺直，拉至腰侧。\n3. 肩胛骨收紧，停 1 秒。', breath:'拉时呼气。', mistakes:'耸肩、腰部借力。', equipment:'弹力带/哑铃' },
-  'S5 前方高位下拉': { name:'S5 前方高位下拉', target:'背阔肌', purpose:'背部宽度', how:'2-3×8-12，极轻阻力开始，下拉至锁骨。', detail:'1. 弹力带固定在高处。\n2. 双手下拉至锁骨前方。\n3. 肋骨不外翻。', breath:'下拉呼气。', mistakes:'腰后仰借力、耸肩。', equipment:'弹力带' },
-  'S6 墙/高台俯卧撑': { name:'S6 墙/高台俯卧撑', target:'胸、肩、肱三头', purpose:'上肢推力', how:'2-3×8-12，身体一条直线。', detail:'1. 双手撑墙或桌沿。\n2. 屈肘靠近，推起。\n3. 身体保持直线。', breath:'推起呼气。', mistakes:'塌腰、肘部完全张开。', equipment:'墙面/桌子' },
-  'S7 死虫式': { name:'S7 死虫式', target:'深层核心', purpose:'躯干稳定', how:'2×6-8/侧，对侧手脚伸展，腰部贴地。', detail:'1. 仰卧，双手双脚朝天。\n2. 对侧手脚下落，腰部紧贴地面。\n3. 缓慢收回换边。', breath:'伸展呼气。', mistakes:'腰部离地、动作太快。', equipment:'瑜伽垫' },
-  'S8 Pallof 抗旋转': { name:'S8 Pallof 抗旋转', target:'抗旋转核心', purpose:'核心稳定', how:'2×8-12/侧，抵抗旋转。', detail:'1. 侧对弹力带，双手握在胸前。\n2. 向前推，核心抵抗身体被拉转。', breath:'推出呼气。', mistakes:'身体被拉转、腰部代偿。', equipment:'弹力带' },
-  'S9 分腿蹲': { name:'S9 分腿蹲', target:'臀腿单侧力量', purpose:'平衡与下肢稳定', how:'2×6-8/侧，骶髂稳定时尝试。', detail:'1. 弓步姿势。\n2. 下蹲至前腿大腿接近平行。\n3. 前脚掌发力站起。', breath:'下蹲吸气，站起呼气。', mistakes:'膝盖内扣、身体晃动。', equipment:'自重' },
-  'S10 农夫行走': { name:'S10 农夫行走', target:'全身核心与握力', purpose:'全身功能性', how:'每手 1-3kg 或更轻，20秒，可选项。', detail:'1. 双手提重物。\n2. 挺胸收腹，小步慢走。\n3. 牵扯腰骶则取消。', breath:'自然呼吸。', mistakes:'身体侧倾、弯腰。', equipment:'哑铃/水瓶' },
-  '游泳': { name:'游泳', target:'全身协调', purpose:'心肺与全身', how:'水中适应、缓慢吐气、扶池边练习。', detail:'按阶段练习：水中适应、呼吸、漂浮、扶板打腿、分解练习。', breath:'水下呼气，抬头吸气。', mistakes:'憋气、慌张。', equipment:'泳衣、泳镜' },
-  '散步': { name:'散步', target:'低强度有氧/主动恢复', purpose:'恢复与心肺', how:'轻松步行 10–25 分钟，能正常说话，不追求速度。', detail:'1. 挺胸收腹，自然摆臂。\n2. 速度以能轻松说话为准。\n3. 结束后做 2–3 次深呼吸。', breath:'自然呼吸。', mistakes:'弯腰驼背、速度过快、步幅过大。', equipment:'运动鞋' },
-  '胸肌拉伸': { name:'胸肌拉伸', target:'胸大肌、胸小肌', purpose:'改善圆肩', how:'前臂贴门框/墙角，身体前倾，20–30 秒，不憋气。', detail:'1. 一侧前臂贴门框，肘部略高于肩。\n2. 身体轻轻前倾，感受胸前拉伸。\n3. 保持 20–30 秒，换边。\n4. 不要耸肩、不要腰部代偿。', breath:'缓慢呼吸，不憋气。', mistakes:'用力过猛、耸肩、腰部代偿。', equipment:'门框/墙角' },
-  '自由泳': { name:'自由泳', target:'全身协调、心肺', purpose:'游泳技能', how:'4×25m，单臂/侧转呼吸，以技术为主。', detail:'1. 扶板或单臂练习，先建立身体流线。\n2. 水下缓慢吐气，转头侧吸。\n3. 每次 25m，休息充分。\n4. 不追求速度，先找水感。', breath:'水下呼气，转头吸气。', mistakes:'憋气、抬头过高、身体下沉。', equipment:'泳池/泳镜' }
-};
 
 const HOLIDAYS = { '2025-01-01':'元旦','2025-01-28':'除夕','2025-01-29':'春节','2025-05-01':'劳动节','2025-06-01':'儿童节','2025-10-01':'国庆' };
 const EXPENSE_CATS = [['餐饮', /(餐饮|早餐|午餐|晚餐|吃|饭|餐|咖啡|奶茶|外卖|水果|零食|饮料|买菜|蟹|面包)/],['交通', /(交通|打车|公交|地铁|加油|停车|高铁|火车|机票|滴滴)/],['购物', /(购物|超市|商场|买|衣服|鞋|包|网购|淘宝|京东|背心|立减金)/],['日用', /(日用|纸巾|洗发|沐浴|牙膏|清洁|家居|洗衣)/],['娱乐', /(娱乐|电影|游戏|KTV|旅游|门票|聚会)/],['医疗', /(医疗|医院|药|挂号|体检|诊所)/],['居住', /(居住|房租|水费|电费|燃气|物业|房贷)/],['通讯', /(通讯|话费|流量|宽带|会员|订阅)/],['美容', /(美容|美发|美甲|理发|护肤|化妆|香水)/],['运动', /(运动|健身|游泳|瑜伽|私教)/],['人情', /(人情|礼物|份子|请客|随礼)/]];
@@ -611,91 +587,8 @@ let skinState = HealthStore.load('skinState', 'stable'); if (!SKIN_STATES[skinSt
 let transactions = LS.get('app_h_transactions', []); let clothes = LS.get('app_h_clothes', []);
 function getDayIndexForSkin(){ const d = new Date().getDay(); return d === 0 ? 7 : d; }
 
-function mkEx(code, sets, reps, load){ return { code, sets, reps, dose: reps, load, ...(EXERCISES[code]||{name:code,purpose:'',how:'',breath:'',target:'',detail:'',mistakes:'',equipment:''}) }; }
-
-function getPlanDetail(weekPhase, dow) {
-  const plan = { warmup: [], exercises: [], stretch: [], tips: [] };
-  plan.warmup = [mkEx('P1 90/90 呼吸', 1, '5次', '自重'), mkEx('P2 下巴轻收', 1, '8次', '自重'), mkEx('P3 墙面滑手', 1, '8次', '自重'), mkEx('S2 臂桥', 1, '8次', '自重')];
-  plan.stretch = [mkEx('P1 90/90 呼吸', 1, '5次', '自重')];
-  plan.tips = ['全程 RPE 4-6，不要练到力竭', '如有疼痛或不适，立刻降低幅度或停止'];
-
-  if (dow === 1) {
-    plan.label = '下肢力量+臀部塑形+骨盆控制';
-    plan.duration = '45-55 分钟';
-    if (weekPhase === 1) {
-      plan.exercises = [mkEx('S1 椅子坐站', 2, '8次', '自重'), mkEx('S2 臂桥', 2, '8-10次', '自重'), mkEx('S3 弹力带侧向走', 1, '6步/侧', '轻阻力'), mkEx('S7 死虫式', 2, '6次/侧', '自重')];
-    } else if (weekPhase === 2) {
-      plan.exercises = [mkEx('S1 椅子坐站', 3, '8-10次', '自重'), mkEx('S2 臂桥', 3, '10次', '自重'), mkEx('S3 弹力带侧向走', 2, '8步/侧', '轻阻力'), mkEx('S7 死虫式', 2, '8次/侧', '自重')];
-    } else if (weekPhase === 3) {
-      plan.exercises = [mkEx('S1 椅子坐站', 3, '8-12次', '自重'), mkEx('S2 臂桥', 3, '10-12次', '自重'), mkEx('S3 弹力带侧向走', 2, '8-10步/侧', '轻阻力'), mkEx('S7 死虫式', 2, '8次/侧', '自重')];
-    } else {
-      plan.exercises = [mkEx('S1 椅子坐站', 3, '8-12次', '自重'), mkEx('S2 臂桥', 3, '10-15次', '自重'), mkEx('S3 弹力带侧向走', 2, '8-12步/侧', '轻阻力'), mkEx('S7 死虫式', 3, '8次/侧', '自重')];
-    }
-  }
-  else if (dow === 2) {
-    plan.label = '康复控制+短版普拉提';
-    plan.duration = '20-30 分钟';
-    plan.tips = ['不应练到疲惫', '专注呼吸和骨盆小范围控制'];
-    if (weekPhase === 1) {
-      plan.exercises = [mkEx('P1 90/90 呼吸', 2, '5次', '自重'), mkEx('P2 下巴轻收', 2, '8次', '自重'), mkEx('P3 墙面滑手', 1, '8次', '自重'), mkEx('P4 仰卧脚跟滑动', 1, '6次/侧', '自重')];
-    } else if (weekPhase === 2) {
-      plan.exercises = [mkEx('P1 90/90 呼吸', 2, '5次', '自重'), mkEx('P2 下巴轻收', 2, '8次', '自重'), mkEx('P3 墙面滑手', 2, '8次', '自重'), mkEx('P4 仰卧脚跟滑动', 2, '6次/侧', '自重')];
-    } else {
-      plan.exercises = [mkEx('P1 90/90 呼吸', 2, '5次', '自重'), mkEx('P2 下巴轻收', 2, '8次', '自重'), mkEx('P3 墙面滑手', 2, '8次', '自重'), mkEx('P4 仰卧脚跟滑动', 2, '6次/侧', '自重')];
-    }
-  }
-  else if (dow === 3) {
-    plan.label = '上肢力量+背部/肩胛线条';
-    plan.duration = '40-55 分钟';
-    if (weekPhase === 1) {
-      plan.exercises = [mkEx('S4 划船', 2, '10次', '轻阻力'), mkEx('S5 前方高位下拉', 2, '8次', '极轻'), mkEx('S6 墙/高台俯卧撑', 2, '8次', '自重'), mkEx('P3 墙面滑手', 1, '8次', '自重')];
-    } else if (weekPhase === 2) {
-      plan.exercises = [mkEx('S4 划船', 3, '10次', '轻中阻力'), mkEx('S5 前方高位下拉', 2, '8-10次', '轻'), mkEx('S6 墙/高台俯卧撑', 2, '8-10次', '自重'), mkEx('S4 划船', 1, '10次', '极轻阻力')];
-    } else {
-      plan.exercises = [mkEx('S4 划船', 3, '8-12次', '轻中阻力'), mkEx('S5 前方高位下拉', 2, '8-12次', '轻'), mkEx('S6 墙/高台俯卧撑', 3, '8-12次', '自重'), mkEx('S4 划船', 2, '10次', '极轻阻力')];
-    }
-  }
-  else if (dow === 4) {
-    plan.label = '恢复+温和普拉提';
-    plan.duration = '20-30 分钟';
-    plan.tips = ['步行作为主动恢复', '保持放松'];
-    if (weekPhase === 1) {
-      plan.exercises = [mkEx('P1 90/90 呼吸', 2, '5次', '自重'), mkEx('P5 小范围骨盆控制', 1, '5次', '自重'), mkEx('散步', 1, '10-15分钟', '自重')];
-    } else if (weekPhase === 2) {
-      plan.exercises = [mkEx('P1 90/90 呼吸', 2, '5次', '自重'), mkEx('P4 仰卧脚跟滑动', 1, '6次/侧', '自重'), mkEx('散步', 1, '15-20分钟', '自重')];
-    } else {
-      plan.exercises = [mkEx('P1 90/90 呼吸', 2, '5次', '自重'), mkEx('P4 仰卧脚跟滑动', 1, '6次/侧', '自重'), mkEx('散步', 1, '15-25分钟', '自重')];
-    }
-  }
-  else if (dow === 5) {
-    plan.label = '全身功能性力量';
-    plan.duration = '40-55 分钟';
-    if (weekPhase === 1) {
-      plan.exercises = [mkEx('S1 椅子坐站', 2, '8次', '自重'), mkEx('S4 划船', 2, '8次', '轻阻力'), mkEx('S8 Pallof 抗旋转', 2, '8次/侧', '轻阻力')];
-    } else if (weekPhase === 2) {
-      plan.exercises = [mkEx('S1 椅子坐站', 2, '10次', '自重'), mkEx('S4 划船', 2, '8次', '轻阻力'), mkEx('S8 Pallof 抗旋转', 2, '10次/侧', '轻阻力'), mkEx('S10 农夫行走', 1, '20秒', '1-3kg')];
-    } else {
-      plan.exercises = [mkEx('S1 椅子坐站', 2, '10次', '自重'), mkEx('S9 分腿蹲', 2, '6次/侧', '自重'), mkEx('S4 划船', 3, '8次', '轻阻力'), mkEx('S8 Pallof 抗旋转', 2, '10次/侧', '轻阻力')];
-    }
-  }
-  else if (dow === 6) {
-    plan.label = '游泳技能学习';
-    plan.duration = '40-60 分钟';
-    plan.tips = ['一定要在有救生员的泳池', '绝对不独自在深水区练漂浮', '前 4-8 次最好请教练'];
-    plan.exercises = [mkEx('游泳', 1, '40-60分钟', '水中适应、缓慢吐气、扶池边练习')];
-  }
-  else if (dow === 0) {
-    plan.label = '完全休息';
-    plan.duration = '—';
-    plan.isTraining = false;
-    plan.exercises = [];
-    plan.tips = ['完全休息', '保证睡眠'];
-  }
-  return plan;
-}
-
 function buildPlanByContent(weekPhase, dow) {
-  const plan = getPlanDetail(weekPhase, dow);
+  const plan = window.getPlanDetail(weekPhase, dow);
   return {
     key: 'd' + dow,
     label: plan.label,
@@ -717,7 +610,7 @@ function currentPlan() {
   const ov = getOverride(new Date());
 
   if (ov === 'leave' || ov === 'period' || ov === 'rest') return buildRestPlan(ov);
-  if (ov === 'swim') return { key:'swim', label:'游泳代替今日计划', icon:'🏊', duration:'40–60 分钟', summary:'游泳代替今日计划 · 原训练顺延', isTraining:true, warmup:[], stretch:[mkEx('胸肌拉伸',1,'20–30秒','自重')], exercises:[mkEx('游泳',4,'25m','自由'), mkEx('自由泳',4,'25m','单臂')], tips:['以水感与技术为主'] };
+  if (ov === 'swim') return { key:'swim', label:'游泳代替今日计划', icon:'🏊', duration:'40–60 分钟', summary:'游泳代替今日计划 · 原训练顺延', isTraining:true, warmup:[], stretch:[window.mkEx('胸肌拉伸',1,'20–30秒','自重')], exercises:[window.mkEx('游泳',4,'25m','自由'), window.mkEx('自由泳',4,'25m','单臂')], tips:['以水感与技术为主'] };
   if (ov === 'reduced'){ const base = buildPlanByContent(1, 1); return { ...base, label:'身体不适（减量）', icon:'🔻', duration:'20–30 分钟', summary:'减量 · 组数减少', exercises: base.exercises.map(x=>({...x,sets:Math.max(1,x.sets-1)})) }; }
 
   if (!planInfo) return buildRestPlan('rest');
@@ -814,8 +707,6 @@ function homeView(){
 async function studyView(){ const sub = state.studySub; const subs = [{ id:'today', label:'今日' },{ id:'english', label:'英语' },{ id:'valve', label:'专业' },{ id:'general', label:'每日知识' },{ id:'logic', label:'逻辑' },{ id:'wrong', label:'错题本' },{ id:'weekly', label:'周测' },{ id:'alltest', label:'总测' }]; let content = ''; try { if (sub === 'today') content = todaySection(); else if (sub === 'english') content = await englishSection(); else if (sub === 'valve') content = valveSection(); else if (sub === 'general') content = await generalSection(); else if (sub === 'logic') content = logicSection(); else if (sub === 'wrong') content = wrongBookSection(); else if (sub === 'weekly') content = weeklyTestSection(); else if (sub === 'alltest') content = allTestSection(); } catch(e){ content = `<div class="tip-card">加载失败：${esc(e.message)}</div>`; } return `<div class="hero"><div class="hero-k">学习 · ${todayStr()}</div><h1>每天进步一点</h1></div><div class="subtabs">${subs.map(x => `<button class="subtab ${x.id===sub?'on':''}" data-act="studySub" data-sub="${x.id}">${x.label}</button>`).join('')}</div><div>${content}</div>`; }
 function todaySection(){ const tasks = LearnStore.getTodayTasks(); const done = tasks.filter(t => t.done).length; const streak = LearnStore.getStreak(); const schedEn = LearnStore.getAllScheduledKeys('english').length; const schedWk = LearnStore.getAllScheduledKeys('work').length; return `<div class="task-card"><div class="task-head"><div class="task-title">☀️ 今日待办</div><div class="task-progress">${done}/${tasks.length}${streak.count>0?' · 🔥'+streak.count+'天':''}</div></div>${tasks.map(t => `<div class="task-row" data-act="taskJump" data-key="${t.key}"><div class="task-check ${t.done?'on':''}">${t.done?'✓':''}</div><div class="task-label ${t.done?'on':''}">${t.label}</div><div class="task-count">${t.current}/${t.total} →</div></div>`).join('')}</div>${(schedEn+schedWk>0)?`<div class="review-entry"><div class="r-title"><span>🔁 开始复习</span><span>共 ${schedEn+schedWk} 条</span></div><div style="display:flex;gap:8px;">${schedEn?`<button class="btn" style="flex:1;background:#92400e;color:#fff;" data-act="startReview" data-type="english">英语复习</button>`:''}${schedWk?`<button class="btn" style="flex:1;background:#92400e;color:#fff;" data-act="startReview" data-type="work">专业复习</button>`:''}</div></div>`:''}`; }
 async function englishSection(){ const sub = state.englishSub || 'today'; let curDeck = state.englishDeck; if (curDeck !== 'all' && !SEED.DECKS.find(d => d.id === curDeck)){ curDeck = (SEED.DECKS[0]&&SEED.DECKS[0].id)||''; state.englishDeck = curDeck; } if (!SEED.DECKS.length) return `<div class="tip-card">没有配置词库。</div>`; if (curDeck !== 'all' && DeckLoader.loaded[curDeck] === undefined){ DeckLoader.load(curDeck).then(()=>render({keepScroll:true})).catch(()=>{}); return `<div class="loading-card"><div style="font-size:42px;animation:pulse 1.4s ease-in-out infinite;">📚</div><div style="font-size:14px;font-weight:750;margin-top:14px;">正在加载词库…</div></div>`; } const deckWords = DeckLoader.get(curDeck); const learnedAll = new Set(LearnStore.getAllLearnedEver()); const learnedToday = new Set(LearnStore.getLearned()); const totalCount = curDeck==='all' ? SEED.DECKS.reduce((s,d)=>s+(d.count||0),0) : deckWords.length; const learnedCount = deckWords.filter(w => learnedAll.has(w.w)).length; const pct = totalCount ? Math.round(learnedCount/totalCount*100) : 0; const schedEn = LearnStore.getAllScheduledKeys('english').length; const head = `<div class="card" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:0;"><div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">ENGLISH DECK</div><div style="font-size:19px;font-weight:750;margin-bottom:10px;">${SEED.DECKS.reduce((s,d)=>s+(d.count||0),0)} 词 · ${SEED.DECKS.length} 词库</div><div style="font-size:13.5px;opacity:.92;line-height:1.7;">已学 ${LearnStore.getAllLearnedEver().length} 词 · 已排程 ${schedEn} 词</div></div><div class="sec-title">选择词库 <span class="muted">共 ${SEED.DECKS.length} 个</span></div><div class="chips" style="align-items:stretch;">${SEED.DECKS.map(d => { const isLoaded = DeckLoader.loaded[d.id] !== undefined; const words = DeckLoader.get(d.id); const learned = words.filter(w => learnedAll.has(w.w)).length; const meta = isLoaded ? `${learned}/${words.length}` : `${d.count} 词`; return `<button class="deck-chip ${curDeck===d.id?'on':''}" data-act="englishDeck" data-deck="${esc(d.id)}"><div class="dc-name">${d.icon||'📗'} ${esc(d.name)}</div><div class="dc-meta">${meta}</div></button>`; }).join('')}</div><div class="card" style="padding:14px;"><div class="row-between"><div style="font-size:13px;font-weight:750;">当前进度</div><div style="font-size:13px;color:var(--brand);font-weight:750;">${learnedCount}/${totalCount} · ${pct}%</div></div><div class="progress-bar"><div style="width:${pct}%;"></div></div></div><div class="subtabs" style="margin-bottom:12px;"><button class="subtab ${sub==='today'?'on':''}" data-act="englishSub" data-sub="today">今日待学</button><button class="subtab ${sub==='all'?'on':''}" data-act="englishSub" data-sub="all">全部</button><button class="subtab ${sub==='learned'?'on':''}" data-act="englishSub" data-sub="learned">已学</button></div>`; if (sub === 'today'){ const todayNames = LearnStore.getTodayWordNames(curDeck); const todayWords = todayNames.map(w => deckWords.find(x => x.w === w)).filter(Boolean); const doneCount = todayWords.filter(w => learnedToday.has(w.w)).length; const allDone = todayWords.length > 0 && doneCount === todayWords.length; return head + `<div class="sec-title">今日待学 <span class="muted">${doneCount}/${todayWords.length}</span></div>${allDone?'<div style="margin-bottom:12px;padding:10px 14px;background:#ecfdf5;border-radius:12px;font-size:12.5px;color:#047857;font-weight:650;text-align:center;">🎉 今天的 5 个单词都学完了！</div>':''}${todayWords.length ? todayWords.map((w,i) => wordCard(w, i, learnedToday.has(w.w), true)).join('') : '<div class="tip-card">这个词库已全部学完。</div>'}`; } if (sub === 'all'){ const pageSize = state.englishPage * PAGE_SIZE; const visible = deckWords.slice(0, pageSize); const hasMore = deckWords.length > pageSize; return head + `<div class="sec-title">全部单词 <span class="muted">${visible.length}/${deckWords.length}</span></div>${visible.map((w) => { const done = learnedAll.has(w.w); return `<div class="word-mini ${done?'done':''}" data-word="${esc(w.w)}" data-deck="${esc(w.deck||'')}" data-act="learnWord"><div class="wm-check ${done?'on':''}">${done?'✓':''}</div><div class="wm-word">${esc(w.w)}</div><div class="wm-cn">${esc(w.cn||'')}</div></div>`; }).join('')}${hasMore?`<button class="load-more" data-act="englishLoadMore">加载更多（还有 ${deckWords.length - pageSize} 个）</button>`:''}`; } if (sub === 'learned'){ const list = deckWords.filter(w => learnedAll.has(w.w)); if (!list.length) return head + `<div class="tip-card">还没学过单词。</div>`; const pageSize = state.englishPage * PAGE_SIZE; const visible = list.slice(0, pageSize); const hasMore = list.length > pageSize; return head + `<div class="sec-title">已学单词 <span class="muted">${list.length} 个</span></div>${visible.map((w, i) => wordCard(w, i, true)).join('')}${hasMore?`<button class="load-more" data-act="englishLoadMore">加载更多</button>`:''}`; } return head; }
-
-// 修正了喇叭图标，并增加了明确的“标记已学”按钮
 function wordCard(w, i, isDone, isDoneToday){ 
   return `<div class="card ${isDone?'done':''}" data-word="${esc(w.w)}" data-deck="${esc(w.deck||'')}" style="position:relative;">
     <div style="display:flex;align-items:flex-start;gap:12px;cursor:pointer" data-act="learnWord">
@@ -832,12 +723,10 @@ function wordCard(w, i, isDone, isDoneToday){
     <div style="font-size:14px;color:#333a4d;margin-top:10px;font-weight:600;line-height:1.55;${isDone?'text-decoration:line-through;color:#aab0c0;':''}">${esc(w.cn||'')}</div>
     ${w.scene?`<div style="margin-top:11px;padding-top:11px;border-top:1px dashed #eceef4;"><div style="font-size:13.5px;color:#2b3244;line-height:1.55;">${esc(w.scene)}</div><div style="font-size:12.5px;color:var(--sub);margin-top:5px;">${esc(w.sceneCn||'')}</div></div>`:''}
     
-    <!-- 修正后的正确喇叭图标 (Volume Up) -->
     <button style="position:absolute;top:14px;right:14px;border:0;background:#f3f4fa;width:38px;height:38px;border-radius:12px;font-size:16px;cursor:pointer;" data-act="speakWordScene" data-word="${esc(w.w)}" data-scene="${esc(w.scene||'')}" title="朗读">
       <svg class="svg-icon" viewBox="0 0 24 24" style="width:20px;height:20px;margin:0;"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"></path></svg>
     </button>
     
-    <!-- 增加明显的打卡按钮 -->
     <div style="margin-top:14px;padding-top:10px;border-top:1px dashed #eceef4;text-align:right;">
       <button class="mini-add" data-act="learnWord" style="background:${isDone?'#f1f2f9':'var(--brand)'};color:${isDone?'#6b7280':'#fff'};padding:6px 14px;font-size:12.5px;">
         ${isDone ? '↺ 取消已学' : '☑️ 标记为已学'}
@@ -860,7 +749,7 @@ async function lifeView(){ const sub = state.lifeSub || 'calendar'; const mainTa
 function getAllTodoItems(){ const items = []; Object.entries(state.calendarData || {}).forEach(([date, list]) => { (list || []).forEach(it => items.push({ date, time: it.time || '', title: it.title || '', desc: it.desc || '', done: !!it.done, manual: !!it.manual })); }); return items; }
 function todoRowHTML(it, today){ const payload = encodeURIComponent(JSON.stringify({ date: it.date, time: it.time, title: it.title })); const showDate = it.date === today ? '今天' : it.date; return `<div class="h-task"><span class="check ${it.done ? 'done' : ''}" data-toggle-todo="${payload}"></span><div class="body"><div class="h-t-name" style="${it.done ? 'text-decoration:line-through;color:var(--sub)' : ''}">${esc(it.title)}</div><div class="muted" style="font-size:11.5px;color:var(--sub)">${showDate} ${it.time} · ${esc(it.desc || '')}</div></div>${it.manual ? `<button class="del-tx" data-del-todo="${payload}">✕</button>` : ''}</div>`; }
 function calendarSection(){ const sub = state.calendarSub || 'month'; const subs = [{ id:'month', label:'月历' },{ id:'undone', label:'未完成' },{ id:'all', label:'总代办' }]; let content = ''; if (sub === 'month') content = calMonthPane(); else if (sub === 'undone') content = calUndonePane(); else content = calAllPane(); return `<div class="subtabs" style="margin-top:4px;">${subs.map(s => `<button class="subtab ${s.id===sub?'on':''}" data-act="calendarSub" data-sub="${s.id}">${s.label}</button>`).join('')}</div>${content}`; }
-function buildCalendarFromPlans(){ const data = {}; const start = new Date(PLAN_START); start.setDate(start.getDate() - 7); const end = new Date(PLAN_START); end.setDate(end.getDate() + 200); let cur = new Date(start); while (cur <= end) { const key = localDateStr(cur); const plan = getPlanDayInfo(cur); const ov = getOverride(cur); let item = null; if (ov === 'leave' || ov === 'period' || ov === 'rest'){ const m = { leave:['📝 请假','今日不训练'], period:['🌸 经期（休息）','今日休息'], rest:['😴 休息','今日完全休息'] }[ov]; item = { time:'全天', title:m[0], desc:m[1], done:false, type:'rest' }; } else if (ov === 'swim'){ item = { time:'19:30', title:'游泳代替今日计划', desc:'40–60 分钟', done:false, type:'swim' }; } else if (ov === 'reduced'){ item = { time:'19:30', title:'身体不适（减量训练）', desc:'20–30 分钟', done:false }; } else if (plan){ const totalWeeks = Math.floor(plan.effective / 7) + 1; const weekPhase = totalWeeks <= 4 ? 1 : totalWeeks <= 8 ? 2 : totalWeeks <= 12 ? 3 : 4; const dow = (plan.dayOfWeek === 6) ? 0 : plan.dayOfWeek + 1; const detail = getPlanDetail(weekPhase, dow); item = { time:'19:30', title:`第${totalWeeks}周 · ${detail.label}`, desc:detail.duration, done:false, type:'sport' }; } if (item) data[key] = [item]; cur.setDate(cur.getDate() + 1); } const saved = getManualTodos(); Object.keys(saved).forEach(k => { data[k] = (data[k] || []).concat((saved[k]||[]).map(x => ({ ...x, manual:true }))); }); const statusMap = getTodoStatusMap(); Object.entries(data).forEach(([date, items]) => { items.forEach(it => { if (statusMap[getTodoKey(date, it)]) it.done = true; }); }); state.calendarData = data; }
+function buildCalendarFromPlans(){ const data = {}; const start = new Date(PLAN_START); start.setDate(start.getDate() - 7); const end = new Date(PLAN_START); end.setDate(end.getDate() + 200); let cur = new Date(start); while (cur <= end) { const key = localDateStr(cur); const plan = getPlanDayInfo(cur); const ov = getOverride(cur); let item = null; if (ov === 'leave' || ov === 'period' || ov === 'rest'){ const m = { leave:['📝 请假','今日不训练'], period:['🌸 经期（休息）','今日休息'], rest:['😴 休息','今日完全休息'] }[ov]; item = { time:'全天', title:m[0], desc:m[1], done:false, type:'rest' }; } else if (ov === 'swim'){ item = { time:'19:30', title:'游泳代替今日计划', desc:'40–60 分钟', done:false, type:'swim' }; } else if (ov === 'reduced'){ item = { time:'19:30', title:'身体不适（减量训练）', desc:'20–30 分钟', done:false }; } else if (plan){ const totalWeeks = Math.floor(plan.effective / 7) + 1; const weekPhase = totalWeeks <= 4 ? 1 : totalWeeks <= 8 ? 2 : totalWeeks <= 12 ? 3 : 4; const dow = (plan.dayOfWeek === 6) ? 0 : plan.dayOfWeek + 1; const detail = window.getPlanDetail(weekPhase, dow); item = { time:'19:30', title:`第${totalWeeks}周 · ${detail.label}`, desc:detail.duration, done:false, type:'sport' }; } if (item) data[key] = [item]; cur.setDate(cur.getDate() + 1); } const saved = getManualTodos(); Object.keys(saved).forEach(k => { data[k] = (data[k] || []).concat((saved[k]||[]).map(x => ({ ...x, manual:true }))); }); const statusMap = getTodoStatusMap(); Object.entries(data).forEach(([date, items]) => { items.forEach(it => { if (statusMap[getTodoKey(date, it)]) it.done = true; }); }); state.calendarData = data; }
 function calMonthPane(){ buildCalendarFromPlans(); const y = state.calYear, m = state.calMonth; const firstDay = new Date(y, m, 1); const startWeek = (firstDay.getDay() + 6) % 7; const daysInMonth = new Date(y, m + 1, 0).getDate(); const today = todayStr(); let gridHtml = ''; for (let i = 0; i < startWeek; i++) gridHtml += '<div class="empty"></div>'; for (let d = 1; d <= daysInMonth; d++) { const dateStr = `${y}-${pad(m+1)}-${pad(d)}`; const cls = []; if (dateStr === today) cls.push('today'); if (dateStr === state.selectedDate) cls.push('sel'); if (state.calendarData[dateStr] && state.calendarData[dateStr].length) cls.push('has'); const holiday = HOLIDAYS[dateStr]; if (holiday) cls.push('holiday'); gridHtml += `<div class="${cls.join(' ')}" data-date="${dateStr}"><span>${d}</span>${holiday ? `<span class="holiday-name">${holiday}</span>` : ''}</div>`; } const total = startWeek + daysInMonth; const rest = (7 - total % 7) % 7; for (let i = 0; i < rest; i++) gridHtml += '<div class="empty"></div>'; const dayList = (state.calendarData[state.selectedDate] || []).slice().sort((a,b) => (a.time||'').localeCompare(b.time||'')); const dt = new Date(state.selectedDate + 'T00:00:00'); const holiday = HOLIDAYS[state.selectedDate]; const dayTl = dayList.length ? dayList.map(it => { const payload = encodeURIComponent(JSON.stringify({ date: state.selectedDate, time: it.time, title: it.title })); return `<div class="tl-item ${it.done ? 'done' : ''}"><div style="display:flex;gap:10px;align-items:flex-start"><span class="check ${it.done ? 'done' : ''}" data-toggle-todo="${payload}"></span><div style="flex:1" data-toggle-todo="${payload}"><div class="tl-time">${it.time}</div><div class="tl-title">${esc(it.title)}</div><div class="tl-desc">${esc(it.desc || '')}</div></div>${it.manual ? `<button class="del-tx" data-del-todo="${payload}" style="margin-top:2px">✕</button>` : ''}</div></div>`; }).join('') : '<p class="tip" style="color:#8A90A2">这一天暂无事项记录。</p>'; return `<div class="card"><div class="cal-head"><span class="nav" data-act="prevMonth">‹</span><div class="m">${y} 年 ${m + 1} 月</div><span class="nav" data-act="nextMonth">›</span></div><div style="text-align:center;margin-bottom:12px"><button class="mini-add" data-act="backToToday" style="padding:6px 16px">↩ 回到今天</button></div><div class="cal-week"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div></div><div class="cal-grid">${gridHtml}</div></div><div class="card"><div class="row-between" style="margin-bottom:10px;"><div style="font-size:14px;font-weight:700;">${dt.getMonth()+1} 月 ${dt.getDate()} 日${holiday ? ' · ' + holiday : ''}</div><button class="mini-add" data-act="openTodoSheet">＋ 新建待办</button></div><div class="tl">${dayTl}</div></div>`; }
 function calUndonePane(){ const today = todayStr(); const items = getAllTodoItems().filter(i => !i.done).sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time)); if (!items.length) return `<div class="card"><p class="tip" style="text-align:center;color:#8A90A2;padding:20px 0">没有未完成的事项 🎉</p></div>`; let html = '', lastDate = ''; items.forEach(it => { if (it.date !== lastDate){ lastDate = it.date; const d = new Date(it.date + 'T00:00:00'); const wd = ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]; const isPast = it.date < today; html += `<div style="font-size:12px;color:${isPast?'var(--hot)':'var(--sub)'};font-weight:700;margin:12px 0 4px">${it.date === today ? '今天 · ' + it.date : it.date + ' ' + wd + (isPast ? ' · 已过期' : '')}</div>`; } html += todoRowHTML(it, today); }); return `<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:6px;">未完成事项 <span class="muted" style="color:var(--sub)">${items.length} 项</span></div>${html}</div>`; }
 function calAllPane(){ const today = todayStr(); const items = getAllTodoItems().sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time)); if (!items.length) return `<div class="card"><p class="tip" style="text-align:center;color:#8A90A2;padding:20px 0">暂无待办</p></div>`; let html = '', lastDate = ''; items.forEach(it => { if (it.date !== lastDate){ lastDate = it.date; const d = new Date(it.date + 'T00:00:00'); const wd = ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]; const isPast = it.date < today; html += `<div style="font-size:12px;color:${isPast?'var(--hot)':'var(--sub)'};font-weight:700;margin:12px 0 4px">${it.date === today ? '今天 · ' + it.date : it.date + ' ' + wd}</div>`; } html += todoRowHTML(it, today); }); return `<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:6px;">全部待办</div>${html}</div>`; }
@@ -882,7 +771,7 @@ function sportPlanPane(){
     if (ov === 'leave' || ov === 'period' || ov === 'rest'){ label = '休息'; cls.push('rest'); }
     else if (ov === 'swim'){ label = '游泳（替换）'; duration = '40–60′'; }
     else if (ov === 'reduced'){ label = '身体不适（减量）'; duration = '20–30′'; }
-    else if (pd){ const totalWeeks = Math.floor(pd.effective / 7) + 1; const weekPhase = totalWeeks <= 4 ? 1 : totalWeeks <= 8 ? 2 : totalWeeks <= 12 ? 3 : 4; const dowD = (pd.dayOfWeek === 6) ? 0 : pd.dayOfWeek + 1; const detail = getPlanDetail(weekPhase, dowD); label = detail.label; duration = detail.duration || '—'; }
+    else if (pd){ const totalWeeks = Math.floor(pd.effective / 7) + 1; const weekPhase = totalWeeks <= 4 ? 1 : totalWeeks <= 8 ? 2 : totalWeeks <= 12 ? 3 : 4; const dowD = (pd.dayOfWeek === 6) ? 0 : pd.dayOfWeek + 1; const detail = window.getPlanDetail(weekPhase, dowD); label = detail.label; duration = detail.duration || '—'; }
     weekRows.push(`<div class="week-row ${cls.join(' ')}"><span class="d">${dayNames[i]}</span><span class="dt">${fmtShort(d)}</span><span class="a">${label}</span><span class="t">${duration}</span></div>`);
   }
   let sessionBlock = '';
@@ -950,7 +839,6 @@ function closetAddPane(){ const sh = calcShape(); const cat = state.closetCat ||
   return `<div class="card" style="background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;border:0;"><div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">身材类型</div><div style="font-size:19px;font-weight:750;margin-bottom:6px;">${sh.name}</div><div style="font-size:13px;opacity:.92;">${sh.desc}</div><button class="btn" style="background:rgba(255,255,255,.92);color:var(--purple);margin-top:12px;font-weight:700;" data-act="gotoBodyData">📐 修改身材数据 →</button></div>
   <div class="card">
     <div style="font-size:13px;font-weight:700;margin-bottom:10px;">添加单品</div>
-    <!-- 修复了上传照片无法点击的问题 -->
     <div class="upload" style="min-height:120px;" onclick="document.getElementById('clothUpload').click()">
       <span class="plus">＋</span><span>点击上传衣物照片</span>
       <input type="file" id="clothUpload" accept="image/*" style="display:none;">
@@ -1029,7 +917,6 @@ view.addEventListener('click', async e => {
   if (act === 'gotoExport'){ state.tab = 'me'; render(); return; }
   if (act === 'jumpFromHome'){ const target = t.dataset.target; if (target === 'study'){ state.tab = 'study'; state.studySub = 'today'; } else if (target === 'sport'){ state.tab = 'life'; state.lifeSub = 'sport'; state.sportSub = 'plan'; } else if (target === 'money'){ state.tab = 'life'; state.lifeSub = 'money'; state.moneySub = 'record'; } render(); return; }
   
-  // 修复了日历只能选当天的BUG，现在默认为选择的日期
   if (act === 'openTodoSheet') { 
     const defaultDate = state.selectedDate || todayStr(); 
     openSheet(`<div class="sheet-head"><div class="sheet-emoji">📝</div><div style="flex:1;"><h2>新建待办</h2><div class="muted">${defaultDate}</div></div></div>
@@ -1150,7 +1037,6 @@ view.addEventListener('click', e => { const del = e.target.closest('[data-del-tx
 view.addEventListener('change', e => { if (e.target.id === 'planStartInput'){ const v = e.target.value; if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return; setPlanStart(new Date(v + 'T00:00:00')); buildCalendarFromPlans(); render(); return; } if (e.target.id === 'clothCat'){ state.closetCat = e.target.value; render({ keepScroll: true }); return; } if (e.target.dataset && e.target.dataset.gkey){ const v = parseFloat(e.target.value); if (!isNaN(v)) state.garmentDraft[e.target.dataset.gkey] = v; else delete state.garmentDraft[e.target.dataset.gkey]; render({ keepScroll: true }); return; } if (e.target.id === 'clothUpload'){ const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = ev => { const img = new Image(); img.onload = () => { const MAX = 600; const scale = Math.min(1, MAX / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale); const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, c.width, c.height); const dataUrl = c.toDataURL('image/jpeg', 0.8); const p = document.getElementById('clothPreview'); if (p){ p.src = dataUrl; p.style.display = 'block'; } }; img.src = ev.target.result; }; reader.readAsDataURL(file); } });
 sheet.addEventListener('click', async e => { const t = e.target.closest('[data-act]'); if (!t) return; const act = t.dataset.act; if (act === 'closeSheet'){ closeSheet(); return; } if (act === 'confirmImportTx'){ confirmImportTx(t.dataset.mode); return; } if (act === 'reviewSpeak'){ toggleSpeak(t.dataset.text, t.dataset.lang||'en-US', t); return; } if (act === 'reviewSubmit'){ submitReviewAnswer(); return; } if (act === 'rate'){ rateAndNext(t.dataset.rating); return; } if (act === 'aiRole'){ state.aiRole = t.dataset.role; LS.set('ai-role', state.aiRole); openAIAssistant(); return; } if (act === 'clearAIHistory'){ if (confirm('清空？')){ LearnStore.clearAIHistory(); openAIAssistant(); } return; } if (act === 'aiSend'){ sendAIMessage(); return; } });
 
-// AI 动作解析点击事件
 view.addEventListener('click', async e => {
   const btn = e.target.closest('[data-act="aiExerciseDetail"]');
   if (!btn) return;
@@ -1161,7 +1047,7 @@ view.addEventListener('click', async e => {
     return;
   }
   const code = btn.dataset.code;
-  const ex = EXERCISES[code] || { name: code, code };
+  const ex = window.EXERCISES[code] || { name: code, code };
   btn.disabled = true;
   btn.textContent = '⏳ AI 解析中…';
   try {
@@ -1183,7 +1069,6 @@ view.addEventListener('click', async e => {
 let _voiceActive = false; let _voiceTimerHandle = null; let _voiceStartTime = 0;
 let _recognition = null;
 
-// 初始化 Web Speech API 作为降级方案
 function initWebSpeech() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -1211,7 +1096,6 @@ function startVoiceRecord(){
   const apiName = detectVoiceAPI(); 
   console.log('[Voice] 检测到原生接口:', apiName || '无'); 
   
-  // 如果原生没接口，且浏览器支持 Web Speech API
   if (!apiName && _recognition){ 
     _voiceActive = true; 
     _voiceStartTime = Date.now(); 
