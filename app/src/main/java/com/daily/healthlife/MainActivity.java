@@ -1,91 +1,120 @@
 package com.daily.healthlife;
 
 import android.annotation.SuppressLint;
-import android.appwidget.AppWidgetManager;
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
-import android.webkit.JavascriptInterface;
+import android.view.KeyEvent;
+import android.webkit.ConsoleMessage;
+import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.Toast;
-
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 public class MainActivity extends AppCompatActivity {
-
     private WebView webView;
-    private ValueCallback<Uri[]> uploadMessage;
-    private static final int FILE_CHOOSER_RESULT_CODE = 100;
+    private JsBridge jsBridge;
+    private ValueCallback<Uri[]> filePathCallback;
+    private static final int FILE_CHOOSER_CODE = 1001;
+    private static final int REQ_PERMS = 1002;
 
-    // 接收小组件点击打勾的广播
-    private final BroadcastReceiver widgetCheckReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver widgetReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if ("com.daily.healthlife.WIDGET_CHECK_SYNC".equals(intent.getAction())) {
-                String key = intent.getStringExtra("key");
-                boolean done = intent.getBooleanExtra("done", false);
-                // 通知 WebView 同步状态
-                if (webView != null) {
-                    webView.post(() -> webView.evaluateJavascript("window.onWidgetCheckin('" + key + "', " + done + ")", null));
+            if (HealthWidgetProvider.ACTION_WIDGET_TOGGLE_ITEM.equals(intent.getAction())) {
+                String key = intent.getStringExtra("item_key");
+                boolean done = intent.getBooleanExtra("item_done", false);
+                if (webView != null && key != null) {
+                    webView.post(() -> {
+                        String js = "if(window.onWidgetCheckin) window.onWidgetCheckin('" + key + "', " + done + ");";
+                        webView.evaluateJavascript(js, null);
+                    });
                 }
             }
         }
     };
 
-    @SuppressLint("SetJavaScriptEnabled")
+    @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        requestPerms();
 
-        webView = findViewById(R.id.webview); // 确保你的 activity_main.xml 里有这个 ID
-        WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setAllowFileAccess(true);
-        settings.setAllowContentAccess(true);
+        webView = findViewById(R.id.webview);
+        WebSettings s = webView.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);
+        s.setDatabaseEnabled(true);
+        s.setAllowFileAccess(true);
+        s.setAllowContentAccess(true);
+        s.setAllowFileAccessFromFileURLs(true);
+        s.setAllowUniversalAccessFromFileURLs(true);
+        s.setMediaPlaybackRequiresUserGesture(false);
+        s.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        s.setCacheMode(WebSettings.LOAD_DEFAULT);
+        s.setJavaScriptCanOpenWindowsAutomatically(true);
 
-        // 注册 JS 接口
-        webView.addJavascriptInterface(new JsBridge(this), "AndroidBridge");
-        
-        // 允许网页弹窗选择文件（修复衣橱上传照片无反应）
-        webView.setWebChromeClient(new WebChromeClient() {
+        jsBridge = new JsBridge(this, webView);
+        webView.addJavascriptInterface(jsBridge, "AndroidBridge");
+        webView.addJavascriptInterface(jsBridge, "AndroidTTS");
+        webView.addJavascriptInterface(jsBridge, "AndroidFile");
+        webView.addJavascriptInterface(jsBridge, "AndroidNotify");
+
+        webView.setWebViewClient(new WebViewClient() {
             @Override
-            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
-                if (uploadMessage != null) {
-                    uploadMessage.onReceiveValue(null);
-                    uploadMessage = null;
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
+                String url = req.getUrl().toString();
+                if (url.startsWith("http://") || url.startsWith("https://")) {
+                    try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); } catch (Exception ignored) {}
+                    return true;
                 }
-                uploadMessage = filePathCallback;
-                Intent intent = fileChooserParams.createIntent();
-                try {
-                    startActivityForResult(intent, FILE_CHOOSER_RESULT_CODE);
-                } catch (Exception e) {
-                    uploadMessage = null;
-                    return false;
-                }
-                return true;
+                return false;
             }
         });
 
-        webView.setWebViewClient(new WebViewClient());
-        webView.loadUrl("file:///android_asset/index.html"); // 假设 index.html 在 assets 目录下
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onPermissionRequest(final PermissionRequest request) {
+                runOnUiThread(() -> request.grant(request.getResources()));
+            }
+            @Override
+            public boolean onShowFileChooser(WebView wv, ValueCallback<Uri[]> cb, FileChooserParams params) {
+                if (filePathCallback != null) filePathCallback.onReceiveValue(null);
+                filePathCallback = cb;
+                try {
+                    Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+                    i.addCategory(Intent.CATEGORY_OPENABLE);
+                    i.setType("*/*");
+                    startActivityForResult(Intent.createChooser(i, "选择文件"), FILE_CHOOSER_CODE);
+                } catch (Exception e) { filePathCallback = null; return false; }
+                return true;
+            }
+            @Override
+            public boolean onConsoleMessage(ConsoleMessage cm) { return true; }
+        });
 
-        // 注册小组件广播
-        IntentFilter filter = new IntentFilter("com.daily.healthlife.WIDGET_CHECK_SYNC");
-        registerReceiver(widgetCheckReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
-
-        // 处理桌面小部件传过来的跳转路由
+        webView.loadUrl("file:///android_asset/index.html");
         handleIntent(getIntent());
+
+        IntentFilter filter = new IntentFilter(HealthWidgetProvider.ACTION_WIDGET_TOGGLE_ITEM);
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(widgetReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(widgetReceiver, filter);
+        }
     }
 
     @Override
@@ -96,65 +125,68 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void handleIntent(Intent intent) {
-        if (intent != null && intent.hasExtra("route")) {
-            String route = intent.getStringExtra("route");
-            if (webView != null) {
-                // 延迟一点执行，确保 WebView 已加载完毕
-                webView.postDelayed(() -> webView.evaluateJavascript("window.jumpFromNative('" + route + "')", null), 500);
+        if (intent != null && intent.getData() != null) {
+            String route = intent.getData().getQueryParameter("route");
+            if (route != null && webView != null) {
+                webView.postDelayed(() -> {
+                    String js = "if(window.jumpFromNative) window.jumpFromNative('" + route + "');";
+                    webView.evaluateJavascript(js, null);
+                }, 500);
             }
         }
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == FILE_CHOOSER_RESULT_CODE) {
-            if (uploadMessage != null) {
-                Uri[] results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
-                uploadMessage.onReceiveValue(results);
-                uploadMessage = null;
-            }
+    private void requestPerms() {
+        String[] perms;
+        if (Build.VERSION.SDK_INT >= 33) {
+            perms = new String[]{android.Manifest.permission.RECORD_AUDIO, android.Manifest.permission.POST_NOTIFICATIONS};
+        } else {
+            perms = new String[]{android.Manifest.permission.RECORD_AUDIO};
         }
+        boolean need = false;
+        for (String p : perms) {
+            if (ContextCompat.checkSelfPermission(this, p) != PackageManager.PERMISSION_GRANTED) { need = true; break; }
+        }
+        if (need) ActivityCompat.requestPermissions(this, perms, REQ_PERMS);
+    }
+
+    @Override
+    protected void onActivityResult(int req, int res, @Nullable Intent data) {
+        if (req == FILE_CHOOSER_CODE) {
+            if (filePathCallback != null) {
+                Uri[] results = null;
+                if (res == RESULT_OK && data != null && data.getData() != null) {
+                    results = new Uri[]{ data.getData() };
+                }
+                filePathCallback.onReceiveValue(results);
+                filePathCallback = null;
+            }
+            return;
+        }
+        super.onActivityResult(req, res, data);
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            webView.evaluateJavascript(
+                "(function(){ if(document.getElementById('sheet') && document.getElementById('sheet').classList.contains('open')){ closeSheet(); return 'true'; } return 'false'; })()",
+                value -> {
+                    if (!"\"true\"".equals(value)) {
+                        if (webView.canGoBack()) webView.goBack();
+                        else finish();
+                    }
+                });
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
     }
 
     @Override
     protected void onDestroy() {
-        unregisterReceiver(widgetCheckReceiver);
-        if (webView != null) {
-            webView.destroy();
-        }
+        try { unregisterReceiver(widgetReceiver); } catch (Exception ignored) {}
+        if (jsBridge != null) jsBridge.destroy();
+        if (webView != null) { webView.loadUrl("about:blank"); webView.destroy(); }
         super.onDestroy();
-    }
-
-    // ===== JS 交互桥接类 =====
-    public class JsBridge {
-        private final Context context;
-
-        public JsBridge(Context context) {
-            this.context = context;
-        }
-
-        // 网页同步数据到桌面小组件
-        @JavascriptInterface
-        public void syncTimelineData(String jsonStr) {
-            SharedPreferences prefs = context.getSharedPreferences(HealthWidgetProvider.PREFS_NAME, Context.MODE_PRIVATE);
-            prefs.edit().putString(HealthWidgetProvider.KEY_TIMELINE_DATA, jsonStr).apply();
-
-            AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
-            ComponentName thisWidget = new ComponentName(context, HealthWidgetProvider.class);
-            int[] appWidgetIds = appWidgetManager.getAppWidgetIds(thisWidget);
-            if (appWidgetIds.length > 0) {
-                for (int id : appWidgetIds) {
-                    HealthWidgetProvider.updateAppWidget(context, appWidgetManager, id);
-                }
-            }
-        }
-
-        // 预留的其他接口（防止网页报错）
-        @JavascriptInterface
-        public void syncWidgetData(String study, String expense) {}
-        
-        @JavascriptInterface
-        public void getWidgetTimelineData() {}
     }
 }
