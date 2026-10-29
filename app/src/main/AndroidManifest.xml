@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.daily.healthlife">
-
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.daily.healthlife">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -10,21 +8,13 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="日常 · 健康生活"
-        android:roundIcon="@mipmap/ic_launcher"
-        android:supportsRtl="true"
-        android:usesCleartextTraffic="true"
+        android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:label="日常 · 健康生活"
+        android:roundIcon="@mipmap/ic_launcher" android:supportsRtl="true" android:usesCleartextTraffic="true"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">
-
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:launchMode="singleTask"
-            android:configChanges="orientation|screenSize|keyboardHidden">
+        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask" android:configChanges="orientation|screenSize|keyboardHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -36,25 +26,13 @@
                 <data android:scheme="healthlife" android:host="jump" />
             </intent-filter>
         </activity>
-
-        <!-- 桌面小部件 -->
-        <receiver
-            android:name=".HealthWidgetProvider"
-            android:exported="true">
+        <receiver android:name=".HealthWidgetProvider" android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="com.daily.healthlife.WIDGET_TOGGLE_ITEM" />
             </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_health_card_info" />
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_health_card_info" />
         </receiver>
-
-        <!-- 倒计时前台服务 -->
-        <service
-            android:name=".WalkTimerService"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
-
+        <service android:name=".WalkTimerService" android:exported="false" android:foregroundServiceType="dataSync" />
     </application>
 </manifest>
