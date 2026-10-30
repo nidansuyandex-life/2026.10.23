@@ -513,6 +513,29 @@ function buildPlanByContent(weekPhase, dow) {
   const plan = getPlanDetail(weekPhase, dow);
   return { key: 'd' + dow, label: plan.label, icon: plan.isTraining === false ? '😴' : '✅', duration: plan.duration, summary: plan.label, isTraining: plan.isTraining !== false, warmup: plan.warmup || [], stretch: plan.stretch || [], exercises: plan.exercises || [], tips: plan.tips || [] };
 }
+
+// 👇 修复：补全 buildRestPlan 函数 👇
+function buildRestPlan(mode) {
+  const configs = {
+    'leave': { label: '请假', icon: '📝', summary: '今日不训练', tips: ['好好休息', '放松身心'] },
+    'period': { label: '经期（休息）', icon: '🌸', summary: '经期休息', tips: ['避免剧烈运动', '注意保暖'] },
+    'rest': { label: '休息', icon: '😴', summary: '今日完全休息', tips: ['完全休息', '保证睡眠'] }
+  };
+  const config = configs[mode] || configs['rest'];
+  return {
+    key: mode,
+    label: config.label,
+    icon: config.icon,
+    duration: '—',
+    summary: config.summary,
+    isTraining: false,
+    warmup: [],
+    stretch: [],
+    exercises: [],
+    tips: config.tips
+  };
+}
+
 function currentPlan() {
   const planInfo = getPlanDayInfo(new Date());
   const ov = getOverride(new Date());
