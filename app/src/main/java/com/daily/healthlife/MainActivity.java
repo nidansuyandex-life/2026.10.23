@@ -1,17 +1,22 @@
 package com.daily.healthlife;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -19,38 +24,32 @@ import androidx.core.content.ContextCompat;
 public class MainActivity extends AppCompatActivity {
     private WebView webView;
     private JsBridge jsBridge;
+    private ValueCallback<Uri[]> mUploadMessage;
+    private final static int FILE_CHOOSER_RESULT_CODE = 10000;
 
+    @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // 1. 加载布局文件
         setContentView(R.layout.activity_main);
         
-        // 2. 初始化 WebView
         webView = findViewById(R.id.webview);
         setupWebView();
-        
-        // 3. 请求权限
         checkPermissions();
-        
-        // 4. 处理外部跳转意图
         handleJumpIntent(getIntent());
     }
 
     private void setupWebView() {
         WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);           // 开启 JS
-        settings.setDomStorageEnabled(true);           // 开启 localStorage
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
-        
-        // 允许本地文件访问跨域资源（很重要：HTML 抓取网络 API 需要）
         settings.setAllowFileAccessFromFileURLs(true);
         settings.setAllowUniversalAccessFromFileURLs(true);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
-        // 5. 注册 JS 桥接（HTML 中用了多个别名）
         jsBridge = new JsBridge(this, webView);
         webView.addJavascriptInterface(jsBridge, "AndroidBridge");
         webView.addJavascriptInterface(jsBridge, "AndroidFile");
@@ -61,7 +60,6 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                // 拦截外部网页链接，使用系统浏览器打开
                 if (url.startsWith("http://") || url.startsWith("https://")) {
                     try {
                         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
@@ -74,10 +72,55 @@ public class MainActivity extends AppCompatActivity {
                 return false;
             }
         });
-        webView.setWebChromeClient(new WebChromeClient());
+
+        // 关键：处理 WebView 内部的文件上传
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
+                if (mUploadMessage != null) {
+                    mUploadMessage.onReceiveValue(null);
+                }
+                mUploadMessage = filePathCallback;
+
+                Intent intent = fileChooserParams.createIntent();
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                try {
+                    startActivityForResult(Intent.createChooser(intent, "选择图片"), FILE_CHOOSER_RESULT_CODE);
+                } catch (Exception e) {
+                    mUploadMessage = null;
+                    Toast.makeText(MainActivity.this, "无法打开文件选择器", Toast.LENGTH_SHORT).show();
+                    return false;
+                }
+                return true;
+            }
+        });
         
-        // 6. 加载本地 assets 中的入口文件
         webView.loadUrl("file:///android_asset/index.html");
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == FILE_CHOOSER_RESULT_CODE) {
+            if (mUploadMessage == null) return;
+            Uri[] results = null;
+            if (resultCode == Activity.RESULT_OK) {
+                if (data != null) {
+                    String dataString = data.getDataString();
+                    if (dataString != null) {
+                        results = new Uri[]{Uri.parse(dataString)};
+                    } else if (data.getClipData() != null) {
+                        int count = data.getClipData().getItemCount();
+                        results = new Uri[count];
+                        for (int i = 0; i < count; i++) {
+                            results[i] = data.getClipData().getItemAt(i).getUri();
+                        }
+                    }
+                }
+            }
+            mUploadMessage.onReceiveValue(results);
+            mUploadMessage = null;
+        }
     }
 
     public void checkPermissions() {
