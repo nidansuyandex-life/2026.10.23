@@ -49,6 +49,9 @@ public class MainActivity extends AppCompatActivity {
         settings.setAllowFileAccessFromFileURLs(true);
         settings.setAllowUniversalAccessFromFileURLs(true);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        
+        // 关键：允许自动播放媒体，解决发音没反应的问题
+        settings.setMediaPlaybackRequiresUserGesture(false);
 
         jsBridge = new JsBridge(this, webView);
         webView.addJavascriptInterface(jsBridge, "AndroidBridge");
@@ -73,7 +76,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // 关键：处理 WebView 内部的文件上传
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
@@ -81,7 +83,6 @@ public class MainActivity extends AppCompatActivity {
                     mUploadMessage.onReceiveValue(null);
                 }
                 mUploadMessage = filePathCallback;
-
                 Intent intent = fileChooserParams.createIntent();
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
                 try {
