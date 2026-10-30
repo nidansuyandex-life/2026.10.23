@@ -42,7 +42,6 @@ public class JsBridge {
         this.recorder = new VoiceRecorder(a);
     }
 
-    // ================== TTS 相关 ==================
     @JavascriptInterface
     public void speak(String text, String lang) {
         tts.speak(text, lang);
@@ -53,7 +52,6 @@ public class JsBridge {
         tts.stop();
     }
 
-    // ================== 通知权限 ==================
     @JavascriptInterface
     public void requestPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -63,7 +61,6 @@ public class JsBridge {
         }
     }
 
-    // ================== 站立倒计时 ==================
     @JavascriptInterface
     public void startNativeWalkTimer(int seconds) {
         Context context = act.getApplicationContext();
@@ -82,7 +79,6 @@ public class JsBridge {
         context.stopService(new Intent(context, WalkTimerService.class));
     }
 
-    // ================== 桌面小组件同步 ==================
     @JavascriptInterface
     public void syncWidgetData(String studyProgress, String monthExpense) {
         SharedPreferences sp = act.getApplicationContext().getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
@@ -111,7 +107,6 @@ public class JsBridge {
         return act.getApplicationContext().getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE).getString("timeline_data", "[]");
     }
 
-    // ================== 语音识别 ==================
     @JavascriptInterface
     public void startRecognize(int durationSec) {
         act.runOnUiThread(() -> recorder.start(durationSec, new VoiceRecorder.Callback() {
@@ -148,7 +143,6 @@ public class JsBridge {
         return sb.append("'").toString();
     }
 
-    // ================== 图片与文件操作 ==================
     @JavascriptInterface
     public String saveImage(String base64Data, String filename) {
         try {
@@ -225,7 +219,6 @@ public class JsBridge {
         });
     }
 
-    // ================== 通知与震动 ==================
     @JavascriptInterface
     public void notify(String title, String body) {
         try {
@@ -256,7 +249,6 @@ public class JsBridge {
         } catch (Exception ignored) {}
     }
 
-    // ================== 生命周期 ==================
     public void destroy() {
         tts.destroy();
         recorder.destroy();
