@@ -997,6 +997,7 @@ view.addEventListener('click', async e => {
   if (act === 'valveLoadMore'){ state.valvePage += 1; render(); return; }
   if (act === 'taskJump'){ const key = t.dataset.key; if (key === 'words'){ state.studySub = 'english'; state.englishSub = 'today'; } else if (key === 'valve') state.studySub = 'valve'; else if (key === 'logic') state.studySub = 'logic'; else if (key === 'general') state.studySub = 'general'; else if (['passage','expr','yiyan','quote','story'].includes(key)){ state.studySub = 'express'; } else if (key === 'news'){ state.tab = 'discover'; state.discoverSub = 'news'; } render(); return; }
   if (act === 'learnWord'){ 
+    e.stopPropagation();
     const card = t.closest('[data-word]'); 
     if (!card) return; 
     const w = card.dataset.word || t.dataset.word; 
@@ -1115,13 +1116,84 @@ function finishWalkTimer(){ const el = document.getElementById('centerTimer'); i
 let _walkEndTs = 0, _walkCountdownHandle = null, _walkTimerHandle = null;
 const WALK_LAST_KEY = 'app_h_lastWalkReminder';
 function isInWalkWindow(){ const now = new Date(); const mins = now.getHours() * 60 + now.getMinutes(); return (mins >= 8*60 + 30 && mins <= 11*60 + 30) || (mins >= 13*60 + 30 && mins <= 17*60); }
-function startWalkTimer(sec){ const el = document.getElementById('centerTimer'); const num = document.getElementById('centerTimerNum'); if (!el || !num) return; const duration = Math.max(1, parseInt(sec, 10) || 200); _walkEndTs = Date.now() + duration * 1000; num.textContent = duration; el.classList.add('show'); if (window.AndroidBridge && typeof AndroidBridge.startNativeWalkTimer === 'function') { AndroidBridge.startNativeWalkTimer(duration); } if (_walkCountdownHandle) clearInterval(_walkCountdownHandle); _walkCountdownHandle = setInterval(() => { const left = Math.max(0, Math.ceil((_walkEndTs - Date.now()) / 1000)); num.textContent = left; if (left <= 0) finishWalkTimer(); }, 250); speakText('该站起来走动了，活动两到三分钟'); vibratePattern([150, 100, 150]); sendNotification('该站起来走动了', '起身活动 2–3 分钟，下巴轻收 5 次'); }
+function startWalkTimer(sec){ 
+  const el = document.getElementById('centerTimer'); 
+  const num = document.getElementById('centerTimerNum'); 
+  if (!el || !num) return; 
+  const duration = Math.max(1, parseInt(sec, 10) || 200); 
+  _walkEndTs = Date.now() + duration * 1000; 
+  num.textContent = duration; 
+  el.classList.add('show'); 
+  
+  let hasNative = false;
+  if (window.AndroidBridge && typeof AndroidBridge.startNativeWalkTimer === 'function') { 
+    AndroidBridge.startNativeWalkTimer(duration); 
+    hasNative = true;
+  } 
+  
+  if (_walkCountdownHandle) clearInterval(_walkCountdownHandle); 
+  _walkCountdownHandle = setInterval(() => { 
+    const left = Math.max(0, Math.ceil((_walkEndTs - Date.now()) / 1000)); 
+    num.textContent = left; 
+    if (left <= 0) finishWalkTimer(); 
+  }, 250); 
+
+  if (!hasNative) {
+    speakText('该站起来走动了，活动两到三分钟'); 
+    vibratePattern([150, 100, 150]); 
+    sendNotification('该站起来走动了', '起身活动 2–3 分钟，下巴轻收 5 次'); 
+  }
+}
 function checkWalkReminder(force){ if (!force && !isInWalkWindow()) return; const last = parseInt(LS.get(WALK_LAST_KEY, '0') || '0', 10); const now = Date.now(); if (!force && now - last < 30 * 60 * 1000) return; LS.set(WALK_LAST_KEY, now); if (!_walkEndTs || _walkEndTs < now) startWalkTimer(200); sendNotification('该站起来走动了', '起身活动 2–3 分钟，下巴轻收 5 次'); }
 function initWalkReminder(){ requestNotifPermission(); setTimeout(() => checkWalkReminder(false), 3000); if (_walkTimerHandle) clearInterval(_walkTimerHandle); _walkTimerHandle = setInterval(() => checkWalkReminder(false), 60 * 1000); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkWalkReminder(false); }); }
 
 function stopSpeak(){ try { if (window.AndroidTTS && AndroidTTS.stopSpeak) AndroidTTS.stopSpeak(); } catch(e){} try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch(e){} try { const p = document.getElementById('ttsPlayer'); if (p){ p.pause(); p.currentTime = 0; } } catch(e){} document.querySelectorAll('.playing').forEach(b => b.classList.remove('playing')); _currentSpeakBtn = null; _speakSeq++; }
 let _currentSpeakBtn = null; let _speakSeq = 0;
-function toggleSpeak(text, lang, btn){ if (!text) { toast('没有内容可朗读'); return; } const wasPlaying = btn && btn.classList.contains('playing'); stopSpeak(); if (wasPlaying) return; const langStr = lang || 'en-US'; const seq = ++_speakSeq; if (btn) { btn.classList.add('playing'); _currentSpeakBtn = btn; } if (window.AndroidTTS && typeof AndroidTTS.speak === 'function'){ try { AndroidTTS.speak(String(text), langStr); const ms = Math.max(1500, Math.min(60000, String(text).length * 200)); setTimeout(() => { if (seq === _speakSeq && _currentSpeakBtn){ _currentSpeakBtn.classList.remove('playing'); _currentSpeakBtn = null; } }, ms); return; } catch(e){ console.error('AndroidTTS 失败', e); } } if (window.speechSynthesis){ try { const u = new SpeechSynthesisUtterance(String(text)); u.lang = langStr; u.rate = 0.95; u.onend = () => { if (seq === _speakSeq && _currentSpeakBtn){ _currentSpeakBtn.classList.remove('playing'); _currentSpeakBtn = null; } }; speechSynthesis.speak(u); return; } catch(e){} } const player = document.getElementById('ttsPlayer'); if (!player) { toast('朗读失败：没有音频播放器'); return; } const isZh = langStr.startsWith('zh'); const trimmed = String(text).slice(0, 800); const url = isZh ? `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(trimmed)}&le=zh` : `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(trimmed)}&type=2`; player.src = url; const cleanup = () => { if (seq !== _speakSeq) return; if (_currentSpeakBtn) _currentSpeakBtn.classList.remove('playing'); _currentSpeakBtn = null; }; player.onended = cleanup; player.onerror = () => { cleanup(); toast('朗读失败，请检查网络'); }; const p = player.play(); if (p && p.catch) p.catch(() => { cleanup(); toast('朗读被拦截，请再点一次'); }); }
+function toggleSpeak(text, lang, btn){ 
+  if (!text) { toast('没有内容可朗读'); return; } 
+  const wasPlaying = btn && btn.classList.contains('playing'); 
+  stopSpeak(); 
+  if (wasPlaying) return; 
+  const langStr = lang || 'en-US'; 
+  const seq = ++_speakSeq; 
+  if (btn) { btn.classList.add('playing'); _currentSpeakBtn = btn; } 
+  
+  if (window.AndroidTTS && typeof AndroidTTS.speak === 'function'){ 
+    try { 
+      AndroidTTS.speak(String(text), langStr); 
+      const ms = Math.max(1500, Math.min(60000, String(text).length * 200)); 
+      setTimeout(() => { 
+        if (seq === _speakSeq && _currentSpeakBtn){ _currentSpeakBtn.classList.remove('playing'); _currentSpeakBtn = null; } 
+      }, ms); 
+      return; 
+    } catch(e){ console.error('AndroidTTS 失败', e); } 
+  } 
+  
+  if (window.speechSynthesis){ 
+    try { 
+      const u = new SpeechSynthesisUtterance(String(text)); 
+      u.lang = langStr; 
+      u.rate = 0.95; 
+      u.onend = () => { 
+        if (seq === _speakSeq && _currentSpeakBtn){ _currentSpeakBtn.classList.remove('playing'); _currentSpeakBtn = null; } 
+      }; 
+      speechSynthesis.speak(u); 
+      return; 
+    } catch(e){} 
+  } 
+  
+  const player = document.getElementById('ttsPlayer'); 
+  if (!player) { toast('朗读失败：没有音频播放器'); return; } 
+  const isZh = langStr.startsWith('zh'); 
+  const trimmed = String(text).slice(0, 800); 
+  const url = isZh ? `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(trimmed)}&le=zh` : `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(trimmed)}&type=2`; 
+  player.src = url; 
+  const cleanup = () => { if (seq !== _speakSeq) return; if (_currentSpeakBtn) _currentSpeakBtn.classList.remove('playing'); _currentSpeakBtn = null; }; 
+  player.onended = cleanup; 
+  player.onerror = () => { cleanup(); toast('朗读失败，请检查网络'); }; 
+  const p = player.play(); 
+  if (p && p.catch) p.catch(() => { cleanup(); toast('朗读被拦截，请再点一次'); }); 
+}
 function speakWordWithScene(word, scene, btn){ const wasPlaying = btn && btn.classList.contains('playing'); stopSpeak(); if (wasPlaying) return; const seq = ++_speakSeq; if (btn) { btn.classList.add('playing'); _currentSpeakBtn = btn; } const doSpeak = (txt) => { if (window.AndroidTTS && typeof AndroidTTS.speak === 'function') AndroidTTS.speak(txt, 'en-US'); else if (window.speechSynthesis){ try { const u = new SpeechSynthesisUtterance(txt); u.lang = 'en-US'; u.rate = 0.95; speechSynthesis.speak(u); } catch(e){} } }; const clearBtn = () => { if (seq === _speakSeq && _currentSpeakBtn){ _currentSpeakBtn.classList.remove('playing'); _currentSpeakBtn = null; } }; doSpeak(word); if (scene){ setTimeout(() => { if (seq !== _speakSeq) return; doSpeak(scene); setTimeout(clearBtn, Math.max(1500, scene.length * 200)); }, 3000); } else { setTimeout(clearBtn, 1500); } }
 function copyText(text){ return new Promise(resolve => { if (navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>resolve(true)).catch(()=>resolve(false)); return; } try { const ta = document.createElement('textarea'); ta.value = text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); document.body.removeChild(ta); resolve(ok); }catch(e){ resolve(false); } }); }
 function openExternal(url){ if (!url){ toast('无链接'); return; } const u = String(url).trim(); if (!/^https?:\/\//i.test(u)){ toast('链接不安全'); return; } try { const a = document.createElement('a'); a.href = u; a.target='_blank'; a.rel='noopener noreferrer'; a.style.display='none'; document.body.appendChild(a); a.click(); setTimeout(()=>a.remove(),150); }catch(e){ toast('打开失败'); } }
