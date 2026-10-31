@@ -44,7 +44,8 @@ public class JsBridge {
 
     @JavascriptInterface
     public boolean isReady() {
-        return tts != null && tts.isReady();
+        // 不再调用 TtsHelper.isReady()，避免该类型缺少方法导致编译失败
+        return tts != null;
     }
 
     @JavascriptInterface
