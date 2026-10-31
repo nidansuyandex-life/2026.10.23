@@ -3,8 +3,8 @@ package com.daily.healthlife;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
-import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.TextToSpeech;
+import android.util.Log;
 import java.util.Locale;
 
 public class TtsHelper {
@@ -20,20 +20,23 @@ public class TtsHelper {
         });
     }
 
+    public boolean isReady() {
+        return isReady;
+    }
+
     public void speak(String text, String lang) {
         if (tts != null) {
             if (!isReady) {
-                // 如果引擎还没准备好，延迟重试
                 new Handler(Looper.getMainLooper()).postDelayed(() -> {
                     if (isReady) speak(text, lang);
                 }, 500);
                 return;
             }
-            
-            if ("zh-CN".equals(lang) || "zh".equals(lang)) {
-                tts.setLanguage(Locale.CHINA);
-            } else {
-                tts.setLanguage(Locale.US);
+            Locale locale = ("zh-CN".equals(lang) || "zh".equals(lang)) ? Locale.CHINA : Locale.US;
+            int result = tts.setLanguage(locale);
+            if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                Log.e("TtsHelper", "语言不支持: " + lang);
+                return;
             }
             tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "tts1");
         }
