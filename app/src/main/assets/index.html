@@ -377,41 +377,25 @@ window.addEventListener('error', e => console.error('Error:', e.message));
 window.addEventListener('unhandledrejection', e => console.error('Promise:', e.reason));
 
 window.onWidgetCheckin = function(key, done) {
-  try {
-    const checkKey = String(key || '');
-
-    if (checkKey.startsWith('todo_')) {
-      const payloadStr = checkKey.substring(5);
-
-      try {
-        const payload = JSON.parse(decodeURIComponent(payloadStr));
-        const dayItems = state.calendarData && state.calendarData[payload.date];
-        const item = (dayItems || []).find(x =>
-          x.time === payload.time && x.title === payload.title
-        );
-
-        if (item) {
-          const statusMap = getTodoStatusMap();
-          const todoKey = getTodoKey(payload.date, item);
-          if (done) statusMap[todoKey] = true;
-          else delete statusMap[todoKey];
-          saveTodoStatusMap(statusMap);
-        } else {
-          console.warn('小组件待办未匹配到应用内日历项目:', payload);
+    try {
+        if (key.startsWith('todo_')) {
+            const payloadStr = key.substring(5);
+            try {
+                const payload = JSON.parse(decodeURIComponent(payloadStr));
+                const item = (state.calendarData[payload.date] || []).find(x => x.time === payload.time && x.title === payload.title);
+                if (item) { 
+                    const m = getTodoStatusMap(); 
+                    const k = getTodoKey(payload.date, item); 
+                    if (done) m[k] = true; else delete m[k]; 
+                    saveTodoStatusMap(m); 
+                }
+            } catch(err) { console.error('parse todo error', err); }
+        } else { 
+            setCheck(key, done); 
         }
-      } catch(parseError) {
-        console.error('解析小组件待办数据失败:', parseError);
-      }
-    } else {
-      setCheck(checkKey, !!done);
-    }
-
-    // 先持久化，再刷新界面，并将最新数据回传给 Android 小组件。
-    render({ keepScroll: true });
-    syncToNativeWidget();
-  } catch (error) {
-    console.error('onWidgetCheckin error:', error);
-  }
+        render({ keepScroll: true }); 
+        syncToNativeWidget();
+    } catch (e) { console.error('onWidgetCheckin error:', e); }
 };
 
 window.jumpFromNative = function(route) {
@@ -574,7 +558,7 @@ function getCustomCats(){ const v = LS.get('app_h_customCats', null); if (!v || 
 function saveCustomCats(v){ LS.set('app_h_customCats', v); }
 function dailyPick(arr,n,salt=0){ if(!arr||!arr.length) return []; let seed=(DAY*1000+salt*7919)%2147483647; if(seed<=0) seed+=2147483646; const rnd=()=>{seed=(seed*16807)%2147483647; return (seed-1)/2147483646;}; const idx=arr.map((_,i)=>i); for(let i=idx.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1)); [idx[i],idx[j]]=[idx[j],idx[i]];} return idx.slice(0,n).map(i=>arr[i]); }
 function shuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
-function raceTimeout(promise, ms, errMsg='请求超时'){ return Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error(errMsg)), ms))]); }
+function raceTimeout(promise, ms, errMsg='请求超时'){ let timer = null; return Promise.race([promise, new Promise((_, rej) => { timer = setTimeout(() => rej(new Error(errMsg)), ms); })]).finally(() => { if (timer) clearTimeout(timer); }); }
 function friendlyErr(e){ const msg = (e && e.message) ? e.message : String(e || ''); if (/Failed to fetch/i.test(msg)) return '网络不通'; if (/aborted|timeout|请求超时/i.test(msg)) return '请求超时'; if (/HTTP 404/.test(msg)) return 'HTTP 404'; if (/HTTP 429/.test(msg)) return '请求过于频繁'; if (/HTTP 403/.test(msg)) return '无权限'; if (/code=130/.test(msg)) return 'QPS 超限（稍后重试）'; if (/code=140/.test(msg)) return '接口未申请'; if (/无内容/.test(msg)) return '接口返回空'; return msg || '失败'; }
 async function fetchJson(url, timeout=8000){ const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeout); try { const r = await fetch(url, { signal: controller.signal }); if (!r.ok) throw new Error('HTTP '+r.status); return await r.json(); } finally { clearTimeout(timer); } }
 async function fetchText(url, timeout=8000){ const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeout); try { const r = await fetch(url, { signal: controller.signal }); if (!r.ok) throw new Error('HTTP '+r.status); return await r.text(); } finally { clearTimeout(timer); } }
@@ -721,7 +705,7 @@ function csvEscape(v){ const s = String(v == null ? '' : v); return /[",\n\r]/.t
 function getRangeTransactions(){ const today = todayStr(), ym = today.slice(0,7), list = transactions; if (state.exportRange === 'month') return list.filter(t => t.date.startsWith(ym)); if (state.exportRange === 'lastMonth'){ const d = new Date(); d.setMonth(d.getMonth() - 1); const lym = `${d.getFullYear()}-${pad(d.getMonth()+1)}`; return list.filter(t => t.date.startsWith(lym)); } if (state.exportRange === '3months'){ const c = new Date(); c.setMonth(c.getMonth() - 2); const cut = `${c.getFullYear()}-${pad(c.getMonth()+1)}-01`; return list.filter(t => t.date >= cut); } return list; }
 
 function AI_get_provider(){ return LS.get('ai-provider', 'none'); } function AI_get_apiKey(){ return LS.get('ai-key', ''); } function AI_get_model(){ return LS.get('ai-model', ''); }
-const AI = { get provider(){ return AI_get_provider(); }, get apiKey(){ return AI_get_apiKey(); }, get model(){ return AI_get_model(); }, set(p,k,m){ LS.set('ai-provider', p||'none'); LS.set('ai-key', k||''); LS.set('ai-model', m||''); }, enabled(){ return this.provider !== 'none' && !!this.apiKey; }, roles: { engineer:{ name:'👷 工程师', prompt:'你是阀门行业资深工程师。' }, customer:{ name:'👤 客户', prompt:'你是一个挑剔的客户。' }, boss:{ name:'💼 老板', prompt:'你是一个务实的老板。' }, teacher:{ name:'🎓 英语老师', prompt:'你是英语老师。' }, health:{ name:'💊 健康顾问', prompt:'你是健康生活顾问。' }, skincare:{ name:'💄 护肤顾问', prompt:'你是专业护肤顾问。' } }, endpoints(){ return { deepseek:{ base:'https://api.deepseek.com/v1/chat/completions', model:'deepseek-chat' }, qwen:{ base:'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model:'qwen-turbo' }, zhipu:{ base:'https://open.bigmodel.cn/api/paas/v4/chat/completions', model:'glm-4-flash' } }; }, async call(system, user, maxTokens, temp){ const cfg = this.endpoints()[this.provider]; if (!cfg) throw new Error('AI 未配置'); const r = await fetch(cfg.base, { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + this.apiKey }, body: JSON.stringify({ model: this.model || cfg.model, messages: [{ role:'system', content:system }, { role:'user', content:user }], temperature: temp == null ? 0.4 : temp, max_tokens: maxTokens || 1000 }) }); if (!r.ok) throw new Error('HTTP '+r.status); const d = await r.json(); return (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || null; }, parseJSON(content){ if (!content) return null; let json = content.trim(); if (json.startsWith('```')) json = json.replace(/^```(?:json)?\s*/, '').replace(/```\s*$/, ''); const i = json.indexOf('{'), j = json.lastIndexOf('}'); if (i>=0 && j>i) json = json.slice(i, j+1); return JSON.parse(json); }, async scoreAnswer(q,a,ref){ if (!this.enabled()) return null; const system = `严格导师。只输出 JSON：{"accuracy":0-100,"correct":[],"missing":[],"supplement":""}`; return this.parseJSON(await this.call(system, `【问题】\n${q}\n\n【参考】\n${ref}\n\n【学员】\n${a}\n\n请评分。`, 1000, 0.2)); }, async judgeWord(w,a,cn){ if (!this.enabled()) return null; const system = `英语单词判卷。只输出 JSON：{"correct":true/false,"score":0-100,"feedback":"20字以内"}`; return this.parseJSON(await this.call(system, `单词：${w}\n参考：${cn}\n学员：${a}`, 200, 0.1)); }, async answerQuestion(q, ctx){ if (!this.enabled()) return null; const system = `专业助手。回答专业准确。1.直接回答 2.给适用边界 3.分点，400字内。`; return await this.call(system, ctx ? `背景：${ctx}\n\n问题：${q}` : q, 1000, 0.4); }, async assistant(q, role){ if (!this.enabled()) throw new Error('AI 未配置'); const cfg = this.roles[role] || this.roles.engineer; return await this.call(cfg.prompt + '\n分点作答，每点短句，400字内。', q, 1000, 0.4); }, async gradeExpression(scene, q, guide, answer){ if (!this.enabled()) return null; const system = `表达训练教练。场景「${scene}」\n题目：${q}\n要求：${guide}\n只输出 JSON：{"score":0-100,"level":"","strengths":[],"issues":[],"improved":"","advice":""}`; return this.parseJSON(await this.call(system, '用户的回答：\n'+answer, 1200, 0.3)); }, async recommendRoutine(skinKey, skinProfile, products){ if (!this.enabled()) return null; const system = `你是专业护肤顾问。根据皮肤状态、肤质档案和用户产品库（已开封未过期），生成今日早间和晚间护肤流程。只输出 JSON：{"morning":[{"step":"步骤名","product":"产品名","note":"注意（可空）"}],"night":[...],"reason":"一句话推荐说明"}。重要规则：1. 只用给定产品，不可虚构，product 必须是产品库中的产品名之一；2. 你要根据产品名和成分，自行判断每个产品属于哪一类（卸妆/洁面/爽肤水/精华/乳液/面霜/防晒/面膜/去角质），并决定它放在护肤流程的哪一步；3. 标准顺序：卸妆 → 洁面 → 爽肤水 → 精华 → 乳液 → 面霜 → 防晒（防晒只白天用）；面膜/去角质放在精华之前或替代精华；4. 早间优先抗氧化（VC、烟酰胺等），晚间优先修复/抗老（A醇、壬二酸、胜肽等）；A醇、酸类、去角质只能晚间用；VC白天需配合防晒；5. 严重期（severe）：只用最温和的洁面、水、修复精华（B5/积雪草/神经酰胺等）、简单保湿霜、物理防晒，避免所有活性成分；6. 痘痘期（acne）：早间温和洁面+控油水+烟酰胺类+保湿乳+防晒，晚间卸妆(如有)+洁面+局部壬二酸/水杨酸+修复+保湿，避开A醇；7. 稳定期（stable）：早间抗氧化精华+保湿+防晒，晚间活性精华（A醇/壬二酸/VC/胜肽等轮换）+修复+保湿；周三周日可安排面膜，周六可安排去角质；8. 关键：让产品库中所有开封产品在一周内都被用到，不要反复只用其中1-2件；同类产品（如多个精华）按日期轮换，不要每天用同一支；9. 如果某产品不适合当前皮肤状态，可以不用它，但要在 reason 里说明。`; const userMsg = `今日：${todayStr()}（星期${'日一二三四五六'[new Date().getDay()]}）\n皮肤状态：${skinKey}\n肤质档案：${JSON.stringify(skinProfile)}\n可用产品（已开封未过期）：\n${products.map(p => `- ${p.name}（大类：${(PRODUCT_CATS[p.majorCat]||{}).label || p.majorCat}${p.ingredients ? '；成分：'+p.ingredients.slice(0,120) : ''}）`).join('\n')}\n\n请安排今天早间和晚间的护肤流程，确保所有产品在一周内轮换使用。`; return this.parseJSON(await this.call(system, userMsg, 2500, 0.3)); } };
+const AI = { get provider(){ return AI_get_provider(); }, get apiKey(){ return AI_get_apiKey(); }, get model(){ return AI_get_model(); }, set(p,k,m){ LS.set('ai-provider', p||'none'); LS.set('ai-key', k||''); LS.set('ai-model', m||''); }, enabled(){ return this.provider !== 'none' && !!this.apiKey; }, roles: { engineer:{ name:'👷 工程师', prompt:'你是阀门行业资深工程师。' }, customer:{ name:'👤 客户', prompt:'你是一个挑剔的客户。' }, boss:{ name:'💼 老板', prompt:'你是一个务实的老板。' }, teacher:{ name:'🎓 英语老师', prompt:'你是英语老师。' }, health:{ name:'💊 健康顾问', prompt:'你是健康生活顾问。' }, skincare:{ name:'💄 护肤顾问', prompt:'你是专业护肤顾问。' } }, endpoints(){ return { deepseek:{ base:'https://api.deepseek.com/v1/chat/completions', model:'deepseek-chat' }, qwen:{ base:'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model:'qwen-turbo' }, zhipu:{ base:'https://open.bigmodel.cn/api/paas/v4/chat/completions', model:'glm-4-flash' } }; }, async call(system, user, maxTokens, temp){ const cfg = this.endpoints()[this.provider]; if (!cfg) throw new Error('AI 未配置'); const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 30000); try { const r = await fetch(cfg.base, { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + this.apiKey }, body: JSON.stringify({ model: this.model || cfg.model, messages: [{ role:'system', content:system }, { role:'user', content:user }], temperature: temp == null ? 0.4 : temp, max_tokens: maxTokens || 1000 }), signal: controller.signal }); if (!r.ok) throw new Error('HTTP '+r.status); const d = await r.json(); return (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || null; } catch(e) { if (e && e.name === 'AbortError') throw new Error('AI 请求超时，请检查网络后重试'); throw e; } finally { clearTimeout(timer); } }, parseJSON(content){ if (!content) return null; let json = content.trim(); if (json.startsWith('```')) json = json.replace(/^```(?:json)?\s*/, '').replace(/```\s*$/, ''); const i = json.indexOf('{'), j = json.lastIndexOf('}'); if (i>=0 && j>i) json = json.slice(i, j+1); return JSON.parse(json); }, async scoreAnswer(q,a,ref){ if (!this.enabled()) return null; const system = `严格导师。只输出 JSON：{"accuracy":0-100,"correct":[],"missing":[],"supplement":""}`; return this.parseJSON(await this.call(system, `【问题】\n${q}\n\n【参考】\n${ref}\n\n【学员】\n${a}\n\n请评分。`, 1000, 0.2)); }, async judgeWord(w,a,cn){ if (!this.enabled()) return null; const system = `英语单词判卷。只输出 JSON：{"correct":true/false,"score":0-100,"feedback":"20字以内"}`; return this.parseJSON(await this.call(system, `单词：${w}\n参考：${cn}\n学员：${a}`, 200, 0.1)); }, async answerQuestion(q, ctx){ if (!this.enabled()) return null; const system = `专业助手。回答专业准确。1.直接回答 2.给适用边界 3.分点，400字内。`; return await this.call(system, ctx ? `背景：${ctx}\n\n问题：${q}` : q, 1000, 0.4); }, async assistant(q, role){ if (!this.enabled()) throw new Error('AI 未配置'); const cfg = this.roles[role] || this.roles.engineer; return await this.call(cfg.prompt + '\n分点作答，每点短句，400字内。', q, 1000, 0.4); }, async gradeExpression(scene, q, guide, answer){ if (!this.enabled()) return null; const system = `表达训练教练。场景「${scene}」\n题目：${q}\n要求：${guide}\n只输出 JSON：{"score":0-100,"level":"","strengths":[],"issues":[],"improved":"","advice":""}`; return this.parseJSON(await this.call(system, '用户的回答：\n'+answer, 1200, 0.3)); }, async recommendRoutine(skinKey, skinProfile, products){ if (!this.enabled()) return null; const system = `你是专业护肤顾问。根据皮肤状态、肤质档案和用户产品库（已开封未过期），生成今日早间和晚间护肤流程。只输出 JSON：{"morning":[{"step":"步骤名","product":"产品名","note":"注意（可空）"}],"night":[...],"reason":"一句话推荐说明"}。重要规则：1. 只用给定产品，不可虚构，product 必须是产品库中的产品名之一；2. 你要根据产品名和成分，自行判断每个产品属于哪一类（卸妆/洁面/爽肤水/精华/乳液/面霜/防晒/面膜/去角质），并决定它放在护肤流程的哪一步；3. 标准顺序：卸妆 → 洁面 → 爽肤水 → 精华 → 乳液 → 面霜 → 防晒（防晒只白天用）；面膜/去角质放在精华之前或替代精华；4. 早间优先抗氧化（VC、烟酰胺等），晚间优先修复/抗老（A醇、壬二酸、胜肽等）；A醇、酸类、去角质只能晚间用；VC白天需配合防晒；5. 严重期（severe）：只用最温和的洁面、水、修复精华（B5/积雪草/神经酰胺等）、简单保湿霜、物理防晒，避免所有活性成分；6. 痘痘期（acne）：早间温和洁面+控油水+烟酰胺类+保湿乳+防晒，晚间卸妆(如有)+洁面+局部壬二酸/水杨酸+修复+保湿，避开A醇；7. 稳定期（stable）：早间抗氧化精华+保湿+防晒，晚间活性精华（A醇/壬二酸/VC/胜肽等轮换）+修复+保湿；周三周日可安排面膜，周六可安排去角质；8. 关键：让产品库中所有开封产品在一周内都被用到，不要反复只用其中1-2件；同类产品（如多个精华）按日期轮换，不要每天用同一支；9. 如果某产品不适合当前皮肤状态，可以不用它，但要在 reason 里说明。`; const userMsg = `今日：${todayStr()}（星期${'日一二三四五六'[new Date().getDay()]}）\n皮肤状态：${skinKey}\n肤质档案：${JSON.stringify(skinProfile)}\n可用产品（已开封未过期）：\n${products.map(p => `- ${p.name}（大类：${(PRODUCT_CATS[p.majorCat]||{}).label || p.majorCat}${p.ingredients ? '；成分：'+p.ingredients.slice(0,120) : ''}）`).join('\n')}\n\n请安排今天早间和晚间的护肤流程，确保所有产品在一周内轮换使用。`; return this.parseJSON(await this.call(system, userMsg, 2500, 0.3)); } };
 
 const CACHE_KEY_KNOWLEDGE = 'knowledge-v9';
 function getLastRefreshBoundary(){ const bj = bjDate(); const h = bj.getUTCHours(); const today0 = Date.UTC(bj.getUTCFullYear(), bj.getUTCMonth(), bj.getUTCDate()); let lastHour = h >= 19 ? 19 : (h >= 12 ? 12 : 0); return today0 + lastHour*3600*1000 - 8*3600*1000; }
@@ -808,11 +792,11 @@ async function studyView(){
 
 function todaySection(){ const tasks = LearnStore.getTodayTasks(); const done = tasks.filter(t => t.done).length; const streak = LearnStore.getStreak(); const schedEn = LearnStore.getAllScheduledKeys('english').length; const schedWk = LearnStore.getAllScheduledKeys('work').length; return `<div class="task-card"><div class="task-head"><div class="task-title">☀️ 今日待办</div><div class="task-progress">${done}/${tasks.length}${streak.count>0?' · 🔥'+streak.count+'天':''}</div></div>${tasks.map(t => `<div class="task-row" data-act="taskJump" data-key="${t.key}"><div class="task-check ${t.done?'on':''}">${t.done?'✓':''}</div><div class="task-label ${t.done?'on':''}">${t.label}</div><div class="task-count">${t.current}/${t.total} →</div></div>`).join('')}</div>${(schedEn+schedWk>0)?`<div class="review-entry"><div class="r-title"><span>🔁 开始复习</span><span>共 ${schedEn+schedWk} 条</span></div><div style="display:flex;gap:8px;">${schedEn?`<button class="btn" style="flex:1;background:#92400e;color:#fff;" data-act="startReview" data-type="english">英语复习</button>`:''}${schedWk?`<button class="btn" style="flex:1;background:#92400e;color:#fff;" data-act="startReview" data-type="work">专业复习</button>`:''}</div></div>`:''}`; }
 async function englishSection(){ const sub = state.englishSub || 'today'; let curDeck = state.englishDeck; if (curDeck !== 'all' && !SEED.DECKS.find(d => d.id === curDeck)){ curDeck = (SEED.DECKS[0]&&SEED.DECKS[0].id)||''; state.englishDeck = curDeck; } if (!SEED.DECKS.length) return `<div class="tip-card">没有配置词库。</div>`; if (curDeck !== 'all' && DeckLoader.loaded[curDeck] === undefined){ DeckLoader.load(curDeck).then(()=>render({keepScroll:true})).catch(()=>{}); return `<div class="loading-card"><div style="font-size:42px;animation:pulse 1.4s ease-in-out infinite;">📚</div><div style="font-size:14px;font-weight:750;margin-top:14px;">正在加载词库…</div></div>`; } const deckWords = DeckLoader.get(curDeck); const learnedAll = new Set(LearnStore.getAllLearnedEver()); const learnedToday = new Set(LearnStore.getLearned()); const totalCount = curDeck==='all' ? SEED.DECKS.reduce((s,d)=>s+(d.count||0),0) : deckWords.length; const learnedCount = deckWords.filter(w => learnedAll.has(w.w)).length; const pct = totalCount ? Math.round(learnedCount/totalCount*100) : 0; const schedEn = LearnStore.getAllScheduledKeys('english').length; const head = `<div class="card" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:0;"><div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">ENGLISH DECK</div><div style="font-size:19px;font-weight:750;margin-bottom:10px;">${SEED.DECKS.reduce((s,d)=>s+(d.count||0),0)} 词 · ${SEED.DECKS.length} 词库</div><div style="font-size:13.5px;opacity:.92;line-height:1.7;">已学 ${LearnStore.getAllLearnedEver().length} 词 · 已排程 ${schedEn} 词</div></div><div class="sec-title">选择词库 <span class="muted">共 ${SEED.DECKS.length} 个</span></div><div class="chips" style="align-items:stretch;">${SEED.DECKS.map(d => { const isLoaded = DeckLoader.loaded[d.id] !== undefined; const words = DeckLoader.get(d.id); const learned = words.filter(w => learnedAll.has(w.w)).length; const meta = isLoaded ? `${learned}/${words.length}` : `${d.count} 词`; return `<button class="deck-chip ${curDeck===d.id?'on':''}" data-act="englishDeck" data-deck="${esc(d.id)}"><div class="dc-name">${d.icon||'📗'} ${esc(d.name)}</div><div class="dc-meta">${meta}</div></button>`; }).join('')}</div><div class="card" style="padding:14px;"><div class="row-between"><div style="font-size:13px;font-weight:750;">当前进度</div><div style="font-size:13px;color:var(--brand);font-weight:750;">${learnedCount}/${totalCount} · ${pct}%</div></div><div class="progress-bar"><div style="width:${pct}%;"></div></div></div><div class="subtabs" style="margin-bottom:12px;"><button class="subtab ${sub==='today'?'on':''}" data-act="englishSub" data-sub="today">今日待学</button><button class="subtab ${sub==='all'?'on':''}" data-act="englishSub" data-sub="all">全部</button><button class="subtab ${sub==='learned'?'on':''}" data-act="englishSub" data-sub="learned">已学</button></div>`; if (sub === 'today'){ const todayNames = LearnStore.getTodayWordNames(curDeck); const todayWords = todayNames.map(w => deckWords.find(x => x.w === w)).filter(Boolean); const doneCount = todayWords.filter(w => learnedToday.has(w.w)).length; const allDone = todayWords.length > 0 && doneCount === todayWords.length; return head + `<div class="sec-title">今日待学 <span class="muted">${doneCount}/${todayWords.length}</span></div>${allDone?'<div style="margin-bottom:12px;padding:10px 14px;background:#ecfdf5;border-radius:12px;font-size:12.5px;color:#047857;font-weight:650;text-align:center;">🎉 今天的 5 个单词都学完了！</div>':''}${todayWords.length ? todayWords.map((w,i) => wordCard(w, i, learnedToday.has(w.w), true)).join('') : '<div class="tip-card">这个词库已全部学完。</div>'}`; } if (sub === 'all'){ const pageSize = state.englishPage * PAGE_SIZE; const visible = deckWords.slice(0, pageSize); const hasMore = deckWords.length > pageSize; return head + `<div class="sec-title">全部单词 <span class="muted">${visible.length}/${deckWords.length}</span></div>${visible.map((w) => { const done = learnedAll.has(w.w); return `<div class="word-mini ${done?'done':''}" data-word="${esc(w.w)}" data-deck="${esc(w.deck||'')}" data-act="learnWord"><div class="wm-check ${done?'on':''}">${done?'✓':''}</div><div class="wm-word">${esc(w.w)}</div><div class="wm-cn">${esc(w.cn||'')}</div></div>`; }).join('')}${hasMore?`<button class="load-more" data-act="englishLoadMore">加载更多（还有 ${deckWords.length - pageSize} 个）</button>`:''}`; } if (sub === 'learned'){ const list = deckWords.filter(w => learnedAll.has(w.w)); if (!list.length) return head + `<div class="tip-card">还没学过单词。</div>`; const pageSize = state.englishPage * PAGE_SIZE; const visible = list.slice(0, pageSize); const hasMore = list.length > pageSize; return head + `<div class="sec-title">已学单词 <span class="muted">${list.length} 个</span></div>${visible.map((w, i) => wordCard(w, i, true)).join('')}${hasMore?`<button class="load-more" data-act="englishLoadMore">加载更多</button>`:''}`; } return head; }
-function wordCard(w, i, isDone, isDoneToday){
+function wordCard(w, i, isDone, isDoneToday){ 
   return `<div class="card ${isDone?'done':''}" data-word="${esc(w.w)}" data-deck="${esc(w.deck||'')}" style="position:relative;">
     <div style="display:flex;align-items:flex-start;gap:12px;">
       <div style="width:26px;height:26px;border-radius:50%;background:${isDone?'var(--brand)':'#f0f1f8'};color:${isDone?'#fff':'#8a90a6'};display:grid;place-items:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:2px;">${isDone?'✓':i+1}</div>
-      <div style="flex:1;min-width:0;padding-right:112px;">
+      <div style="flex:1;min-width:0;padding-right:100px;">
         <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
           <span class="word-big" style="${isDone?'text-decoration:line-through;color:#aab0c0;':''}">${esc(w.w)}</span>
           ${w.pos?`<span style="font-size:11px;color:var(--brand);background:#eef0ff;padding:2px 7px;border-radius:6px;font-weight:700;">${esc(w.pos)}</span>`:''}
@@ -823,39 +807,36 @@ function wordCard(w, i, isDone, isDoneToday){
     </div>
     <div style="font-size:14px;color:#333a4d;margin-top:10px;font-weight:600;line-height:1.55;${isDone?'text-decoration:line-through;color:#aab0c0;':''}">${esc(w.cn||'')}</div>
     ${w.scene?`<div style="margin-top:11px;padding-top:11px;border-top:1px dashed #eceef4;"><div style="font-size:13.5px;color:#2b3244;line-height:1.55;">${esc(w.scene)}</div><div style="font-size:12.5px;color:var(--sub);margin-top:5px;">${esc(w.sceneCn||'')}</div></div>`:''}
-
-    <div style="position:absolute;top:14px;right:14px;display:flex;align-items:center;gap:8px;z-index:2;">
-      <button type="button" style="border:0;background:#f3f4fa;width:32px;height:32px;border-radius:8px;display:grid;place-items:center;color:#6b7280;cursor:pointer;" data-act="speakWordScene" data-word="${esc(w.w)}" data-scene="${esc(w.scene||'')}" title="朗读" aria-label="朗读单词和例句">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+    <div style="position:absolute;top:14px;right:14px;display:flex;align-items:center;gap:8px;">
+      <button style="border:0;background:#f3f4fa;width:32px;height:32px;border-radius:8px;display:grid;place-items:center;color:#6b7280;cursor:pointer;" data-act="speakWordScene" data-word="${esc(w.w)}" data-scene="${esc(w.scene||'')}" title="朗读">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
       </button>
-      <button type="button" class="btn ${isDone?'ghost':'primary'}" style="padding:4px 10px;font-size:12px;border-radius:8px;white-space:nowrap;box-shadow:none;" data-act="learnWord" data-word="${esc(w.w)}" data-deck="${esc(w.deck||'')}">${isDone?'取消':'标记已学'}</button>
+      <button class="btn ${isDone?'ghost':'primary'}" style="padding:4px 10px;font-size:12px;border-radius:8px;white-space:nowrap;box-shadow:none;" data-act="learnWord" data-word="${esc(w.w)}" data-deck="${esc(w.deck||'')}">${isDone?'取消':'标记已学'}</button>
     </div>
-  </div>`;
+  </div>`; 
 }
 function valveSection(){ const q = state.searchQuery || ''; const cat = state.valveCat || '全部'; const knowDoneEver = new Set(LearnStore.getAllKnowDoneEver()); const knowDoneToday = new Set(LearnStore.getKnowDone()); let list = [], titleSuffix = ''; if (q.trim()){ list = SEED.VALVE_ALL.filter(v => v.q.toLowerCase().includes(q.toLowerCase()) || v.a.toLowerCase().includes(q.toLowerCase())); titleSuffix = `搜索结果 (${list.length})`; } else if (cat === '全部'){ const unlearned = SEED.VALVE_ALL.filter(v => !knowDoneEver.has(v.q)); const pageSize = state.valvePage * PAGE_SIZE; list = unlearned.slice(0, Math.max(DAILY_VALVE_COUNT, pageSize)); titleSuffix = `待掌握 · ${list.length}/${unlearned.length}`; } else { list = SEED.VALVE[cat] || []; titleSuffix = cat + ' · ' + list.length + ' 条'; } const cats = ['全部', ...Object.keys(SEED.VALVE)]; return `<div class="card" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:0;"><div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">VALVE KNOWLEDGE</div><div style="font-size:19px;font-weight:750;margin-bottom:10px;">${SEED.VALVE_ALL.length} 条专业知识</div><div style="font-size:13.5px;opacity:.92;line-height:1.7;">已掌握 ${LearnStore.getAllKnowDoneEver().length} 条</div></div><div class="search-box"><span style="font-size:15px;opacity:.5;">🔍</span><input type="search" class="search-input" id="valveSearch" placeholder="搜索…" value="${esc(q)}">${q?'<button data-act="searchClear" style="border:0;background:#f1f2f9;color:#6b7280;width:24px;height:24px;border-radius:50%;font-size:12px;cursor:pointer;">✕</button>':''}</div><div class="chips">${cats.map(c => `<button class="chip ${c===cat&&!q.trim()?'on':''}" data-act="valveCat" data-cat="${esc(c)}">${esc(c)}${c!=='全部'?` · ${(SEED.VALVE[c]||[]).length}`:''}</button>`).join('')}</div><div class="sec-title">${titleSuffix} <span class="muted">点卡片展开</span></div>${list.length ? list.map((v,i) => knowCard(v, i, knowDoneEver.has(v.q), knowDoneToday.has(v.q))).join('') : '<div class="tip-card">没有找到。</div>'}`; }
-function knowCard(v, i, isDone, isDoneToday){
-  const open = state.openKnow === v.q;
-  const note = LearnStore.getNote(v.q);
-  const askCache = LS.get('ask-cache:'+v.q, null);
-  const askText = LS.get('ask-text:'+v.q, '');
-  const isLoading = state.aiLoading && state.aiAnsweringFor === v.q;
-  const hasAsk = askCache && askCache.answer;
-
+function knowCard(v, i, isDone, isDoneToday){ 
+  const open = state.openKnow === v.q; 
+  const note = LearnStore.getNote(v.q); 
+  const askCache = LS.get('ask-cache:'+v.q, null); 
+  const askText = LS.get('ask-text:'+v.q, ''); 
+  const isLoading = state.aiLoading && state.aiAnsweringFor === v.q; 
+  const hasAsk = askCache && askCache.answer; 
+  
   return `<div class="card know ${open?'open':''} ${isDone?'done':''}" data-q="${esc(v.q)}" style="position:relative;">
-    <div style="cursor:pointer;padding-right:4px;" data-act="knowToggle">
-      <div style="display:flex;align-items:flex-start;gap:10px;">
-        <div style="flex:1;min-width:0;padding-right:116px;">
+    <div style="cursor:pointer;" data-act="knowToggle">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+        <div style="flex:1;min-width:0;padding-right:90px;">
           <div class="know-cat">${esc(v.cat)}</div>
           <div class="know-q" style="${isDone?'text-decoration:line-through;color:#aab0c0;':''}">${esc(v.q)}</div>
         </div>
+        <div style="position:absolute;top:16px;right:14px;display:flex;align-items:center;gap:8px;">
+          <button class="btn ${isDone?'ghost':'primary'}" style="padding:4px 10px;font-size:12px;border-radius:8px;white-space:nowrap;box-shadow:none;" data-act="knowDone" data-q="${esc(v.q)}">${isDone?'取消掌握':'标记已掌握'}</button>
+          <span style="font-size:12px;color:var(--sub);">${open?'▴':'▾'}</span>
+        </div>
       </div>
     </div>
-
-    <div style="position:absolute;top:16px;right:14px;display:flex;align-items:center;gap:8px;z-index:2;">
-      <button type="button" class="btn ${isDone?'ghost':'primary'}" style="padding:4px 10px;font-size:12px;border-radius:8px;white-space:nowrap;box-shadow:none;" data-act="knowDone" data-q="${esc(v.q)}">${isDone?'取消掌握':'标记已掌握'}</button>
-      <span style="font-size:12px;color:var(--sub);pointer-events:none;">${open?'▴':'▾'}</span>
-    </div>
-
     <div class="know-body">
       <div class="know-a">${esc(v.a)}</div>
       <div class="know-key">${esc(v.key)}</div>
@@ -863,7 +844,7 @@ function knowCard(v, i, isDone, isDoneToday){
         <div style="font-size:12px;color:var(--brand);margin-bottom:8px;font-weight:700;">💬 问 AI</div>
         <textarea style="width:100%;min-height:60px;border:1px solid #e6e8f0;border-radius:12px;padding:11px 12px;font-size:13.5px;line-height:1.65;background:#fafbfe;font-family:inherit;" data-qa-q="${esc(v.q)}" placeholder="例如：这个能用在 300℃ 的蒸汽管道上吗？">${esc(askText)}</textarea>
         <div style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap;">
-          <button type="button" style="background:var(--brand);color:#fff;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:650;border:0;cursor:pointer;" data-act="askAbout" data-q="${esc(v.q)}" ${isLoading?'disabled':''}>${isLoading?'⏳ 思考中…':'问 AI'}</button>
+          <button style="background:var(--brand);color:#fff;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:650;border:0;cursor:pointer;" data-act="askAbout" data-q="${esc(v.q)}" ${isLoading?'disabled':''}>${isLoading?'⏳ 思考中…':'问 AI'}</button>
         </div>
         ${hasAsk?`<div style="margin-top:12px;background:linear-gradient(135deg,#eef0ff,#f6f0ff);border:1px solid #e2e5ff;border-radius:12px;padding:13px;"><div style="font-size:11.5px;font-weight:750;color:var(--brand);margin-bottom:9px;">🤖 AI 解答</div><div style="font-size:13px;line-height:1.78;color:#3f4658;white-space:pre-wrap;">${esc(askCache.answer)}</div></div>`:''}
       </div>
@@ -874,7 +855,6 @@ function knowCard(v, i, isDone, isDoneToday){
     </div>
   </div>`;
 }
-
 function wrongBookSection(){ const list = LearnStore.getWrongBook(); if (!list.length) return `<div class="card" style="text-align:center;padding:40px 20px;"><div style="font-size:46px;margin-bottom:10px;">🎉</div><div style="font-size:15px;font-weight:750;color:var(--ok);">错题本是空的</div><div style="font-size:12.5px;color:var(--sub);margin-top:6px;">继续加油！</div></div>`; const typeLabel = { english:'英语', work:'专业' }; return `<div class="card"><div class="sec-title" style="margin:0 0 12px;"><span>📕 错题本</span><span class="muted" style="font-weight:500;font-size:11.5px">共 ${list.length} 题</span></div>${list.map(x => `<div style="padding:12px 0;border-bottom:1px dashed #eceef4;"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;"><div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;"><span class="tag" style="background:#eef0ff;color:var(--brand);">${typeLabel[x.type]||x.type}</span><span style="font-size:10.5px;color:var(--sub);">错误 ${x.count||1} 次</span></div><div style="font-size:14px;font-weight:700;color:#2b3244;line-height:1.5;">${esc(x.q)}</div><div style="font-size:12px;color:var(--sub);margin-top:4px;">你的回答：${esc(x.userAnswer||'（未答）')}</div>${x.feedback ? `<div style="font-size:12px;color:var(--warn);margin-top:4px;">点评：${esc(x.feedback)}</div>` : ''}</div><button class="del-tx" data-act="removeWrong" data-type="${x.type}" data-key="${esc(x.key)}" style="margin-top:2px;">✕</button></div></div>`).join('')}</div>`; }
 async function generalSection(){ const doneToday = LS.get('general-done:'+DAY, false); if (!state.generalData && !state.generalLoading){ const cached = CacheStore.load(CACHE_KEY_KNOWLEDGE); if (cached && !CacheStore.shouldRefresh(CACHE_KEY_KNOWLEDGE)){ state.generalData = cached; } else { state.generalLoading = true; KnowledgeSource.fetchAll().then(results => { state.generalData = results; state.generalLoading = false; if (results && results.length) CacheStore.save(CACHE_KEY_KNOWLEDGE, results); if (state.tab === 'study' && state.studySub === 'general') render({ keepScroll: true }); }).catch(() => { state.generalLoading = false; state.generalData = []; render({ keepScroll: true }); }); } } const labelMap = { wiki:'维基百科', oioweb:'接口盒子', showapi:'ShowAPI', why:'天聚 · 十万为什么' }; const iconMap = { wiki:'🌐', oioweb:'🧠', showapi:'📚', why:'❓' }; if (state.generalLoading || !state.generalData){ return `<div class="loading-card"><div style="font-size:38px;animation:pulse 1.2s ease-in-out infinite;">🌐</div><div style="font-size:13.5px;font-weight:750;margin-top:14px;">正在并发抓取 4 个源…</div></div>`; } const okCount = state.generalData.filter(x => !x.error).length; const head = `<div class="card" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:0;"><div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">DAILY KNOWLEDGE</div><div style="font-size:19px;font-weight:750;margin-bottom:10px;">每日知识 · 4 源并发</div><div style="font-size:13.5px;opacity:.92;line-height:1.7;">成功 ${okCount}/4 · 上次 ${CacheStore.getTime(CACHE_KEY_KNOWLEDGE)}</div></div>`; if (!state.generalData.length){ return head + `<div class="tip-card">暂时没抓到内容，点下面重试。</div><button class="btn primary wide" data-act="refreshGeneral">🔄 全部换一批</button>`; } const items = state.generalData.map(item => { const label = labelMap[item.source] || item.source; const icon = iconMap[item.source] || '🌐'; if (item.error){ return `<div class="card" style="border-left:3px solid #dc2626;"><span class="src-tag">${icon} ${label}</span><div class="err-inline">❌ ${esc(item.error)}</div></div>`; } return `<div class="card"><span class="src-tag">${icon} ${label}</span><div class="know-q" style="font-size:16px;font-weight:800;line-height:1.4;margin-top:4px;">${esc(item.q)}</div><div class="know-a" style="font-size:13px;">${esc(item.a)}</div>${item.key?`<div class="know-key" style="font-size:11.5px;">${esc(item.key)}</div>`:''}<div style="display:flex;gap:8px;margin-top:14px;"><button class="btn ghost" data-act="speak" data-text="${esc(item.q + '。' + item.a)}" data-lang="zh-CN"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.321 4.358 3.25 6.938 3.25c1.504 0 2.826.741 3.66 1.85.834-1.109 2.156-1.85 3.66-1.85 2.58 0 4.688 2.071 4.688 5 0 3.926-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z"></path></svg> 朗读</button></div></div>`; }).join(''); const tail = `<div style="display:flex;gap:8px;margin-top:6px;"><button class="btn primary wide" data-act="refreshGeneral">🔄 全部换一批</button><button class="btn wide" style="background:#f1f2f9;color:#4b5265;" data-act="markGeneralDone" ${doneToday?'disabled':''}>${doneToday?'✓ 今日已读':'✓ 标记已读'}</button></div>`; return head + items + tail; }
 function logicSection(){ const all = SEED.THINKING; if (!all.length) return `<div class="tip-card">思维模型未加载。</div>`; const unlearned = all.filter(m => LearnStore.getThinkDoneDays(m.name).length === 0); let today = null; if (unlearned.length > 0) today = dailyPick(unlearned, 1, 201)[0]; else { const sorted = all.slice().sort((a,b) => LearnStore.getThinkDoneDays(a.name).length - LearnStore.getThinkDoneDays(b.name).length); today = sorted[0]; } const totalLearned = all.filter(m => LearnStore.getThinkDoneDays(m.name).length > 0).length; const todayDone = today && LearnStore.getThinkDoneDays(today.name).includes(todayStr()); return `<div class="card" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:0;"><div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">THINKING MODEL</div><div style="font-size:19px;font-weight:750;margin-bottom:10px;">每天一个思维模型</div><div style="font-size:13.5px;opacity:.92;line-height:1.7;">共 ${all.length} 个 · 已学 ${totalLearned} 个</div></div>${todayDone?'<div style="margin-bottom:12px;padding:10px 14px;background:#ecfdf5;border-radius:12px;font-size:12.5px;color:#047857;font-weight:650;text-align:center;">✓ 今天的思维模型已练习完成</div>':''}${today?logicCard(today, todayDone):'<div class="tip-card">暂无可用模型。</div>'}`; }
@@ -971,7 +951,7 @@ function startRestTimer(code, sec){ const key = 'rest-' + code; if (restTimers[k
 function playBeep(){ try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const o = ctx.createOscillator(), g = ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.frequency.value = 880; o.type = 'sine'; g.gain.setValueAtTime(0.3, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8); o.start(); o.stop(ctx.currentTime + 0.8); } catch(e){} }
 
 function openAIAssistant(){ const msgs = LearnStore.getAIHistory(); const role = state.aiRole; const roles = Object.keys(AI.roles).map(k => ({ id:k, name:AI.roles[k].name })); openSheet(`<div class="sheet-head"><div class="sheet-emoji">🤖</div><div style="flex:1;min-width:0;"><h2>AI 助手</h2><div class="muted">学习 / 工作 / 健康</div></div>${msgs.length?`<button class="link-btn" data-act="clearAIHistory">清空</button>`:''}</div><div class="ai-role-row">${roles.map(r => `<button class="ai-role-btn ${r.id===role?'on':''}" data-act="aiRole" data-role="${r.id}">${r.name}</button>`).join('')}</div><div id="aiChat" style="margin-top:14px;max-height:50vh;overflow-y:auto;">${msgs.length===0?'<div style="text-align:center;font-size:12.5px;color:var(--sub);padding:20px 0;">试试问我：DN200 闸阀怎么选？</div>':''}${msgs.map(m => `<div class="ai-msg ${m.role==='user'?'user':'bot'}">${esc(m.content)}</div>`).join('')}${state.aiLoading?'<div class="ai-msg bot">⏳ 思考中…</div>':''}</div><div style="display:flex;gap:8px;margin-top:14px;"><textarea class="answer-input" id="aiInput" style="min-height:52px;margin:0;flex:1;" placeholder="输入问题…"></textarea><button class="btn primary" style="align-self:flex-end;padding:12px 16px;" data-act="aiSend">发送</button></div>`); setTimeout(() => { const c = document.getElementById('aiChat'); if (c) c.scrollTop = c.scrollHeight; }, 50); }
-async function sendAIMessage(){ const input = document.getElementById('aiInput'); const q = (input && input.value || '').trim(); if (!q) return; if (!AI.enabled()){ toast('请先配置 AI'); return; } LearnStore.addAIHistory('user', q); state.aiLoading = true; openAIAssistant(); try { const answer = await AI.assistant(q, state.aiRole); LearnStore.addAIHistory('bot', answer || '（无返回）'); } catch(e){ LearnStore.addAIHistory('bot', '调用失败：'+(e.message||'未知')); } state.aiLoading = false; openAIAssistant(); }
+async function sendAIMessage(){ if (state.aiLoading) return; const input = document.getElementById('aiInput'); const q = (input && input.value || '').trim(); if (!q) return; if (!AI.enabled()){ toast('请先配置 AI'); return; } LearnStore.addAIHistory('user', q); state.aiLoading = true; openAIAssistant(); try { const answer = await AI.assistant(q, state.aiRole); LearnStore.addAIHistory('bot', answer || '（无返回）'); } catch(e){ LearnStore.addAIHistory('bot', '调用失败：'+(e.message||'未知')); } finally { state.aiLoading = false; openAIAssistant(); } }
 
 function doExport(){ const data = { app:'daily-health', version:4, exportedAt:new Date().toISOString(), learn: { learned: LearnStore.getLearned(), wordDeckMap: LS.get('word-deck-map', {}), schedule: { english: LearnStore.getSchedule('english'), work: LearnStore.getSchedule('work') }, wrongBook: LearnStore.getWrongBook(), streak: LearnStore.getStreak(), aiHistory: LearnStore.getAIHistory() }, health: { body, suppLib, profile, skinState, transactions, clothes, productLibrary: getProductLibrary(), customCats: getCustomCats(), planStart: localDateStr(PLAN_START), overrides: getOverrides(), manualTodos: getManualTodos(), todoStatus: getTodoStatusMap(), sportSessions: getSportSessions(), bodyHistory: getBodyHistory(), dailyChecks: getChecks() } }; const json = JSON.stringify(data, null, 2); const filename = `日常健康备份_${todayStr()}.json`; HealthStore.save('lastBackupAt', Date.now()); if (window.AndroidFile && typeof AndroidFile.saveFile === 'function'){ try { AndroidFile.saveFile(json, filename, 'application/json'); return; } catch(e){ console.error(e); } } try { const blob = new Blob([json], { type:'application/json;charset=utf-8' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); setTimeout(() => { document.body.removeChild(a); try { URL.revokeObjectURL(url); } catch(e){} }, 200); toast('已导出：' + filename); } catch(err){ toast('导出失败：' + err.message); } }
 function doImport(){ const input = document.createElement('input'); input.type = 'file'; input.accept = '.json,application/json,text/plain,*/*'; input.style.position = 'fixed'; input.style.left = '-9999px'; input.style.top = '-9999px'; input.style.opacity = '0'; input.onchange = e => { const f = e.target.files[0]; if (!f) return; if (!confirm('导入会覆盖当前数据，确定继续？')) return; const reader = new FileReader(); reader.onload = ev => { try { doImportConfirm(ev.target.result); } catch(err){ toast('文件读取失败：' + err.message); } }; reader.readAsText(f, 'UTF-8'); }; document.body.appendChild(input); input.click(); setTimeout(() => { try { document.body.removeChild(input); } catch(e){} }, 60000); }
@@ -1124,11 +1104,11 @@ view.addEventListener('click', e => { const del = e.target.closest('[data-del-tx
 view.addEventListener('change', e => { if (e.target.id === 'planStartInput'){ const v = e.target.value; if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return; setPlanStart(new Date(v + 'T00:00:00')); buildCalendarFromPlans(); render(); return; } if (e.target.id === 'clothCat'){ state.closetCat = e.target.value; render({ keepScroll: true }); return; } if (e.target.dataset && e.target.dataset.gkey){ const v = parseFloat(e.target.value); if (!isNaN(v)) state.garmentDraft[e.target.dataset.gkey] = v; else delete state.garmentDraft[e.target.dataset.gkey]; render({ keepScroll: true }); return; } if (e.target.id === 'clothUpload'){ const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = ev => { const img = new Image(); img.onload = () => { const MAX = 600; const scale = Math.min(1, MAX / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale); const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, c.width, c.height); const dataUrl = c.toDataURL('image/jpeg', 0.8); const p = document.getElementById('clothPreview'); if (p){ p.src = dataUrl; p.style.display = 'block'; } }; img.src = ev.target.result; }; reader.readAsDataURL(file); } });
 sheet.addEventListener('click', async e => { const t = e.target.closest('[data-act]'); if (!t) return; const act = t.dataset.act; if (act === 'closeSheet'){ closeSheet(); return; } if (act === 'confirmImportTx'){ confirmImportTx(t.dataset.mode); return; } if (act === 'reviewSpeak'){ toggleSpeak(t.dataset.text, t.dataset.lang||'en-US', t); return; } if (act === 'reviewSubmit'){ submitReviewAnswer(); return; } if (act === 'rate'){ rateAndNext(t.dataset.rating); return; } if (act === 'aiRole'){ state.aiRole = t.dataset.role; LS.set('ai-role', state.aiRole); openAIAssistant(); return; } if (act === 'clearAIHistory'){ if (confirm('清空？')){ LearnStore.clearAIHistory(); openAIAssistant(); } return; } if (act === 'aiSend'){ sendAIMessage(); return; } });
 
-let _voiceActive = false; let _voiceTimerHandle = null; let _voiceStartTime = 0;
+let _voiceActive = false; let _voiceTimerHandle = null; let _voiceStartTime = 0; let _voiceResultHandled = false;
 function detectVoiceAPI(){ const candidates = ['AndroidTTS', 'AndroidSpeech', 'AndroidASR', 'AndroidVoice', 'AndroidRecognizer', 'AndroidVoiceInput']; for (const name of candidates){ const api = window[name]; if (api && typeof api.startRecognize === 'function') return name; } return null; }
-function registerVoiceCallbacks(){ const handler = function(text){ console.log('[Voice] 收到识别结果:', text); stopVoiceRecord(); if (!text || !String(text).trim()){ toast('没有识别到内容，请再说一次或手动输入'); return; } const raw = String(text).trim(); try { const parsed = parseTransactionText(raw); state.pendingTx = parsed; if (state.tab !== 'life' || state.lifeSub !== 'money' || state.moneySub !== 'record'){ state.tab = 'life'; state.lifeSub = 'money'; state.moneySub = 'record'; render(); setTimeout(() => { renderTxEditor(); }, 150); } else { renderTxEditor(); } toast('已识别：' + raw.slice(0, 20) + (parsed.amount ? ' → ¥' + parsed.amount : '（请补金额）')); } catch(e){ console.error('[Voice] 处理失败:', e); toast('识别结果处理失败：' + e.message); } }; window.onVoiceResult = handler; window.onSpeechResult = handler; window.onSpeechRecognizeResult = handler; window.onVoiceRecognizeResult = handler; window.onASRResult = handler; window.onRecognizeResult = handler; window.onResult = handler; window.onVoiceError = function(err){ console.error('[Voice] 错误:', err); stopVoiceRecord(); toast('语音识别失败：' + (err || '未知错误，请手动输入')); }; }
+function registerVoiceCallbacks(){ const handler = function(text){ if (_voiceResultHandled) { console.log('[Voice] 忽略重复的识别回调'); return; } _voiceResultHandled = true; console.log('[Voice] 收到识别结果:', text); stopVoiceRecord(); if (!text || !String(text).trim()){ toast('没有识别到内容，请再说一次或手动输入'); return; } const raw = String(text).trim(); try { const parsed = parseTransactionText(raw); state.pendingTx = parsed; if (state.tab !== 'life' || state.lifeSub !== 'money' || state.moneySub !== 'record'){ state.tab = 'life'; state.lifeSub = 'money'; state.moneySub = 'record'; render(); setTimeout(() => { renderTxEditor(); }, 150); } else { renderTxEditor(); } toast('已识别：' + raw.slice(0, 20) + (parsed.amount ? ' → ¥' + parsed.amount : '（请补金额）')); } catch(e){ console.error('[Voice] 处理失败:', e); toast('识别结果处理失败：' + e.message); } }; window.onVoiceResult = handler; window.onSpeechResult = handler; window.onSpeechRecognizeResult = handler; window.onVoiceRecognizeResult = handler; window.onASRResult = handler; window.onRecognizeResult = handler; window.onResult = handler; window.onVoiceError = function(err){ console.error('[Voice] 错误:', err); stopVoiceRecord(); toast('语音识别失败：' + (err || '未知错误，请手动输入')); }; }
 registerVoiceCallbacks();
-function startVoiceRecord(){ if (_voiceActive){ stopVoiceRecord(); return; } const apiName = detectVoiceAPI(); console.log('[Voice] 检测到接口:', apiName || '无'); if (!apiName){ toast('当前环境不支持语音识别，请点击「手动输入」'); return; } _voiceActive = true; _voiceStartTime = Date.now(); const mic = document.getElementById('micBtn'); if (mic) mic.classList.add('listening'); const hint = document.getElementById('micHint'); if (hint) hint.textContent = '🎙️ 正在聆听…说完点「⏹ 停止识别」'; let left = 30; if (_voiceTimerHandle) clearInterval(_voiceTimerHandle); _voiceTimerHandle = setInterval(() => { left--; if (hint) hint.textContent = `🎙️ 正在聆听…还剩 ${left} 秒`; if (left <= 0) stopVoiceRecord(); }, 1000); const api = window[apiName]; let result = null, error = null; try { result = api.startRecognize(30); } catch(e1){ try { result = api.startRecognize(10); } catch(e2){ try { result = api.startRecognize(); } catch(e3){ error = e3; } } } console.log('[Voice] startRecognize 返回:', result, error ? '错误:' + error.message : ''); if (error){ toast('启动语音识别失败：' + error.message); stopVoiceRecord(); return; } if (typeof result === 'string' && result){ window.onVoiceResult(result); } }
+function startVoiceRecord(){ if (_voiceActive){ stopVoiceRecord(); return; } const apiName = detectVoiceAPI(); console.log('[Voice] 检测到接口:', apiName || '无'); if (!apiName){ toast('当前环境不支持语音识别，请点击「手动输入」'); return; } _voiceActive = true; _voiceResultHandled = false; _voiceStartTime = Date.now(); const mic = document.getElementById('micBtn'); if (mic) mic.classList.add('listening'); const hint = document.getElementById('micHint'); if (hint) hint.textContent = '🎙️ 正在聆听…说完点「⏹ 停止识别」'; let left = 30; if (_voiceTimerHandle) clearInterval(_voiceTimerHandle); _voiceTimerHandle = setInterval(() => { left--; if (hint) hint.textContent = `🎙️ 正在聆听…还剩 ${left} 秒`; if (left <= 0) stopVoiceRecord(); }, 1000); const api = window[apiName]; let result = null, error = null; try { result = api.startRecognize(30); } catch(e1){ try { result = api.startRecognize(10); } catch(e2){ try { result = api.startRecognize(); } catch(e3){ error = e3; } } } console.log('[Voice] startRecognize 返回:', result, error ? '错误:' + error.message : ''); if (error){ toast('启动语音识别失败：' + error.message); stopVoiceRecord(); return; } if (typeof result === 'string' && result){ window.onVoiceResult(result); } }
 function stopVoiceRecord(){ if (!_voiceActive && !_voiceTimerHandle) return; _voiceActive = false; if (_voiceTimerHandle){ clearInterval(_voiceTimerHandle); _voiceTimerHandle = null; } const mic = document.getElementById('micBtn'); if (mic) mic.classList.remove('listening'); const hint = document.getElementById('micHint'); if (hint) hint.textContent = '点击麦克风开始语音输入，说完后点「⏹ 停止识别」'; const apiName = detectVoiceAPI(); if (apiName){ try { const api = window[apiName]; if (api && typeof api.stopRecognize === 'function') api.stopRecognize(); } catch(e){ console.log('[Voice] stopRecognize 失败:', e.message); } } console.log('[Voice] 录音时长:', Math.round((Date.now() - _voiceStartTime) / 1000) + ' 秒'); }
 view.addEventListener('click', e => { const mic = e.target.closest('#micBtn'); if (!mic) return; if (_voiceActive) stopVoiceRecord(); else startVoiceRecord(); });
 tabbar.addEventListener('click', e => { const t = e.target.closest('.tab'); if (!t) return; stopSpeak(); state.tab = t.dataset.tab; render(); });
@@ -1172,179 +1152,86 @@ function startWalkTimer(sec){
   }
 }
 function checkWalkReminder(force){ if (!force && !isInWalkWindow()) return; const last = parseInt(LS.get(WALK_LAST_KEY, '0') || '0', 10); const now = Date.now(); if (!force && now - last < 30 * 60 * 1000) return; LS.set(WALK_LAST_KEY, now); if (!_walkEndTs || _walkEndTs < now) startWalkTimer(200); sendNotification('该站起来走动了', '起身活动 2–3 分钟，下巴轻收 5 次'); }
-function initWalkReminder(){ requestNotifPermission(); setTimeout(() => checkWalkReminder(false), 3000); if (_walkTimerHandle) clearInterval(_walkTimerHandle); _walkTimerHandle = setInterval(() => checkWalkReminder(false), 60 * 1000); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkWalkReminder(false); }); }
+let _walkVisibilityBound = false;
+function initWalkReminder(){ requestNotifPermission(); setTimeout(() => checkWalkReminder(false), 3000); if (_walkTimerHandle) clearInterval(_walkTimerHandle); _walkTimerHandle = setInterval(() => checkWalkReminder(false), 60 * 1000); if (!_walkVisibilityBound){ document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkWalkReminder(false); }); _walkVisibilityBound = true; } }
 
-function stopSpeak(){
-  try {
-    if (window.AndroidTTS && typeof window.AndroidTTS.stopSpeak === 'function') {
-      window.AndroidTTS.stopSpeak();
-    }
-  } catch(e) { console.warn('AndroidTTS stopSpeak 失败:', e); }
-
-  try {
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-  } catch(e) {}
-
-  try {
-    const player = document.getElementById('ttsPlayer');
-    if (player) {
-      player.pause();
-      player.currentTime = 0;
-    }
-  } catch(e) {}
-
-  document.querySelectorAll('.playing').forEach(btn => btn.classList.remove('playing'));
-  _currentSpeakBtn = null;
-  _speakSeq++;
+function stopSpeak(){ 
+  try { if (window.AndroidTTS && typeof AndroidTTS.stopSpeak === 'function') AndroidTTS.stopSpeak(); } catch(e){} 
+  try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch(e){} 
+  try { const p = document.getElementById('ttsPlayer'); if (p){ p.pause(); p.currentTime = 0; } } catch(e){} 
+  document.querySelectorAll('.playing').forEach(b => b.classList.remove('playing')); 
+  _currentSpeakBtn = null; 
+  _speakSeq++; 
 }
 
-let _currentSpeakBtn = null;
-let _speakSeq = 0;
+let _currentSpeakBtn = null; let _speakSeq = 0;
 
-function finishSpeak(seq) {
-  if (seq !== _speakSeq) return;
-  if (_currentSpeakBtn) _currentSpeakBtn.classList.remove('playing');
-  _currentSpeakBtn = null;
+function toggleSpeak(text, lang, btn){ 
+  if (!text) { toast('没有内容可朗读'); return; } 
+  const wasPlaying = btn && btn.classList.contains('playing'); 
+  stopSpeak(); 
+  if (wasPlaying) return; 
+  const langStr = lang || 'en-US'; 
+  const seq = ++_speakSeq; 
+  if (btn) { btn.classList.add('playing'); _currentSpeakBtn = btn; } 
+  
+  if (window.AndroidTTS && typeof AndroidTTS.speak === 'function'){ 
+    try { 
+      AndroidTTS.speak(String(text), langStr); 
+      const ms = Math.max(1500, Math.min(60000, String(text).length * 200)); 
+      setTimeout(() => { 
+        if (seq === _speakSeq && _currentSpeakBtn){ _currentSpeakBtn.classList.remove('playing'); _currentSpeakBtn = null; } 
+      }, ms); 
+      return; 
+    } catch(e){ console.error('AndroidTTS 失败', e); } 
+  } 
+  
+  if (window.speechSynthesis){ 
+    try { 
+      const u = new SpeechSynthesisUtterance(String(text)); 
+      u.lang = langStr; 
+      u.rate = 0.95; 
+      u.onend = () => { 
+        if (seq === _speakSeq && _currentSpeakBtn){ _currentSpeakBtn.classList.remove('playing'); _currentSpeakBtn = null; } 
+      }; 
+      speechSynthesis.speak(u); 
+      return; 
+    } catch(e){} 
+  } 
+  
+  const player = document.getElementById('ttsPlayer'); 
+  if (!player) { toast('朗读失败：没有音频播放器'); return; } 
+  const isZh = langStr.startsWith('zh'); 
+  const trimmed = String(text).slice(0, 800); 
+  const url = isZh ? `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(trimmed)}&le=zh` : `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(trimmed)}&type=2`; 
+  player.src = url; 
+  const cleanup = () => { if (seq !== _speakSeq) return; if (_currentSpeakBtn) _currentSpeakBtn.classList.remove('playing'); _currentSpeakBtn = null; }; 
+  player.onended = cleanup; 
+  player.onerror = () => { cleanup(); toast('朗读失败，请检查网络'); }; 
+  const p = player.play(); 
+  if (p && p.catch) p.catch(() => { cleanup(); toast('朗读被拦截，请再点一次'); }); 
 }
 
-function speakFallback(text, lang, seq) {
-  const player = document.getElementById('ttsPlayer');
-  if (!player) {
-    finishSpeak(seq);
-    toast('朗读失败：没有音频播放器');
-    return;
-  }
-
-  const langStr = lang || 'en-US';
-  const isZh = langStr.toLowerCase().startsWith('zh');
-  const trimmed = String(text).slice(0, 800);
-  const url = isZh
-    ? `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(trimmed)}&le=zh`
-    : `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(trimmed)}&type=2`;
-
-  player.src = url;
-  player.onended = () => finishSpeak(seq);
-  player.onerror = () => {
-    finishSpeak(seq);
-    toast('朗读失败，请检查网络或稍后重试');
-  };
-
-  try {
-    const playPromise = player.play();
-    if (playPromise && typeof playPromise.catch === 'function') {
-      playPromise.catch(() => {
-        finishSpeak(seq);
-        toast('朗读被拦截，请再点一次');
-      });
-    }
-  } catch(e) {
-    finishSpeak(seq);
-    toast('音频播放失败');
-  }
+function speakWordWithScene(word, scene, btn){ 
+  const wasPlaying = btn && btn.classList.contains('playing'); 
+  stopSpeak(); 
+  if (wasPlaying) return; 
+  const seq = ++_speakSeq; 
+  if (btn) { btn.classList.add('playing'); _currentSpeakBtn = btn; } 
+  const doSpeak = (txt) => { 
+    if (window.AndroidTTS && typeof AndroidTTS.speak === 'function') AndroidTTS.speak(txt, 'en-US'); 
+    else if (window.speechSynthesis){ 
+      try { const u = new SpeechSynthesisUtterance(txt); u.lang = 'en-US'; u.rate = 0.95; speechSynthesis.speak(u); } catch(e){} 
+    } 
+  }; 
+  const clearBtn = () => { if (seq === _speakSeq && _currentSpeakBtn){ _currentSpeakBtn.classList.remove('playing'); _currentSpeakBtn = null; } }; 
+  doSpeak(word); 
+  if (scene){ 
+    setTimeout(() => { if (seq !== _speakSeq) return; doSpeak(scene); setTimeout(clearBtn, Math.max(1500, scene.length * 200)); }, 3000); 
+  } else { 
+    setTimeout(clearBtn, 1500); 
+  } 
 }
-
-function speakOne(text, lang, seq) {
-  const content = String(text || '').trim();
-  if (!content || seq !== _speakSeq) return false;
-
-  if (window.AndroidTTS && typeof window.AndroidTTS.speak === 'function') {
-    try {
-      window.AndroidTTS.speak(content, lang || 'en-US');
-      return true;
-    } catch(e) {
-      console.warn('AndroidTTS 朗读失败，尝试浏览器朗读:', e);
-    }
-  }
-
-  if ('speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined') {
-    try {
-      const utterance = new SpeechSynthesisUtterance(content);
-      utterance.lang = lang || 'en-US';
-      utterance.rate = 0.95;
-      utterance.onend = () => finishSpeak(seq);
-      utterance.onerror = () => {
-        if (seq === _speakSeq) speakFallback(content, lang, seq);
-      };
-      window.speechSynthesis.speak(utterance);
-      return true;
-    } catch(e) {
-      console.warn('浏览器语音朗读失败:', e);
-    }
-  }
-
-  speakFallback(content, lang, seq);
-  return true;
-}
-
-function toggleSpeak(text, lang, btn) {
-  if (!String(text || '').trim()) {
-    toast('没有内容可朗读');
-    return;
-  }
-
-  const wasPlaying = !!(btn && btn.classList.contains('playing'));
-  stopSpeak();
-  if (wasPlaying) return;
-
-  const langStr = lang || 'en-US';
-  const seq = ++_speakSeq;
-
-  if (btn) {
-    btn.classList.add('playing');
-    _currentSpeakBtn = btn;
-  }
-
-  const ok = speakOne(text, langStr, seq);
-  if (ok && window.AndroidTTS && typeof window.AndroidTTS.speak === 'function') {
-    const ms = Math.max(1500, Math.min(60000, String(text).length * 220));
-    setTimeout(() => finishSpeak(seq), ms);
-  }
-}
-
-function speakWordWithScene(word, scene, btn) {
-  if (!String(word || '').trim()) {
-    toast('没有可朗读的单词');
-    return;
-  }
-
-  const wasPlaying = !!(btn && btn.classList.contains('playing'));
-  stopSpeak();
-  if (wasPlaying) return;
-
-  const seq = ++_speakSeq;
-  if (btn) {
-    btn.classList.add('playing');
-    _currentSpeakBtn = btn;
-  }
-
-  const speakWord = () => {
-    if (seq !== _speakSeq) return;
-    speakOne(word, 'en-US', seq);
-  };
-
-  speakWord();
-
-  if (String(scene || '').trim()) {
-    const firstDelay = Math.max(1800, Math.min(5000, String(word).length * 250));
-    setTimeout(() => {
-      if (seq !== _speakSeq) return;
-      try {
-        if (window.AndroidTTS && typeof window.AndroidTTS.stopSpeak === 'function') {
-          window.AndroidTTS.stopSpeak();
-        } else if (window.speechSynthesis) {
-          window.speechSynthesis.cancel();
-        }
-      } catch(e) {}
-
-      speakOne(scene, 'en-US', seq);
-      const finishDelay = Math.max(2500, Math.min(60000, String(scene).length * 220));
-      setTimeout(() => finishSpeak(seq), finishDelay);
-    }, firstDelay);
-  } else {
-    setTimeout(() => finishSpeak(seq), Math.max(1500, String(word).length * 250));
-  }
-}
-
 function copyText(text){ return new Promise(resolve => { if (navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>resolve(true)).catch(()=>resolve(false)); return; } try { const ta = document.createElement('textarea'); ta.value = text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); document.body.removeChild(ta); resolve(ok); }catch(e){ resolve(false); } }); }
 function openExternal(url){ if (!url){ toast('无链接'); return; } const u = String(url).trim(); if (!/^https?:\/\//i.test(u)){ toast('链接不安全'); return; } try { const a = document.createElement('a'); a.href = u; a.target='_blank'; a.rel='noopener noreferrer'; a.style.display='none'; document.body.appendChild(a); a.click(); setTimeout(()=>a.remove(),150); }catch(e){ toast('打开失败'); } }
 
@@ -1358,7 +1245,53 @@ async function fetchRecommendMovie(){ const url = `https://api.themoviedb.org/3/
 async function fetchRecommendBook(){ const seed = DAY % 1000; const url = `https://openlibrary.org/search.json?q=the&sort=random&limit=20&page=${seed % 10 + 1}`; const d = await fetchJson(url, 8000); const list = d.docs || []; if (!list.length) throw new Error('无数据'); const b = list[Math.floor(Math.random() * list.length)]; return { name: b.title || '未知书名', author: (b.author_name || []).slice(0, 2).join(', ') || '', cover: b.cover_i ? `https://covers.openlibrary.org/b/id/${b.cover_i}-M.jpg` : '', why: `首次出版：${b.first_publish_year || '未知'}。${b.subject ? '主题：' + b.subject.slice(0,3).join('、') : ''}`, url: b.key ? `https://openlibrary.org${b.key}` : '' }; }
 async function fetchRecommendPodcast(){ const terms = ['technology', 'business', 'health', 'science', 'culture']; const term = terms[DAY % terms.length]; const url = `https://itunes.apple.com/search?media=podcast&term=${term}&limit=20&country=us`; const d = await fetchJson(url, 8000); const list = d.results || []; if (!list.length) throw new Error('无数据'); const p = list[Math.floor(Math.random() * list.length)]; return { name: p.collectionName || p.trackName || '未知播客', author: p.artistName || '', cover: p.artworkUrl100 || '', why: `题材：${(p.primaryGenreName || '综合')}。${p.trackCount ? '共 ' + p.trackCount + ' 集' : ''}`, url: p.collectionViewUrl || '' }; }
 async function fetchRecommendTool(){ const url = 'https://api.github.com/search/repositories?q=stars:%3E5000&sort=stars&order=desc&per_page=30'; const d = await fetchJson(url, 8000); const list = d.items || []; if (!list.length) throw new Error('无数据'); const pick = list[Math.floor(Math.random() * Math.min(15, list.length))]; return { name: pick.full_name, author: `⭐ ${pick.stargazers_count} · ${pick.language || '通用'}`, why: pick.description || '（暂无描述）', url: pick.html_url }; }
-async function fetchWeather(){ const el1 = document.getElementById('homeWeather'); const el2 = document.getElementById('homeTemp'); if (!el1 || !el2) return; try { let location = '101010100'; try { const pos = await new Promise((resolve, reject) => { if (!navigator.geolocation) return reject(new Error('no geo')); navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000, maximumAge: 30*60*1000 }); }); location = `${pos.coords.longitude.toFixed(2)},${pos.coords.latitude.toFixed(2)}`; } catch(e){} const url = `https://${APP_DEFAULTS.qweather.host}/v7/weather/now?location=${encodeURIComponent(location)}&key=${APP_DEFAULTS.qweather.key}`; const res = await fetch(url); const data = await res.json(); if (data.code === '200' && data.now) { const iconMap = { 100:'☀️',101:'⛅',102:'⛅',103:'⛅',104:'☁️',300:'🌧️',400:'❄️',500:'🌫️' }; const icon = iconMap[Math.floor(data.now.icon/100)*100] || '☀️'; el1.textContent = icon + ' ' + data.now.text; el2.textContent = data.now.temp + '℃'; HealthStore.save('lastWeather', { ts: Date.now(), text: data.now.text, temp: data.now.temp }); return; } throw new Error('code '+data.code); } catch(e){ const cached = HealthStore.load('lastWeather', null); if (cached){ el1.textContent = '☀️ ' + cached.text; el2.textContent = cached.temp + '℃'; } else { el1.textContent = '☀️ 晴'; el2.textContent = '--℃'; } } }
+let _weatherRequest = null;
+let _weatherLastAt = 0;
+async function fetchWeather(){
+  const el1 = document.getElementById('homeWeather');
+  const el2 = document.getElementById('homeTemp');
+  if (!el1 || !el2) return;
+  const cached = HealthStore.load('lastWeather', null);
+  if (cached){ el1.textContent = '☀️ ' + cached.text; el2.textContent = cached.temp + '℃'; }
+  if (_weatherRequest) return _weatherRequest;
+  if (_weatherLastAt && Date.now() - _weatherLastAt < 5 * 60 * 1000) return;
+  _weatherLastAt = Date.now();
+  _weatherRequest = (async () => {
+    try {
+      let location = '101010100';
+      try {
+        const pos = await new Promise((resolve, reject) => {
+          if (!navigator.geolocation) return reject(new Error('no geo'));
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout:5000, maximumAge:30*60*1000 });
+        });
+        location = `${pos.coords.longitude.toFixed(2)},${pos.coords.latitude.toFixed(2)}`;
+      } catch(e) {}
+      const url = `https://${APP_DEFAULTS.qweather.host}/v7/weather/now?location=${encodeURIComponent(location)}&key=${APP_DEFAULTS.qweather.key}`;
+      const data = await fetchJson(url, 8000);
+      if (data.code === '200' && data.now){
+        const iconMap = { 100:'☀️',101:'⛅',102:'⛅',103:'⛅',104:'☁️',300:'🌧️',400:'❄️',500:'🌫️' };
+        const icon = iconMap[Math.floor(data.now.icon/100)*100] || '☀️';
+        const weather = { ts:Date.now(), text:data.now.text, temp:data.now.temp };
+        HealthStore.save('lastWeather', weather);
+        const current1 = document.getElementById('homeWeather');
+        const current2 = document.getElementById('homeTemp');
+        if (current1 && current2){ current1.textContent = icon + ' ' + weather.text; current2.textContent = weather.temp + '℃'; }
+        return;
+      }
+      throw new Error('code ' + data.code);
+    } catch(e){
+      const fallback = HealthStore.load('lastWeather', null);
+      const current1 = document.getElementById('homeWeather');
+      const current2 = document.getElementById('homeTemp');
+      if (current1 && current2){
+        if (fallback){ current1.textContent = '☀️ ' + fallback.text; current2.textContent = fallback.temp + '℃'; }
+        else { current1.textContent = '☀️ 晴'; current2.textContent = '--℃'; }
+      }
+      console.warn('[Weather] 获取天气失败:', e);
+    } finally { _weatherRequest = null; }
+  })();
+  return _weatherRequest;
+}
 
 function importTransactionsCsv(){ const input = document.createElement('input'); input.type = 'file'; input.accept = '.csv,.xls,.xlsx,.txt,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,*/*'; input.style.position = 'fixed'; input.style.left = '-9999px'; input.style.top = '-9999px'; input.style.opacity = '0'; input.onchange = e => { const file = e.target.files[0]; if (file) doImportCsv(file); }; document.body.appendChild(input); input.click(); setTimeout(() => { try { document.body.removeChild(input); } catch(e){} }, 60000); }
 async function ensureSheetJS(){ if (window.XLSX) return window.XLSX; return new Promise((resolve, reject) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'; s.onload = () => resolve(window.XLSX); s.onerror = () => reject(new Error('无法加载 Excel 解析库（需要联网一次）')); document.head.appendChild(s); }); }
