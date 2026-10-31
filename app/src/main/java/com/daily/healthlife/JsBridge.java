@@ -44,8 +44,8 @@ public class JsBridge {
 
     @JavascriptInterface
     public boolean isReady() {
-        // 不再调用 TtsHelper.isReady()，避免该类型缺少方法导致编译失败
-        return tts != null;
+        // 修复：调用 tts.isReady() 确保 TTS 引擎真正准备好后再发音
+        return tts != null && tts.isReady();
     }
 
     @JavascriptInterface
@@ -198,8 +198,10 @@ public class JsBridge {
                 cv.put(MediaStore.Downloads.MIME_TYPE, mime == null ? "application/octet-stream" : mime);
                 Uri uri = act.getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
                 OutputStream os = act.getContentResolver().openOutputStream(uri);
-                os.write(content.getBytes(StandardCharsets.UTF_8));
-                os.close();
+                if (os != null) {
+                    os.write(content.getBytes(StandardCharsets.UTF_8));
+                    os.close();
+                }
             } else {
                 File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
                 if (!dir.exists()) dir.mkdirs();
