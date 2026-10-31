@@ -38,19 +38,20 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="#EAF1FF"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="7dp"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp"
+            android:paddingTop="7dp"
+            android:paddingBottom="7dp"
             android:text="打开 APP  ›"
             android:textColor="#4268C5"
             android:textSize="11sp"
             android:textStyle="bold" />
     </LinearLayout>
 
-    <View
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="#E9ECF3" />
-
 
     <LinearLayout
         android:id="@+id/widget_item_1_layout"
@@ -59,7 +60,8 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:minHeight="43dp"
-        android:paddingVertical="5dp">
+        android:paddingTop="5dp"
+        android:paddingBottom="5dp">
         <TextView
             android:id="@+id/widget_item_1_icon"
             android:layout_width="30dp"
@@ -99,7 +101,8 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:minHeight="43dp"
-        android:paddingVertical="5dp">
+        android:paddingTop="5dp"
+        android:paddingBottom="5dp">
         <TextView
             android:id="@+id/widget_item_2_icon"
             android:layout_width="30dp"
@@ -139,7 +142,8 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:minHeight="43dp"
-        android:paddingVertical="5dp">
+        android:paddingTop="5dp"
+        android:paddingBottom="5dp">
         <TextView
             android:id="@+id/widget_item_3_icon"
             android:layout_width="30dp"
@@ -179,7 +183,8 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:minHeight="43dp"
-        android:paddingVertical="5dp">
+        android:paddingTop="5dp"
+        android:paddingBottom="5dp">
         <TextView
             android:id="@+id/widget_item_4_icon"
             android:layout_width="30dp"
@@ -219,7 +224,8 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:minHeight="43dp"
-        android:paddingVertical="5dp">
+        android:paddingTop="5dp"
+        android:paddingBottom="5dp">
         <TextView
             android:id="@+id/widget_item_5_icon"
             android:layout_width="30dp"
