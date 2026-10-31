@@ -3,6 +3,7 @@ package com.daily.healthlife;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
+import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.TextToSpeech;
 import java.util.Locale;
 
@@ -13,7 +14,8 @@ public class TtsHelper {
     public TtsHelper(Context context) {
         tts = new TextToSpeech(context, status -> {
             if (status == TextToSpeech.SUCCESS) {
-                isReady = true;
+                int result = tts.setLanguage(Locale.US);
+                isReady = result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED;
             }
         });
     }

@@ -43,6 +43,11 @@ public class JsBridge {
     }
 
     @JavascriptInterface
+    public boolean isReady() {
+        return tts != null && tts.isReady();
+    }
+
+    @JavascriptInterface
     public void speak(String text, String lang) {
         tts.speak(text, lang);
     }

@@ -1,46 +1,254 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:background="@drawable/widget_bg_transparent" android:padding="16dp" android:orientation="vertical">
-    
-    <!-- 顶部标题 -->
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="12dp">
-        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Today" android:textColor="#111827" android:textSize="20dp" android:textStyle="bold" />
-        <TextView android:id="@+id/widget_btn_open_app" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="打开 APP" android:background="#EAF3FF" android:paddingLeft="12dp" android:paddingRight="12dp" android:paddingTop="6dp" android:paddingBottom="6dp" android:textColor="#4A9EFF" android:textSize="12dp" android:textStyle="bold" />
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="14dp"
+    android:background="@drawable/widget_bg_transparent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingBottom="9dp">
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="TODAY"
+                android:textColor="#7C8496"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.12" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="今日时间线"
+                android:textColor="#182033"
+                android:textSize="19sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+        <TextView
+            android:id="@+id/widget_btn_open_app"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="#EAF1FF"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="7dp"
+            android:text="打开 APP  ›"
+            android:textColor="#4268C5"
+            android:textSize="11sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- 列表项 1 -->
-    <LinearLayout android:id="@+id/widget_item_1_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="6dp" android:paddingBottom="6dp">
-        <TextView android:id="@+id/widget_item_1_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🌅" android:textSize="16dp" android:layout_marginRight="8dp" />
-        <TextView android:id="@+id/widget_item_1_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="07:40 起床" android:textColor="#111827" android:textSize="16dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-        <TextView android:id="@+id/widget_item_1_check" android:layout_width="28dp" android:layout_height="28dp" android:background="@drawable/widget_square_bg" android:text="1" android:textColor="#9CA3AF" android:textSize="13dp" android:gravity="center" android:layout_marginLeft="8dp" />
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E9ECF3" />
+
+
+    <LinearLayout
+        android:id="@+id/widget_item_1_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:minHeight="43dp"
+        android:paddingVertical="5dp">
+        <TextView
+            android:id="@+id/widget_item_1_icon"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:gravity="center"
+            android:background="#F2F4F9"
+            android:text="🌅"
+            android:textSize="15sp" />
+        <TextView
+            android:id="@+id/widget_item_1_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="9dp"
+            android:text="07:40 起床"
+            android:textColor="#20283A"
+            android:textSize="13sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+        <TextView
+            android:id="@+id/widget_item_1_check"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_marginStart="7dp"
+            android:background="@drawable/widget_square_bg"
+            android:gravity="center"
+            android:text=""
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- 列表项 2 -->
-    <LinearLayout android:id="@+id/widget_item_2_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="6dp" android:paddingBottom="6dp">
-        <TextView android:id="@+id/widget_item_2_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🧴" android:textSize="16dp" android:layout_marginRight="8dp" />
-        <TextView android:id="@+id/widget_item_2_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="16dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-        <TextView android:id="@+id/widget_item_2_check" android:layout_width="28dp" android:layout_height="28dp" android:background="@drawable/widget_square_bg" android:text="2" android:textColor="#9CA3AF" android:textSize="13dp" android:gravity="center" android:layout_marginLeft="8dp" />
+    <LinearLayout
+        android:id="@+id/widget_item_2_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:minHeight="43dp"
+        android:paddingVertical="5dp">
+        <TextView
+            android:id="@+id/widget_item_2_icon"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:gravity="center"
+            android:background="#F2F4F9"
+            android:text="🧴"
+            android:textSize="15sp" />
+        <TextView
+            android:id="@+id/widget_item_2_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="9dp"
+            android:text="07:45 护肤"
+            android:textColor="#20283A"
+            android:textSize="13sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+        <TextView
+            android:id="@+id/widget_item_2_check"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_marginStart="7dp"
+            android:background="@drawable/widget_square_bg"
+            android:gravity="center"
+            android:text=""
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- 列表项 3 -->
-    <LinearLayout android:id="@+id/widget_item_3_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="6dp" android:paddingBottom="6dp">
-        <TextView android:id="@+id/widget_item_3_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🥣" android:textSize="16dp" android:layout_marginRight="8dp" />
-        <TextView android:id="@+id/widget_item_3_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="16dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-        <TextView android:id="@+id/widget_item_3_check" android:layout_width="28dp" android:layout_height="28dp" android:background="@drawable/widget_square_bg" android:text="3" android:textColor="#9CA3AF" android:textSize="13dp" android:gravity="center" android:layout_marginLeft="8dp" />
+    <LinearLayout
+        android:id="@+id/widget_item_3_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:minHeight="43dp"
+        android:paddingVertical="5dp">
+        <TextView
+            android:id="@+id/widget_item_3_icon"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:gravity="center"
+            android:background="#F2F4F9"
+            android:text="🥣"
+            android:textSize="15sp" />
+        <TextView
+            android:id="@+id/widget_item_3_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="9dp"
+            android:text="07:50 早餐"
+            android:textColor="#20283A"
+            android:textSize="13sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+        <TextView
+            android:id="@+id/widget_item_3_check"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_marginStart="7dp"
+            android:background="@drawable/widget_square_bg"
+            android:gravity="center"
+            android:text=""
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- 列表项 4 -->
-    <LinearLayout android:id="@+id/widget_item_4_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="6dp" android:paddingBottom="6dp">
-        <TextView android:id="@+id/widget_item_4_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="💼" android:textSize="16dp" android:layout_marginRight="8dp" />
-        <TextView android:id="@+id/widget_item_4_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="16dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-        <TextView android:id="@+id/widget_item_4_check" android:layout_width="28dp" android:layout_height="28dp" android:background="@drawable/widget_square_bg" android:text="4" android:textColor="#9CA3AF" android:textSize="13dp" android:gravity="center" android:layout_marginLeft="8dp" />
+    <LinearLayout
+        android:id="@+id/widget_item_4_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:minHeight="43dp"
+        android:paddingVertical="5dp">
+        <TextView
+            android:id="@+id/widget_item_4_icon"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:gravity="center"
+            android:background="#F2F4F9"
+            android:text="💼"
+            android:textSize="15sp" />
+        <TextView
+            android:id="@+id/widget_item_4_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="9dp"
+            android:text="08:00 上班 / 通勤"
+            android:textColor="#20283A"
+            android:textSize="13sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+        <TextView
+            android:id="@+id/widget_item_4_check"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_marginStart="7dp"
+            android:background="@drawable/widget_square_bg"
+            android:gravity="center"
+            android:text=""
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
-    <!-- 列表项 5 -->
-    <LinearLayout android:id="@+id/widget_item_5_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="6dp" android:paddingBottom="6dp">
-        <TextView android:id="@+id/widget_item_5_icon" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🍱" android:textSize="16dp" android:layout_marginRight="8dp" />
-        <TextView android:id="@+id/widget_item_5_text" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="" android:textColor="#111827" android:textSize="16dp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-        <TextView android:id="@+id/widget_item_5_check" android:layout_width="28dp" android:layout_height="28dp" android:background="@drawable/widget_square_bg" android:text="5" android:textColor="#9CA3AF" android:textSize="13dp" android:gravity="center" android:layout_marginLeft="8dp" />
+    <LinearLayout
+        android:id="@+id/widget_item_5_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:minHeight="43dp"
+        android:paddingVertical="5dp">
+        <TextView
+            android:id="@+id/widget_item_5_icon"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:gravity="center"
+            android:background="#F2F4F9"
+            android:text="🍱"
+            android:textSize="15sp" />
+        <TextView
+            android:id="@+id/widget_item_5_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="9dp"
+            android:text="12:00 午餐"
+            android:textColor="#20283A"
+            android:textSize="13sp"
+            android:maxLines="1"
+            android:ellipsize="end" />
+        <TextView
+            android:id="@+id/widget_item_5_check"
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_marginStart="7dp"
+            android:background="@drawable/widget_square_bg"
+            android:gravity="center"
+            android:text=""
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold" />
     </LinearLayout>
 </LinearLayout>

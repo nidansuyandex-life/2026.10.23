@@ -105,13 +105,9 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                 }
             }
 
-            // 排序规则：未完成在前，已完成在后。相同状态下按时间排序
-            Collections.sort(list, (o1, o2) -> {
-                boolean d1 = o1.optBoolean("done", false);
-                boolean d2 = o2.optBoolean("done", false);
-                if (d1 != d2) return d1 ? 1 : -1; // 未完成 -1 排前面
-                return o1.optString("time").compareTo(o2.optString("time"));
-            });
+            // 与 APP 时间线保持一致：只按时间排序，不把已完成事项重新挪位。
+            Collections.sort(list, (o1, o2) ->
+                    o1.optString("time", "99:99").compareTo(o2.optString("time", "99:99")));
 
             int[] layouts = {R.id.widget_item_1_layout, R.id.widget_item_2_layout, R.id.widget_item_3_layout, R.id.widget_item_4_layout, R.id.widget_item_5_layout};
             int[] icons = {R.id.widget_item_1_icon, R.id.widget_item_2_icon, R.id.widget_item_3_icon, R.id.widget_item_4_icon, R.id.widget_item_5_icon};

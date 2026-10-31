@@ -62,6 +62,13 @@ public class MainActivity extends AppCompatActivity {
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                view.postDelayed(() -> view.evaluateJavascript(
+                        "window.mergeNativeWidgetCheckins && window.mergeNativeWidgetCheckins()", null), 250);
+            }
+
+            @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 if (url.startsWith("http://") || url.startsWith("https://")) {
                     try {
@@ -138,6 +145,15 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (webView != null) {
+            webView.postDelayed(() -> webView.evaluateJavascript(
+                    "window.mergeNativeWidgetCheckins && window.mergeNativeWidgetCheckins()", null), 180);
+        }
     }
 
     @Override
