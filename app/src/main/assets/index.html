@@ -1223,11 +1223,11 @@ function toggleSpeak(text, lang, btn){
   const seq = ++_speakSeq; 
   if (btn) { btn.classList.add('playing'); _currentSpeakBtn = btn; } 
   
-  // 1. 尝试原生 TTS（最快，但如果系统没引擎就会失败）
-  if (window.AndroidTTS && typeof AndroidTTS.speak === 'function' && typeof AndroidTTS.isReady === 'function' && AndroidTTS.isReady()) {
+  // 1. 优先尝试原生 TTS (只要是原生 APP 环境，直接调用，TtsHelper 内部有延迟重试逻辑)
+  if (window.AndroidTTS && typeof AndroidTTS.speak === 'function') {
     try {
       AndroidTTS.speak(String(text), langStr); 
-      const ms = Math.max(1500, Math.min(60000, String(text).length * 200)); 
+      const ms = Math.max(2000, Math.min(60000, String(text).length * 300)); 
       setTimeout(() => { 
         if (seq === _speakSeq && _currentSpeakBtn){ _currentSpeakBtn.classList.remove('playing'); _currentSpeakBtn = null; } 
       }, ms); 
@@ -1235,18 +1235,22 @@ function toggleSpeak(text, lang, btn){
     } catch(e){ console.error('AndroidTTS 失败，回退到网络发音', e); } 
   } 
   
-  // 2. 直接走网络发音（不再走浏览器 speechSynthesis，防止异步丢失手势被拦截）
+  // 2. 如果原生没有或者失败，强制走最稳的百度网络发音
   playNetworkAudio(text, langStr, seq, btn);
 }
-// 辅助函数：播放网络音频 (借用有道词典接口，彻底解决 WebView 拦截问题)
+
+// 辅助函数：播放网络音频 (采用百度翻译 TTS，并加入了超时重试机制)
 function playNetworkAudio(text, langStr, seq, btn) {
   const player = document.getElementById('ttsPlayer'); 
   if (!player) { toast('朗读失败：没有音频播放器'); return; } 
-  const isZh = langStr.startsWith('zh'); 
-  // 使用更稳定的 tts.youdao.com 接口
-  const trimmed = String(text).replace(/\n/g, ' ').slice(0, 200); 
-  const url = isZh ? `https://tts.youdao.com/fanyivoice?word=${encodeURIComponent(trimmed)}&le=zh&keyfrom=speaker-target` : `https://tts.youdao.com/fanyivoice?word=${encodeURIComponent(trimmed)}&le=eng&keyfrom=speaker-target`; 
   
+  const isZh = langStr.startsWith('zh'); 
+  const trimmed = String(text).replace(/\n/g, ' ').slice(0, 200); 
+  
+  // 百度翻译 TTS 接口
+  const lan = isZh ? 'zh' : 'en';
+  const url = `https://fanyi.baidu.com/gettts?lan=${lan}&text=${encodeURIComponent(trimmed)}&spd=3&source=web`;
+
   player.src = url; 
   player.load(); 
   
@@ -1256,30 +1260,40 @@ function playNetworkAudio(text, langStr, seq, btn) {
       _currentSpeakBtn = null; 
   }; 
   
-  // 【兜底方案】如果网络音频加载失败，或者播放被拦截，直接调用手机自带语音引擎
-  const fallbackToSystemTTS = () => {
-      cleanup();
-      if (window.speechSynthesis) {
-          speechSynthesis.cancel();
-          const u = new SpeechSynthesisUtterance(trimmed);
-          u.lang = langStr;
-          u.rate = 0.95;
-          speechSynthesis.speak(u);
-      } else {
-          toast('朗读失败，请检查网络'); 
-      }
-  };
+  let hasPlayed = false;
 
+  player.onplaying = () => { hasPlayed = true; };
+  
   player.onended = cleanup; 
-  player.onerror = fallbackToSystemTTS; 
+  player.onerror = () => { 
+    cleanup(); 
+    toast('网络音频加载失败，尝试使用系统语音'); 
+    // 最后的绝招：调用浏览器系统自带引擎（极少数情况能成功）
+    if (window.speechSynthesis) {
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(trimmed);
+        u.lang = langStr;
+        speechSynthesis.speak(u);
+    }
+  }; 
   
   const p = player.play(); 
   if (p !== undefined) {
     p.catch((err) => { 
-        console.warn('音频播放被拦截，启用系统兜底:', err);
-        fallbackToSystemTTS();
+        console.warn('播放被拦截:', err);
+        cleanup();
+        toast('系统拦截了网络音频，请检查手机是否静音'); 
     }); 
   }
+  
+  // 如果 2 秒后还没有开始播放，说明被拦截了，直接切断，让用户重新点
+  setTimeout(() => {
+    if (!hasPlayed && seq === _speakSeq) {
+        cleanup();
+        player.pause();
+        toast('请求超时，请检查网络或重试');
+    }
+  }, 2000);
 }
 function copyText(text){ return new Promise(resolve => { if (navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>resolve(true)).catch(()=>resolve(false)); return; } try { const ta = document.createElement('textarea'); ta.value = text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); document.body.removeChild(ta); resolve(ok); }catch(e){ resolve(false); } }); }
 function openExternal(url){ if (!url){ toast('无链接'); return; } const u = String(url).trim(); if (!/^https?:\/\//i.test(u)){ toast('链接不安全'); return; } try { const a = document.createElement('a'); a.href = u; a.target='_blank'; a.rel='noopener noreferrer'; a.style.display='none'; document.body.appendChild(a); a.click(); setTimeout(()=>a.remove(),150); }catch(e){ toast('打开失败'); } }
