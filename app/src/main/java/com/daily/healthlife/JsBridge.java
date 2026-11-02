@@ -44,18 +44,18 @@ public class JsBridge {
 
     @JavascriptInterface
     public boolean isReady() {
-        // 修复：调用 tts.isReady() 确保 TTS 引擎真正准备好后再发音
         return tts != null && tts.isReady();
     }
 
+    /** 返回 true=原生已发声；false=让 JS 走网络 TTS */
     @JavascriptInterface
-    public void speak(String text, String lang) {
-        tts.speak(text, lang);
+    public boolean speak(String text, String lang) {
+        return tts != null && tts.speak(text, lang);
     }
 
     @JavascriptInterface
     public void stopSpeak() {
-        tts.stop();
+        if (tts != null) tts.stop();
     }
 
     @JavascriptInterface
