@@ -367,18 +367,6 @@ select,input[type=text],input[type=password]{width:100%;border:1px solid #e6e8f0
 </style>
 
 </head>
-<script>
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', () => {
-    const activeEl = document.activeElement;
-    if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
-      setTimeout(() => {
-        activeEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      }, 100);
-    }
-  });
-}
-</script>
 <body>
 <div class="phone">
   <header class="topbar">
@@ -1101,7 +1089,7 @@ async function render(options){
     if (tab === 'life' && state.lifeSub === 'money' && state.moneySub === 'record' && state.pendingTx) renderTxEditor(); 
   }); 
 }
-function applyChecks(){ const c = getChecks(); document.querySelectorAll('[data-check-key]').forEach(el => { if (c[el.dataset.checkKey]) el.classList.add('done'); else el.classList.remove('done'); }); }
+
 function applyChecks(){ const c = getChecks(); document.querySelectorAll('[data-check-key]').forEach(el => { if (c[el.dataset.checkKey]) el.classList.add('done'); else el.classList.remove('done'); }); }
 
 let _sheetCloseTimer = null;
@@ -1750,7 +1738,39 @@ function playNetworkAudio(text, langStr, seq, btn) {
 function copyText(text){ return new Promise(resolve => { if (navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>resolve(true)).catch(()=>resolve(false)); return; } try { const ta = document.createElement('textarea'); ta.value = text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); document.body.removeChild(ta); resolve(ok); }catch(e){ resolve(false); } }); }
 function openExternal(url){ if (!url){ toast('无链接'); return; } const u = String(url).trim(); if (!/^https?:\/\//i.test(u)){ toast('链接不安全'); return; } try { const a = document.createElement('a'); a.href = u; a.target='_blank'; a.rel='noopener noreferrer'; a.style.display='none'; document.body.appendChild(a); a.click(); setTimeout(()=>a.remove(),150); }catch(e){ toast('打开失败'); } }
 
-const KnowledgeSource = { async fetchAll(){ return await Promise.all([ this.fetchWiki().catch(e => ({ source:'wiki', error: friendlyErr(e) })), this.fetchOioweb().catch(e => ({ source:'oioweb', error: friendlyErr(e) })), this.fetchShowAPI().catch(e => ({ source:'showapi', error: friendlyErr(e) })), this.fetchTianapiWhy().catch(e => ({ source:'why', error: friendlyErr(e) })) ]); }, async fetchWiki(){ const d = await raceTimeout(fetchJson('https://zh.wikipedia.org/api/rest_v1/page/random/summary', 6000), 7000); if (!d.extract || d.extract.length < 40) throw new Error('内容太短'); return { source:'wiki', q: d.title, a: d.extract, key: '维基百科 · ' + (d.description || '') }; }, async fetchOioweb(){ const url = `https://cn.apihz.cn/api/zici/changshi.php?id=${APP_DEFAULTS.oioweb.id}&key=${APP_DEFAULTS.oioweb.key}`; const d = await raceTimeout(fetchJson(url, 6000), 7000); if (d.code !== 200) throw new Error('code='+d.code); return { source:'oioweb', q: d.p, a: d.a, key: '接口盒子' }; }, async fetchShowAPI(){ const kw = ['地球','太阳','月亮','星星','火','水','风'][Math.floor(Math.random()*7)]; const url = `https://route.showapi.com/1706-1?showapi_appid=${APP_DEFAULTS.showapi.appid}&showapi_sign=${APP_DEFAULTS.showapi.sign}&keyword=${encodeURIComponent(kw)}`; const d = await raceTimeout(fetchJson(url, 6000), 7000); if (d.showapi_res_code !== 0) throw new Error('code='+d.showapi_res_code); const list = (d.showapi_res_body && d.showapi_res_body.contentlist) || []; if (!list.length) throw new Error('无内容'); const p = list[Math.floor(Math.random()*list.length)]; return { source:'showapi', q: p.title || kw, a: p.content || p.intro || '', key: 'ShowAPI' }; }, async fetchTianapiWhy(){ const urls = [`https://apis.tianapi.com/qwhy/index?key=${TIANAPI}&num=10`,`https://apis.tianapi.com/why/index?key=${TIANAPI}&num=10`]; for (const url of urls){ try { const d = await tianapiFetch(url, 6000); if (d.code !== 200 || !d.result) throw new Error('code='+d.code); const list = extractList(d.result); if (!list.length) throw new Error('无内容'); const p = list[Math.floor(Math.random()*list.length)]; const q = p.title || p.question || p.q || ''; const a = p.content || p.answer || p.a || ''; if (!q || !a) throw new Error('无内容'); return { source:'why', q, a, key: '天聚 · 十万为什么' }; } catch(e){} } throw new Error('接口不可用'); } };
+const KnowledgeSource = { async fetchAll(){ return await Promise.all([ this.fetchWiki().catch(e => ({ source:'wiki', error: friendlyErr(e) })), this.fetchOioweb().catch(e => ({ source:'oioweb', error: friendlyErr(e) })), this.fetchShowAPI().catch(e => ({ source:'showapi', error: friendlyErr(e) })), this.fetchTianapiWhy().catch(e => ({ source:'why', error: friendlyErr(e) })) ]); }, async fetchWiki(){ const d = await raceTimeout(fetchJson('https://zh.wikipedia.org/api/rest_v1/page/random/summary', 6000), 7000); if (!d.extract || d.extract.length < 40) throw new Error('内容太短'); return { source:'wiki', q: d.title, a: d.extract, key: '维基百科 · ' + (d.description || '') }; }, async fetchOioweb(){ const url = `https://cn.apihz.cn/api/zici/changshi.php?id=${APP_DEFAULTS.oioweb.id}&key=${APP_DEFAULTS.oioweb.key}`; const d = await raceTimeout(fetchJson(url, 6000), 7000); if (d.code !== 200) throw new Error('code='+d.code); return { source:'oioweb', q: d.p, a: d.a, key: '接口盒子' }; }, async fetchShowAPI(){ const kw = ['地球','太阳','月亮','星星','火','水','风'][Math.floor(Math.random()*7)]; const url = `https://route.showapi.com/1706-1?showapi_appid=${APP_DEFAULTS.showapi.appid}&showapi_sign=${APP_DEFAULTS.showapi.sign}&keyword=${encodeURIComponent(kw)}`; const d = await raceTimeout(fetchJson(url, 6000), 7000); if (d.showapi_res_code !== 0) throw new Error('code='+d.showapi_res_code); const list = (d.showapi_res_body && d.showapi_res_body.contentlist) || []; if (!list.length) throw new Error('无内容'); const p = list[Math.floor(Math.random()*list.length)]; return { source:'showapi', q: p.title || kw, a: p.content || p.intro || '', key: 'ShowAPI' }; }, async fetchTianapiWhy(){ 
+  const urls = [
+    `https://apis.tianapi.com/qwhy/index?key=${TIANAPI}&num=10`,
+    `https://apis.tianapi.com/why/index?key=${TIANAPI}&num=10`
+  ]; 
+  for (const url of urls){ 
+    try { 
+      const d = await tianapiFetch(url, 6000); 
+      
+      // 👇 新增调试日志：把真实的返回结果打印到控制台
+      console.log('[TianapiWhy] 真实返回数据:', d); 
+      
+      if (d.code !== 200 || !d.result) throw new Error('code=' + d.code); 
+      const list = extractList(d.result); 
+      if (!list.length) throw new Error('无内容'); 
+      
+      // 兼容多种返回字段格式
+      const p = list[Math.floor(Math.random()*list.length)]; 
+      const q = p.title || p.question || p.q || p.name || ''; 
+      const a = p.content || p.answer || p.a || p.des || ''; 
+      
+      if (!q || !a) {
+        console.warn('[TianapiWhy] 字段缺失，解析失败:', p);
+        throw new Error('无内容'); 
+      }
+      return { source:'why', q, a, key: '天聚 · 十万为什么' }; 
+    } catch(e){
+      // 👇 新增调试日志：把报错打印出来
+      console.warn('[TianapiWhy] 抓取失败:', e.message, e);
+    } 
+  } 
+  throw new Error('接口不可用'); 
+}
 const QuoteSource = { async fetchOne(id){ if (id === 'quotable') return await this.fetchQuotable(); if (id === 'ensentence') return await this.fetchEnsentence(); if (id === 'enmaxim') return await this.fetchEnmaxim(); return null; }, async fetchAll(){ return await Promise.all(QUOTE_SOURCES.map(async (src) => { try { const d = await raceTimeout(this.fetchOne(src.id), 12000); if (!d || !d.text) throw new Error('无内容'); return { ok:true, id:src.id, label:src.label, icon:src.icon, data:d }; }catch(e){ return { ok:false, id:src.id, label:src.label, icon:src.icon, error: friendlyErr(e) }; } })); }, async fetchQuotable(){ const d = await fetchJson('https://api.quotable.io/random', 6000); let cn = d.zh || ''; if (!cn){ try { cn = await translateToChinese(d.content); } catch(e){} } return { text: d.content, author: d.author || 'Unknown', cn, source:'quotable' }; }, async fetchEnsentence(){ const d = await tianapiFetch(`https://apis.tianapi.com/ensentence/index?key=${TIANAPI}`, 6000); if (d.code !== 200 || !d.result || !d.result.en) throw new Error('code='+(d.code||'?')); let cn = d.result.zh || ''; if (!cn){ try { cn = await translateToChinese(d.result.en); } catch(e){} } return { text: d.result.en, author: '天聚 · 英语一句话', cn, source:'tianapi' }; }, async fetchEnmaxim(){ const d = await tianapiFetch(`https://apis.tianapi.com/enmaxim/index?key=${TIANAPI}`, 6000); if (d.code !== 200 || !d.result) throw new Error('code='+(d.code||'?')); let cn = d.result.zh || ''; if (!cn){ try { cn = await translateToChinese(d.result.en || ''); } catch(e){} } return { text: d.result.en || '', author: '天聚 · 英语格言', cn, source:'tianapi' }; } };
 const StorySource = { async fetchOne(id){ if (id === 'gutendex') return await this.fetchGutendex(); if (id === 'ensentence') return await this.fetchEnsentence(); if (id === 'enmaxim') return await this.fetchEnmaxim(); return null; }, async fetchAll(){ return await Promise.all(STORY_SOURCES.map(async (src) => { try { const d = await raceTimeout(this.fetchOne(src.id), 12000); if (!d || !d.preview) throw new Error('无内容'); return { ok:true, id:src.id, label:src.label, icon:src.icon, data:d }; }catch(e){ return { ok:false, id:src.id, label:src.label, icon:src.icon, error: friendlyErr(e) }; } })); }, async fetchGutendex(){ const d = await fetchJson('https://gutendex.com/books?languages=en&sort=popular&page=1', 6000); const list = d.results || []; if (!list.length) throw new Error('无数据'); const book = list[Math.floor(Math.random()*Math.min(list.length, 8))]; const fmts = book.formats || {}; const txtUrl = fmts['text/plain; charset=utf-8'] || fmts['text/plain']; if (!txtUrl) throw new Error('无文本'); const full = await fetchText(txtUrl, 6000); let start = full.indexOf('*** START OF'); if (start > 0) start = full.indexOf('\n', start)+1; else start = 0; const preview = full.slice(start, start+600).trim(); let cn = ''; try { cn = await translateToChinese(preview.slice(0,200)); } catch(e){} return { title: book.title, author:(book.authors||[]).map(a=>a.name).join(', '), preview: preview.slice(0,500), cn, url: txtUrl, source:'gutendex' }; }, async fetchEnsentence(){ const d = await tianapiFetch(`https://apis.tianapi.com/ensentence/index?key=${TIANAPI}`, 6000); if (d.code !== 200 || !d.result) throw new Error('code='+(d.code||'?')); let cn = d.result.zh || ''; if (!cn){ try { cn = await translateToChinese(d.result.en||''); } catch(e){} } return { title: '英语一句话', author: '天聚数行', preview: d.result.en, cn, url: null, source:'tianapi' }; }, async fetchEnmaxim(){ const d = await tianapiFetch(`https://apis.tianapi.com/enmaxim/index?key=${TIANAPI}`, 6000); if (d.code !== 200 || !d.result) throw new Error('code='+(d.code||'?')); let cn = d.result.zh || ''; if (!cn){ try { cn = await translateToChinese(d.result.en||''); } catch(e){} } return { title: '英语格言', author: '天聚数行', preview: d.result.en, cn, url: null, source:'tianapi' }; } };
 const YiyanSource = { async fetch(){ const d = await fetchJson('https://v1.hitokoto.cn/', 5000); if (!d.hitokoto) throw new Error('无数据'); return { text: d.hitokoto, from: d.from || d.from_who || '' }; } };
@@ -1948,7 +1968,7 @@ setInterval(_checkDayRollover, 60 * 1000);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') _checkDayRollover();
 });
-// === 提供给 Android 物理返回键调用 ===
+
 
 </script>
 </body>
