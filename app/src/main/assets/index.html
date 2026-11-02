@@ -633,9 +633,9 @@ const PRODUCT_CATS = { makeupRemover:{ label:'卸妆', icon:'🧴', order:0 }, c
 function loadDataFromGlobals(){
   if (window.__VALVE_DATA && typeof window.__VALVE_DATA === 'object'){ SEED.VALVE = window.__VALVE_DATA; SEED.VALVE_ALL = Object.keys(SEED.VALVE).flatMap(cat => (Array.isArray(SEED.VALVE[cat])?SEED.VALVE[cat]:[]).map(v => ({ ...v, cat }))); DATA_STATUS.valve = SEED.VALVE_ALL.length; DATA_STATUS.valveOk = SEED.VALVE_ALL.length > 0; } else { SEED.VALVE = { '基础知识': [{q:'闸阀为什么不适合调节流量？',a:'闸板开启过程中流体阻力变化大。',key:'闸阀设计用于全开/全关。'}] }; SEED.VALVE_ALL = [{...SEED.VALVE['基础知识'][0], cat:'基础知识'}]; DATA_STATUS.valve = 1; }
   window.__WORD_DECK_DATA = window.__WORD_DECK_DATA || {};
-  window.__WORD_DECK_DATA['builtin'] = BUILTIN_WORDS.map(w => ({ ...w, deck:'builtin' }));
+  
   if (Array.isArray(window.__WORD_DECKS) && window.__WORD_DECKS.length) SEED.DECKS = window.__WORD_DECKS;
-  if (!SEED.DECKS.find(d => d.id === 'builtin')) SEED.DECKS.unshift({ id:'builtin', name:'基础词库', icon:'📘', count: BUILTIN_WORDS.length });
+ 
   if (Array.isArray(window.__WORDS_DATA) && window.__WORDS_DATA.length){ window.__WORD_DECK_DATA['default'] = window.__WORDS_DATA.map(w => ({ ...w, deck: 'default' })); if (!SEED.DECKS.find(d => d.id === 'default')) SEED.DECKS.push({ id:'default', name:'内置词库', icon:'📗', count: window.__WORDS_DATA.length }); }
   if (Array.isArray(window.__THINKING_DATA) && window.__THINKING_DATA.length){ SEED.THINKING = window.__THINKING_DATA.map(m => ({ name: m.n||m.name, emoji: m.e||m.emoji, core: m.c||m.core, how: m.h||m.how||[], exercise: m.x||m.exercise, hint: m.t||m.hint })); } else { SEED.THINKING = [{name:'第一性原理',emoji:'🔬',core:'拆到基本事实，再往上重建。',how:['问底层事实','剔除假设','重新推导'],exercise:'把你最头疼的问题拆到最基本事实。',hint:'真问题可能是介质里有颗粒。'}]; }
   if (window.__SCENES_DATA && typeof window.__SCENES_DATA === 'object'){ const out = {}; Object.keys(window.__SCENES_DATA).forEach(cat => { out[cat] = window.__SCENES_DATA[cat].map(s => ({ q: s.q, guide: s.g || s.guide })); }); SEED.SCENES = out; } else { SEED.SCENES = { '通用': [{q:'今天想说点什么？', guide:'自由发挥。'}] }; }
@@ -747,7 +747,7 @@ const CACHE_KEY_KNOWLEDGE = 'knowledge-v9';
 function getLastRefreshBoundary(){ const bj = bjDate(); const h = bj.getUTCHours(); const today0 = Date.UTC(bj.getUTCFullYear(), bj.getUTCMonth(), bj.getUTCDate()); let lastHour = h >= 19 ? 19 : (h >= 12 ? 12 : 0); return today0 + lastHour*3600*1000 - 8*3600*1000; }
 const CacheStore = { shouldRefresh(key){ const c = LS.get('cache:'+key, null); if (!c || !c.t || !c.d) return true; return c.t < getLastRefreshBoundary(); }, save(key, data){ if (data == null){ LS.del('cache:'+key); return; } LS.set('cache:'+key, { t: Date.now(), d: data }); }, load(key){ const c = LS.get('cache:'+key, null); return c && c.d ? c.d : null; }, getTime(key){ const c = LS.get('cache:'+key, null); return c && c.t ? new Date(c.t).toLocaleString('zh-CN', {hour12:false}) : '从未'; } };
 
-const state = { tab:'home', studySub:'today', englishSub:'today', englishDeck: LS.get('english-deck', '') || 'builtin', englishPage: 1, valvePage: 1, discoverSub:'news', recommendCat:'书', openKnow:null, openThink:null, thinkHint:null, searchQuery:'', valveCat:'全部', review:null, aiLoading:false, aiAnsweringFor:null, aiSkincareLoading:false, passageHidden:false, aiRole: LS.get('ai-role','engineer'), generalData:null, generalLoading:false, quoteResults:[], quoteLoading:false, storyResults:[], storyLoading:false, yiyanData:null, yiyanLoading:false, newsResults:[], newsLoading:false, jokeResults:[], jokeLoading:false, recData:null, recLoading:false, lifeSub:'calendar', calendarSub:'month', moneySub:'record', sportSub:'plan', closetSub:'add', careSub:'skin', closetCat:'top', garmentDraft:{ bust:88, shoulder:38, length:62, sleeve:58, waist:70, hip:96, thigh:54, footLength:24, footWidth:9.5 }, selectedDate: HealthStore.load('selectedDate', todayStr()), calYear: HealthStore.load('calYear', new Date().getFullYear()), calMonth: HealthStore.load('calMonth', new Date().getMonth()), setsDone: HealthStore.load('setsDone', {}), restTimers: {}, exportRange: HealthStore.load('exportRange', 'month'), pendingTx: null, calendarData: {}, profileDraft: { ...profile }, _pendingImport: null, showPastTodos: false, todoDraft: null, aiContext: null };
+const state = { tab:'home', studySub:'today', englishSub:'today', englishDeck: LS.get('english-deck', '') || '',  englishPage: 1, valvePage: 1, discoverSub:'news', recommendCat:'书', openKnow:null, openThink:null, thinkHint:null, searchQuery:'', valveCat:'全部', review:null, aiLoading:false, aiAnsweringFor:null, aiSkincareLoading:false, passageHidden:false, aiRole: LS.get('ai-role','engineer'), generalData:null, generalLoading:false, quoteResults:[], quoteLoading:false, storyResults:[], storyLoading:false, yiyanData:null, yiyanLoading:false, newsResults:[], newsLoading:false, jokeResults:[], jokeLoading:false, recData:null, recLoading:false, lifeSub:'calendar', calendarSub:'month', moneySub:'record', sportSub:'plan', closetSub:'add', careSub:'skin', closetCat:'top', garmentDraft:{ bust:88, shoulder:38, length:62, sleeve:58, waist:70, hip:96, thigh:54, footLength:24, footWidth:9.5 }, selectedDate: HealthStore.load('selectedDate', todayStr()), calYear: HealthStore.load('calYear', new Date().getFullYear()), calMonth: HealthStore.load('calMonth', new Date().getMonth()), setsDone: HealthStore.load('setsDone', {}), restTimers: {}, exportRange: HealthStore.load('exportRange', 'month'), pendingTx: null, calendarData: {}, profileDraft: { ...profile }, _pendingImport: null, showPastTodos: false, todoDraft: null, aiContext: null };
 
 const view = document.getElementById('view'); const tabbar = document.getElementById('tabbar'); const sheet = document.getElementById('sheet'); const fab = document.getElementById('fab');
 
@@ -1249,7 +1249,12 @@ function startWalkTimer(sec){
   sendNotification('该站起来走动了', '起身活动 2–3 分钟，下巴轻收 5 次'); 
 }
 
+
+
+let _currentSpeakBtn = null; let _speakSeq = 0; let _speakSceneTimer = null;
+
 function stopSpeak(){ 
+  if (_speakSceneTimer) { clearTimeout(_speakSceneTimer); _speakSceneTimer = null; }
   try { if (window.AndroidTTS && typeof AndroidTTS.stopSpeak === 'function') AndroidTTS.stopSpeak(); } catch(e){} 
   try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch(e){} 
   try { const p = document.getElementById('ttsPlayer'); if (p){ p.pause(); p.currentTime = 0; } } catch(e){} 
@@ -1257,35 +1262,31 @@ function stopSpeak(){
   _currentSpeakBtn = null; 
   _speakSeq++; 
 }
+
 function speakText(text){
   const t = String(text || '');
   if (!t) return;
-  try {
-    if (window.AndroidTTS && typeof AndroidTTS.speak === 'function'){
-      const ok = AndroidTTS.speak(t, 'zh-CN');
-      if (ok === true) return;
-    }
-    if (window.AndroidBridge && typeof AndroidBridge.speak === 'function'){
-      const ok = AndroidBridge.speak(t, 'zh-CN');
-      if (ok === true) return;
-    }
-    if ('speechSynthesis' in window){
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(t);
-      u.lang = 'zh-CN';
-      u.rate = 1.0;
-      speechSynthesis.speak(u);
-    }
-  } catch(e){}
+  stopSpeak();
+  playNetworkAudio(t, 'zh-CN', ++_speakSeq, null);
 }
-let _currentSpeakBtn = null; let _speakSeq = 0;
 
 function speakWordWithScene(word, scene, btn){
   const w = String(word || '').trim();
   const s = String(scene || '').trim();
   if (!w && !s){ toast('没有内容可朗读'); return; }
-  const text = s ? (w + '. ' + s) : w;
-  toggleSpeak(text, 'en-US', btn);
+  
+  if (_speakSceneTimer) { clearTimeout(_speakSceneTimer); _speakSceneTimer = null; }
+  
+  const wasPlaying = btn && btn.classList.contains('playing');
+  if (w) toggleSpeak(w, 'en-US', btn);
+  if (wasPlaying) return;   // ★ 用户是点“停止”，不再排例句
+  
+  if (s) {
+    _speakSceneTimer = setTimeout(() => {
+      _speakSceneTimer = null;
+      playNetworkAudio(s, 'en-US', ++_speakSeq, null);
+    }, 2000);
+  }
 }
 
 // ★★★ 挪到全局，不在 toggleSpeak 内部 ★★★
@@ -1334,53 +1335,25 @@ function toggleSpeak(text, lang, btn){
   const langStr = lang || 'en-US';
   const seq = ++_speakSeq;
   if (btn) { btn.classList.add('playing'); _currentSpeakBtn = btn; }
-
-  let nativeOk = false;
-  if (window.AndroidTTS && typeof AndroidTTS.speak === 'function') {
-    try {
-      const ret = AndroidTTS.speak(String(text), langStr);
-      nativeOk = (ret === true);
-      console.log('[TTS] native speak ->', ret, 'ok=', nativeOk);
-    } catch (e) {
-      console.warn('[TTS] native speak threw:', e);
-      nativeOk = false;
-    }
-  }
-
-  if (nativeOk) {
-    const ms = Math.max(2000, Math.min(60000, String(text).length * 300));
-    setTimeout(() => {
-      if (seq === _speakSeq && _currentSpeakBtn) {
-        _currentSpeakBtn.classList.remove('playing');
-        _currentSpeakBtn = null;
-      }
-    }, ms);
-    return;
-  }
-
-  console.log('[TTS] fallback to network');
+  
+  // ★ 彻底删掉原生 TTS 尝试，直接走网络
   playNetworkAudio(text, langStr, seq, btn);
 }
 
 /* ============ 多源网络 TTS 回退 ============ */
 function playNetworkAudio(text, langStr, seq, btn) {
   const player = document.getElementById('ttsPlayer');
-  if (!player) { toast('无播放器'); return; }
+  if (!player) { return; }
   const trimmed = String(text).replace(/\n+/g, ' ').trim().slice(0, 200);
   if (!trimmed) return;
   const isZh = String(langStr).startsWith('zh');
 
-  // 多源按可靠性排序
   const sources = [
-    // 有道词典发音（国内稳定、中英都支持）
     () => isZh
       ? `https://dict.youdao.com/dictvoice?le=zh&audio=${encodeURIComponent(trimmed)}`
       : `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(trimmed)}&type=2`,
-    // StreamElements（全球 CDN，免费）
     () => `https://api.streamelements.com/kappa/v2/speech?voice=${isZh ? 'Zhiyu' : 'Brian'}&text=${encodeURIComponent(trimmed)}`,
-    // Google 翻译 TTS
     () => `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=${isZh ? 'zh-CN' : 'en'}&q=${encodeURIComponent(trimmed)}`,
-    // 百度（做兜底，可能已失效）
     () => `https://fanyi.baidu.com/gettts?lan=${isZh ? 'zh' : 'en'}&text=${encodeURIComponent(trimmed)}&spd=3&source=web`,
   ];
 
@@ -1398,19 +1371,18 @@ function playNetworkAudio(text, langStr, seq, btn) {
     if (idx >= sources.length) {
       aborted = true;
       cleanup();
-      // 最后回退到系统语音（至少在 PC 上能用）
+      // 静默尝试系统语音，不弹窗
       if (window.speechSynthesis) {
         try {
           speechSynthesis.cancel();
           const u = new SpeechSynthesisUtterance(trimmed);
           u.lang = langStr;
           speechSynthesis.speak(u);
-          toast('已使用系统语音');
           return;
         } catch (e) {}
       }
-      toast('TTS 接口全部不可用，请检查网络');
-      return;
+      console.warn('[TTS] 接口全部不可用');
+      return; // ★ 删掉了 toast('TTS接口全部不可用')
     }
 
     const url = sources[idx++]();
@@ -1428,7 +1400,6 @@ function playNetworkAudio(text, langStr, seq, btn) {
     };
 
     player.src = url;
-    // 注意：不要调用 player.load()，会打断 play()
     const p = player.play();
     if (p && p.catch) {
       p.catch(err => {
@@ -1437,9 +1408,8 @@ function playNetworkAudio(text, langStr, seq, btn) {
         if (err && err.name === 'NotAllowedError') {
           aborted = true;
           cleanup();
-          toast('浏览器拦截了播放，请再点击一次');
+          // ★ 删掉了拦截相关的 toast
         } else {
-          // NotSupportedError = 源返回的不是音频，立刻换源
           tryNext();
         }
       });
@@ -1448,6 +1418,8 @@ function playNetworkAudio(text, langStr, seq, btn) {
 
   tryNext();
 }
+
+
 function copyText(text){ return new Promise(resolve => { if (navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>resolve(true)).catch(()=>resolve(false)); return; } try { const ta = document.createElement('textarea'); ta.value = text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); document.body.removeChild(ta); resolve(ok); }catch(e){ resolve(false); } }); }
 function openExternal(url){ if (!url){ toast('无链接'); return; } const u = String(url).trim(); if (!/^https?:\/\//i.test(u)){ toast('链接不安全'); return; } try { const a = document.createElement('a'); a.href = u; a.target='_blank'; a.rel='noopener noreferrer'; a.style.display='none'; document.body.appendChild(a); a.click(); setTimeout(()=>a.remove(),150); }catch(e){ toast('打开失败'); } }
 
