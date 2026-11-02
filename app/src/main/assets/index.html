@@ -1521,9 +1521,42 @@ function confirmImportTx(mode){ const p = state._pendingImport; if (!p){ closeSh
 // ============ 半小时走动提醒 ============
 let _walkHalfHourTimer = null;
 
-function isWalkHalfHourMoment() { ... }
-function checkWalkHalfHourTrigger() { ... }
-function initWalkReminder() { ... }
+function isWalkHalfHourMoment() {
+  const now = new Date();
+  const mins = now.getMinutes();
+  const secs = now.getSeconds();
+  if (mins !== 0 && mins !== 30) return false;
+  if (secs > 20) return false;
+  const totalMins = now.getHours() * 60 + mins;
+  const inMorning = totalMins >= 8 * 60 + 30 && totalMins <= 11 * 60 + 30;
+  const inAfternoon = totalMins >= 13 * 60 + 30 && totalMins <= 17 * 60;
+  return inMorning || inAfternoon;
+}
+
+function checkWalkHalfHourTrigger() {
+  try {
+    if (!isWalkHalfHourMoment()) return;
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const slotKey = `app_h_walkSlot_${todayStr()}_${hh}${mm}`;
+    if (LS.get(slotKey, false)) return;
+    LS.set(slotKey, true);
+    console.log('[Walk] 半小时提醒触发:', hh + ':' + mm);
+    if (typeof startWalkTimer === 'function') {
+      startWalkTimer(200);
+    }
+  } catch (e) {
+    console.warn('[Walk] checkWalkHalfHourTrigger error:', e);
+  }
+}
+
+function initWalkReminder() {
+  if (_walkHalfHourTimer) clearInterval(_walkHalfHourTimer);
+  checkWalkHalfHourTrigger();
+  _walkHalfHourTimer = setInterval(checkWalkHalfHourTrigger, 15000);
+  console.log('[Walk] 半小时提醒已启动');
+}
 (function init(){
   try {
     loadDataFromGlobals(); 
