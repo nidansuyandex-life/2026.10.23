@@ -1329,33 +1329,44 @@ async function fetchWordExampleFromApi(word){
 
 function toggleSpeak(text, lang, btn){
   if (!text) { toast('没有内容可朗读'); return; }
-  const wasPlaying = btn && btn.classList.contains('playing');
+  const wasPlaying = btn && _currentSpeakBtn === btn;   // ← 改这一行
   stopSpeak();
   if (wasPlaying) return;
   const langStr = lang || 'en-US';
   const seq = ++_speakSeq;
   if (btn) { btn.classList.add('playing'); _currentSpeakBtn = btn; }
-  
-  // ★ 彻底删掉原生 TTS 尝试，直接走网络
   playNetworkAudio(text, langStr, seq, btn);
 }
 
 /* ============ 多源网络 TTS 回退 ============ */
 function playNetworkAudio(text, langStr, seq, btn) {
   const player = document.getElementById('ttsPlayer');
-  if (!player) { return; }
+  if (!player) return;
   const trimmed = String(text).replace(/\n+/g, ' ').trim().slice(0, 200);
   if (!trimmed) return;
   const isZh = String(langStr).startsWith('zh');
 
+  // 源：Google 排第一（最快最稳），其余按需降级
   const sources = [
-    () => isZh
-      ? `https://dict.youdao.com/dictvoice?le=zh&audio=${encodeURIComponent(trimmed)}`
-      : `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(trimmed)}&type=2`,
-    () => `https://api.streamelements.com/kappa/v2/speech?voice=${isZh ? 'Zhiyu' : 'Brian'}&text=${encodeURIComponent(trimmed)}`,
-    () => `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=${isZh ? 'zh-CN' : 'en'}&q=${encodeURIComponent(trimmed)}`,
-    () => `https://fanyi.baidu.com/gettts?lan=${isZh ? 'zh' : 'en'}&text=${encodeURIComponent(trimmed)}&spd=3&source=web`,
+    { name: 'google',
+      url: `https://translate.googleapis.com/translate_tts?ie=UTF-8&client=gtx&tl=${isZh ? 'zh-CN' : 'en'}` +
+           `&q=${encodeURIComponent(trimmed)}&total=1&idx=0&textlen=${trimmed.length}&ttsspeed=1` },
+    { name: 'se',
+      url: `https://api.streamelements.com/kappa/v2/speech?voice=${isZh ? 'Zhiyu' : 'Brian'}&text=${encodeURIComponent(trimmed)}` },
+    { name: 'youdao',
+      url: isZh
+        ? `https://dict.youdao.com/dictvoice?le=zh&audio=${encodeURIComponent(trimmed)}`
+        : `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(trimmed)}&type=2` },
+    { name: 'baidu',
+      url: `https://fanyi.baidu.com/gettts?lan=${isZh ? 'zh' : 'en'}&text=${encodeURIComponent(trimmed)}&spd=3&source=web` },
   ];
+
+  // 按历史成功率排序（成功过的排前面，失败过的排最后）
+  const health = LS.get('tts-health', {});
+  sources.sort((a, b) => (health[b.name] || 0) - (health[a.name] || 0));
+
+  const markOk   = (n) => { health[n] = Math.min((health[n] || 0) + 1, 20); LS.set('tts-health', health); };
+  const markFail = (n) => { health[n] = -1; LS.set('tts-health', health); };
 
   const cleanup = () => {
     if (seq !== _speakSeq) return;
@@ -1363,55 +1374,89 @@ function playNetworkAudio(text, langStr, seq, btn) {
     _currentSpeakBtn = null;
   };
 
+  const fallbackSystemTTS = () => {
+    if (window.speechSynthesis) {
+      try {
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(trimmed);
+        u.lang = langStr;
+        u.rate = 1.0;
+        u.onend = cleanup;
+        u.onerror = cleanup;
+        speechSynthesis.speak(u);
+        return;
+      } catch (e) {}
+    }
+    cleanup();
+  };
+
   let idx = 0;
   let aborted = false;
+
+  // 总超时：6 秒内一个源都没开播 → 系统 TTS 兜底
+  const globalTimer = setTimeout(() => {
+    if (aborted) return;
+    aborted = true;
+    try { player.pause(); } catch (e) {}
+    console.warn('[TTS] global timeout, fallback to system TTS');
+    fallbackSystemTTS();
+  }, 6000);
 
   const tryNext = () => {
     if (seq !== _speakSeq || aborted) return;
     if (idx >= sources.length) {
       aborted = true;
-      cleanup();
-      // 静默尝试系统语音，不弹窗
-      if (window.speechSynthesis) {
-        try {
-          speechSynthesis.cancel();
-          const u = new SpeechSynthesisUtterance(trimmed);
-          u.lang = langStr;
-          speechSynthesis.speak(u);
-          return;
-        } catch (e) {}
-      }
-      console.warn('[TTS] 接口全部不可用');
-      return; // ★ 删掉了 toast('TTS接口全部不可用')
+      clearTimeout(globalTimer);
+      fallbackSystemTTS();
+      return;
     }
+    const src = sources[idx++];
+    console.log('[TTS] try', src.name);
 
-    const url = sources[idx++]();
-    console.log('[TTS] try', idx, url.slice(0, 90));
+    let settled = false;
+    // 单源 2.5s 超时，慢就换
+    const srcTimer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      console.warn('[TTS] source timeout', src.name);
+      markFail(src.name);
+      player.onplaying = null;
+      player.onerror  = null;
+      player.onended  = null;
+      try { player.pause(); } catch (e) {}
+      tryNext();
+    }, 2500);
 
-    player.onended = null;
-    player.onerror = null;
-    player.onplaying = null;
-
-    player.onplaying = () => { /* 开始播放 */ };
+    player.onplaying = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(srcTimer);
+      clearTimeout(globalTimer);
+      markOk(src.name);
+    };
     player.onended = () => { if (seq === _speakSeq) cleanup(); };
     player.onerror = () => {
-      console.warn('[TTS] source', idx, 'load failed');
+      if (settled) return;
+      settled = true;
+      clearTimeout(srcTimer);
+      markFail(src.name);
+      console.warn('[TTS] source error', src.name);
       tryNext();
     };
 
-    player.src = url;
+    player.src = src.url;
+    // 同步调用 play()，尽量占住"用户点击"的手势上下文
     const p = player.play();
     if (p && p.catch) {
       p.catch(err => {
-        if (err && err.name === 'AbortError') return;
-        console.warn('[TTS] play() rejected:', err && err.name, err && err.message);
-        if (err && err.name === 'NotAllowedError') {
-          aborted = true;
-          cleanup();
-          // ★ 删掉了拦截相关的 toast
-        } else {
-          tryNext();
-        }
+        if (settled) return;
+        const n = err && err.name;
+        if (n === 'AbortError') return;             // 正常切源，忽略
+        settled = true;
+        clearTimeout(srcTimer);
+        markFail(src.name);
+        console.warn('[TTS] play() rejected', src.name, n);
+        tryNext();                                  // NotAllowedError / 其他 → 换下一个源
       });
     }
   };
@@ -1495,6 +1540,8 @@ let _walkHalfHourTimer = null;
 
 function isWalkHalfHourMoment() {
   const now = new Date();
+  const dow = now.getDay();                     // 0=日 1=一 ... 6=六
+  if (dow === 0 || dow === 6) return false;     // ★ 只在周一至周五
   const mins = now.getMinutes();
   const secs = now.getSeconds();
   if (mins !== 0 && mins !== 30) return false;
