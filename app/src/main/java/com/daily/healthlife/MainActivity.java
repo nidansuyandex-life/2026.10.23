@@ -50,8 +50,13 @@ public class MainActivity extends AppCompatActivity {
         settings.setAllowUniversalAccessFromFileURLs(true);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         
-        // 关键：允许自动播放媒体，解决部分系统下音频被拦截的问题
+        // 【关键修复 1】允许自动播放媒体，解决音频被拦截问题
         settings.setMediaPlaybackRequiresUserGesture(false);
+        
+        // 【关键修复 2】允许混合内容 (解决部分网络 TTS 接口因 HTTP/HTTPS 冲突被拦截的问题)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        }
 
         jsBridge = new JsBridge(this, webView);
         webView.addJavascriptInterface(jsBridge, "AndroidBridge");
@@ -64,6 +69,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
+                // 页面加载完成后，合并桌面小组件的打卡状态
                 view.postDelayed(() -> view.evaluateJavascript(
                         "window.mergeNativeWidgetCheckins && window.mergeNativeWidgetCheckins()", null), 250);
             }
@@ -132,9 +138,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void checkPermissions() {
+        // 申请录音权限
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, 2001);
         }
+        // 申请通知权限 (Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, 2002);
@@ -150,6 +158,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        // 每次回到前台，同步一次小组件打卡状态
         if (webView != null) {
             webView.postDelayed(() -> webView.evaluateJavascript(
                     "window.mergeNativeWidgetCheckins && window.mergeNativeWidgetCheckins()", null), 180);
@@ -163,6 +172,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void handleJumpIntent(Intent intent) {
+        // 处理来自桌面小组件的点击跳转
         if (intent != null && intent.getData() != null) {
             Uri data = intent.getData();
             if ("healthlife".equals(data.getScheme()) && "jump".equals(data.getHost())) {
