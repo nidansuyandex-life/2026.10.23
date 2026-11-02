@@ -1185,10 +1185,9 @@ function startWalkTimer(sec){
   num.textContent = duration; 
   el.classList.add('show'); 
   
-  let hasNative = false;
+  // 同步给原生服务（在后台运行）
   if (window.AndroidBridge && typeof AndroidBridge.startNativeWalkTimer === 'function') { 
     AndroidBridge.startNativeWalkTimer(duration); 
-    hasNative = true;
   } 
   
   if (_walkCountdownHandle) clearInterval(_walkCountdownHandle); 
@@ -1198,15 +1197,11 @@ function startWalkTimer(sec){
     if (left <= 0) finishWalkTimer(); 
   }, 250); 
 
-  if (!hasNative) {
-    speakText('该站起来走动了，活动两到三分钟'); 
-    vibratePattern([150, 100, 150]); 
-    sendNotification('该站起来走动了', '起身活动 2–3 分钟，下巴轻收 5 次'); 
-  }
+  // 无论是前台还是后台，立刻触发一次系统通知（防挂起）
+  speakText('该站起来走动了，活动两到三分钟'); 
+  vibratePattern([150, 100, 150]); 
+  sendNotification('该站起来走动了', '起身活动 2–3 分钟，下巴轻收 5 次'); 
 }
-function checkWalkReminder(force){ if (!force && !isInWalkWindow()) return; const last = parseInt(LS.get(WALK_LAST_KEY, '0') || '0', 10); const now = Date.now(); if (!force && now - last < 30 * 60 * 1000) return; LS.set(WALK_LAST_KEY, now); if (!_walkEndTs || _walkEndTs < now) startWalkTimer(200); sendNotification('该站起来走动了', '起身活动 2–3 分钟，下巴轻收 5 次'); }
-let _walkVisibilityBound = false;
-function initWalkReminder(){ requestNotifPermission(); setTimeout(() => checkWalkReminder(false), 3000); if (_walkTimerHandle) clearInterval(_walkTimerHandle); _walkTimerHandle = setInterval(() => checkWalkReminder(false), 60 * 1000); if (!_walkVisibilityBound){ document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkWalkReminder(false); }); _walkVisibilityBound = true; } }
 
 function stopSpeak(){ 
   try { if (window.AndroidTTS && typeof AndroidTTS.stopSpeak === 'function') AndroidTTS.stopSpeak(); } catch(e){} 
@@ -1248,34 +1243,41 @@ function playNetworkAudio(text, langStr, seq, btn) {
   const player = document.getElementById('ttsPlayer'); 
   if (!player) { toast('朗读失败：没有音频播放器'); return; } 
   const isZh = langStr.startsWith('zh'); 
-  // 将换行符替换为空格，防止URL解析出错，并截断过长的文本
-  const trimmed = String(text).replace(/\n/g, ' ').slice(0, 800); 
-  const url = isZh ? `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(trimmed)}&le=zh` : `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(trimmed)}&type=2`; 
+  // 使用更稳定的 tts.youdao.com 接口
+  const trimmed = String(text).replace(/\n/g, ' ').slice(0, 200); 
+  const url = isZh ? `https://tts.youdao.com/fanyivoice?word=${encodeURIComponent(trimmed)}&le=zh&keyfrom=speaker-target` : `https://tts.youdao.com/fanyivoice?word=${encodeURIComponent(trimmed)}&le=eng&keyfrom=speaker-target`; 
   
   player.src = url; 
-  player.load(); // 强制重新加载
+  player.load(); 
   
   const cleanup = () => { 
       if (seq !== _speakSeq) return; 
       if (_currentSpeakBtn) _currentSpeakBtn.classList.remove('playing'); 
       _currentSpeakBtn = null; 
   }; 
-  player.onended = cleanup; 
-  player.onerror = () => { cleanup(); toast('网络朗读失败，请检查网络'); }; 
   
-  // 尝试播放
+  // 【兜底方案】如果网络音频加载失败，或者播放被拦截，直接调用手机自带语音引擎
+  const fallbackToSystemTTS = () => {
+      cleanup();
+      if (window.speechSynthesis) {
+          speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(trimmed);
+          u.lang = langStr;
+          u.rate = 0.95;
+          speechSynthesis.speak(u);
+      } else {
+          toast('朗读失败，请检查网络'); 
+      }
+  };
+
+  player.onended = cleanup; 
+  player.onerror = fallbackToSystemTTS; 
+  
   const p = player.play(); 
   if (p !== undefined) {
     p.catch((err) => { 
-        console.warn('播放被拦截:', err);
-        // 针对个别国产系统/WebView 的终极抢救：延迟 100ms 静默再试一次
-        setTimeout(() => {
-            if (seq !== _speakSeq) return;
-            player.play().catch(() => {
-                cleanup();
-                toast('系统限制无法播放声音');
-            });
-        }, 100);
+        console.warn('音频播放被拦截，启用系统兜底:', err);
+        fallbackToSystemTTS();
     }); 
   }
 }
