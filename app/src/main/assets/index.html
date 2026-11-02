@@ -459,7 +459,12 @@ function syncToNativeWidget() {
             if (showProtein) fixedItems.push({ time:'20:30', text:'吃蛋白粉', checkKey: `home_${t}_protein`, icon: '🥛' });
             const todoItems = manualTodos.map(mt => ({ time: mt.time || '99:99', text: mt.title, key: 'todo_' + encodeURIComponent(JSON.stringify({ date: t, time: mt.time, title: mt.title })), done: !!getTodoStatusMap()[getTodoKey(t, mt)], icon: '📝' }));
             const allTimeline = fixedItems.map(it => ({ time: it.time, text: it.text, icon: it.icon, key: it.checkKey, done: !!checks[it.checkKey] }));
-            const finalTimeline = [...allTimeline, ...todoItems].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+            const finalTimeline = [...allTimeline, ...todoItems];
+// 【修复】未完成在前，已完成在后
+finalTimeline.sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    return (a.time || '99:99').localeCompare(b.time || '99:99');
+});
             if (window.AndroidBridge.syncTimelineData) window.AndroidBridge.syncTimelineData(JSON.stringify(finalTimeline));
             const tasks = LearnStore.getTodayTasks(); const doneTasks = tasks.filter(x => x.done).length; const studyText = `今日学习：${doneTasks}/${tasks.length}`;
             const monthTx = transactions.filter(x => x.date.startsWith(t.slice(0,7))); const monthExp = monthTx.filter(x => x.type === 'expense').reduce((s,x) => s + x.amount, 0); const expenseText = `本月支出：¥${monthExp.toFixed(0)}`;
@@ -778,7 +783,15 @@ function homeView(){
       done: !!statusMap[getTodoKey(t, mt)] 
   }));
   
-  const allItems = [...fixedItems, ...todoItems].sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  const allItems = [...fixedItems, ...todoItems];
+
+  // 【核心修复】按完成状态排序：未完成置顶，已完成沉底；同状态下按时间排
+  allItems.sort((a, b) => {
+    const aDone = a.manualPayload ? !!a.done : !!(a.checkKey && checks[a.checkKey]);
+    const bDone = b.manualPayload ? !!b.done : !!(b.checkKey && checks[b.checkKey]);
+    if (aDone !== bDone) return aDone ? 1 : -1; 
+    return (a.time || '99:99').localeCompare(b.time || '99:99');
+  });
 
   const renderItem = (it) => {
     const done = it.manualPayload ? !!it.done : !!(it.checkKey && checks[it.checkKey]); const cls = ['home-tl-item']; if (done) cls.push('is-done');
@@ -788,12 +801,8 @@ function homeView(){
     return `<div class="${cls.join(' ')}" ${actionAttr}>${checkHtml}<span class="home-tl-text">${it.time ? `<span class="tm">${it.time}</span>` : ''}${esc(it.text)}${sub}</span>${badge}${arrow}</div>`;
   };
 
-  const currentTime = fmtTime(new Date());
-  const futureItems = allItems.filter(it => (it.time || '99:99') >= currentTime || !checks[it.checkKey]);
-  const pastItems = allItems.filter(it => (it.time || '99:99') < currentTime && checks[it.checkKey]);
-
-  let tlHtml = `<div class="home-tl-wrap">${futureItems.map(renderItem).join('')}</div>`;
-  if (pastItems.length > 0) { if (state.showPastTodos) { tlHtml += `<div class="timeline-divider" data-act="togglePastTodos">收起已过去的 ${pastItems.length} 项 ▴</div><div class="home-tl-wrap" style="opacity:.65">${pastItems.map(renderItem).join('')}</div>`; } else { tlHtml += `<div class="timeline-divider" data-act="togglePastTodos">展开已过去的 ${pastItems.length} 项 ▾</div>`; } }
+  // 直接渲染所有项（不再折叠）
+  let tlHtml = `<div class="home-tl-wrap">${allItems.map(renderItem).join('')}</div>`;
 
   const tasks = LearnStore.getTodayTasks(); const doneTasks = tasks.filter(x => x.done).length; const monthTx = transactions.filter(x => x.date.startsWith(t.slice(0,7))); const monthExp = monthTx.filter(x => x.type === 'expense').reduce((s,x) => s + x.amount, 0); const todaySess = getSportSession();
   const bodyStateOptions = [{ mode:'original', label:'正常', icon:'✅' },{ mode:'swim', label:'游泳', icon:'🏊' },{ mode:'reduced', label:'减量', icon:'🔻' },{ mode:'period', label:'经期', icon:'🌸' },{ mode:'leave', label:'请假', icon:'📝' },{ mode:'rest', label:'休息', icon:'😴' }];
@@ -1219,8 +1228,8 @@ function toggleSpeak(text, lang, btn){
   const seq = ++_speakSeq; 
   if (btn) { btn.classList.add('playing'); _currentSpeakBtn = btn; } 
   
-  if (window.AndroidTTS && typeof AndroidTTS.speak === 'function' &&
-      (typeof AndroidTTS.isReady !== 'function' || AndroidTTS.isReady())){
+  // 1. 尝试原生 TTS（如果可用）
+  if (window.AndroidTTS && typeof AndroidTTS.speak === 'function' && typeof AndroidTTS.isReady === 'function' && AndroidTTS.isReady()) {
     try {
       AndroidTTS.speak(String(text), langStr); 
       const ms = Math.max(1500, Math.min(60000, String(text).length * 200)); 
@@ -1228,22 +1237,28 @@ function toggleSpeak(text, lang, btn){
         if (seq === _speakSeq && _currentSpeakBtn){ _currentSpeakBtn.classList.remove('playing'); _currentSpeakBtn = null; } 
       }, ms); 
       return; 
-    } catch(e){ console.error('AndroidTTS 失败', e); } 
+    } catch(e){ console.error('AndroidTTS 失败，回退到网络发音', e); } 
   } 
   
-  if (window.speechSynthesis){ 
+  // 2. 降级到浏览器语音（可能被拦截）
+  if (window.speechSynthesis) { 
     try { 
       const u = new SpeechSynthesisUtterance(String(text)); 
       u.lang = langStr; 
       u.rate = 0.95; 
-      u.onend = () => { 
-        if (seq === _speakSeq && _currentSpeakBtn){ _currentSpeakBtn.classList.remove('playing'); _currentSpeakBtn = null; } 
-      }; 
+      u.onend = () => { if (seq === _speakSeq && _currentSpeakBtn){ _currentSpeakBtn.classList.remove('playing'); _currentSpeakBtn = null; } }; 
+      u.onerror = () => { playNetworkAudio(text, langStr, seq, btn); }; 
       speechSynthesis.speak(u); 
       return; 
-    } catch(e){} 
+    } catch(e){ console.error('WebSpeech 失败，回退到网络发音', e); } 
   } 
   
+  // 3. 强制走网络发音（最稳定）
+  playNetworkAudio(text, langStr, seq, btn);
+}
+
+// 辅助函数：播放网络音频 (借用有道词典接口)
+function playNetworkAudio(text, langStr, seq, btn) {
   const player = document.getElementById('ttsPlayer'); 
   if (!player) { toast('朗读失败：没有音频播放器'); return; } 
   const isZh = langStr.startsWith('zh'); 
@@ -1252,41 +1267,22 @@ function toggleSpeak(text, lang, btn){
   player.src = url; 
   const cleanup = () => { if (seq !== _speakSeq) return; if (_currentSpeakBtn) _currentSpeakBtn.classList.remove('playing'); _currentSpeakBtn = null; }; 
   player.onended = cleanup; 
-  player.onerror = () => { cleanup(); toast('朗读失败，请检查网络'); }; 
+  player.onerror = () => { cleanup(); toast('网络朗读失败，请检查网络'); }; 
   const p = player.play(); 
   if (p && p.catch) p.catch(() => { cleanup(); toast('朗读被拦截，请再点一次'); }); 
 }
 
+// 单词+例句的朗读逻辑也同步修复
 function speakWordWithScene(word, scene, btn){
   const wasPlaying = btn && btn.classList.contains('playing');
   stopSpeak();
   if (wasPlaying) return;
   const seq = ++_speakSeq;
   if (btn) { btn.classList.add('playing'); _currentSpeakBtn = btn; }
-  const clearBtn = () => { if (seq === _speakSeq && _currentSpeakBtn){ _currentSpeakBtn.classList.remove('playing'); _currentSpeakBtn = null; } };
-  const nativeReady = window.AndroidTTS && typeof AndroidTTS.speak === 'function' &&
-    (typeof AndroidTTS.isReady !== 'function' || AndroidTTS.isReady());
-  if (nativeReady) {
-    AndroidTTS.speak(String(word), 'en-US');
-    if (scene) setTimeout(() => { if (seq === _speakSeq) AndroidTTS.speak(String(scene), 'en-US'); }, Math.max(1800, String(word).length * 180));
-    setTimeout(clearBtn, Math.max(2500, (String(word).length + String(scene || '').length) * 220));
-  } else if (window.speechSynthesis) {
-    try {
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(String(word));
-      u.lang = 'en-US'; u.rate = 0.95;
-      u.onend = () => {
-        if (seq !== _speakSeq) return;
-        if (scene) {
-          const v = new SpeechSynthesisUtterance(String(scene));
-          v.lang = 'en-US'; v.rate = 0.95; v.onend = clearBtn; v.onerror = clearBtn;
-          speechSynthesis.speak(v);
-        } else clearBtn();
-      };
-      u.onerror = clearBtn;
-      speechSynthesis.speak(u);
-    } catch(e) { clearBtn(); toast('英语朗读启动失败，请检查系统语音引擎'); }
-  } else { clearBtn(); toast('当前设备没有可用的英语语音引擎'); }
+  
+  // 组合词和例句，一次性送进网络发音（最稳妥）
+  const fullText = scene ? `${word}. ${scene}` : word;
+  playNetworkAudio(fullText, 'en-US', seq, btn);
 }
 function copyText(text){ return new Promise(resolve => { if (navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>resolve(true)).catch(()=>resolve(false)); return; } try { const ta = document.createElement('textarea'); ta.value = text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); document.body.removeChild(ta); resolve(ok); }catch(e){ resolve(false); } }); }
 function openExternal(url){ if (!url){ toast('无链接'); return; } const u = String(url).trim(); if (!/^https?:\/\//i.test(u)){ toast('链接不安全'); return; } try { const a = document.createElement('a'); a.href = u; a.target='_blank'; a.rel='noopener noreferrer'; a.style.display='none'; document.body.appendChild(a); a.click(); setTimeout(()=>a.remove(),150); }catch(e){ toast('打开失败'); } }
