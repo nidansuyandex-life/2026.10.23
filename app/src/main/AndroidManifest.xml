@@ -14,7 +14,14 @@
         android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:label="日常 · 健康生活"
         android:roundIcon="@mipmap/ic_launcher" android:supportsRtl="true" android:usesCleartextTraffic="true"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">
-        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask" android:configChanges="orientation|screenSize|keyboardHidden">
+        
+        <!-- 【关键修改】添加了 android:windowSoftInputMode="adjustResize" -->
+        <activity android:name=".MainActivity" 
+            android:exported="true" 
+            android:launchMode="singleTask" 
+            android:windowSoftInputMode="adjustResize" 
+            android:configChanges="orientation|screenSize|keyboardHidden">
+            
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -26,6 +33,7 @@
                 <data android:scheme="healthlife" android:host="jump" />
             </intent-filter>
         </activity>
+        
         <receiver android:name=".HealthWidgetProvider" android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -33,6 +41,7 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_health_card_info" />
         </receiver>
+        
         <service android:name=".WalkTimerService" android:exported="false" android:foregroundServiceType="dataSync" />
     </application>
 </manifest>

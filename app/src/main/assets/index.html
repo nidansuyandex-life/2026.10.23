@@ -10,6 +10,17 @@
 <script src="./data/thinking.js"></script>
 <script src="./data/scenes.js"></script>
 <style>
+.swipe-wrapper { position: relative; overflow: hidden; border-radius: 8px; margin-bottom: 2px; }
+.swipe-content { display: flex; align-items: center; gap: 10px; padding: 10px 0; background: #fff; transition: transform 0.3s ease; position: relative; z-index: 2; width: 100%; box-sizing: border-box;}
+.swipe-content.active { transform: translateX(-70px); }
+.swipe-delete { position: absolute; right: 0; top: 0; bottom: 0; width: 70px; background: #FF6B5B; color: #fff; border: none; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; z-index: 1; cursor: pointer; border-radius: 0 8px 8px 0;}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+  animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
 :root{--brand:#4f46e5;--brand2:#7c3aed;--sub:#6b7280;--ok:#059669;--warn:#b45309;--err:#dc2626;--accent:#1FBFA9;--accent2:#5FD9C4;--accent-soft:#E7F9F5;--hot:#FF6B5B;--hot2:#FFA36B;--hot-soft:#FFF0EC;--purple:#8B7CF6;--purple2:#B39BFF;--purple-soft:#F1EEFF;--blue:#4A9EFF;--blue2:#7FC4FF;--blue-soft:#EAF3FF;--pink:#FF6FA5;--pink2:#FFA1C4;--pink-soft:#FFEEF5;--line:#e6e8f0;}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{margin:0;height:100%;}
@@ -354,7 +365,20 @@ select,input[type=text],input[type=password]{width:100%;border:1px solid #e6e8f0
 .sheet-form-row textarea{min-height:60px;resize:vertical;}
 .svg-icon{width:18px;height:18px;vertical-align:-3px;fill:currentColor;margin-right:4px;}
 </style>
+
 </head>
+<script>
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => {
+    const activeEl = document.activeElement;
+    if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+      setTimeout(() => {
+        activeEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }, 100);
+    }
+  });
+}
+</script>
 <body>
 <div class="phone">
   <header class="topbar">
@@ -984,7 +1008,32 @@ function calMonthPane(){ buildCalendarFromPlans(); const y = state.calYear, m = 
 function calUndonePane(){ const today = todayStr(); const items = getAllTodoItems().filter(i => !i.done).sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time)); if (!items.length) return `<div class="card"><p class="tip" style="text-align:center;color:#8A90A2;padding:20px 0">没有未完成的事项 🎉</p></div>`; let html = '', lastDate = ''; items.forEach(it => { if (it.date !== lastDate){ lastDate = it.date; const d = new Date(it.date + 'T00:00:00'); const wd = ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]; const isPast = it.date < today; html += `<div style="font-size:12px;color:${isPast?'var(--hot)':'var(--sub)'};font-weight:700;margin:12px 0 4px">${it.date === today ? '今天 · ' + it.date : it.date + ' ' + wd + (isPast ? ' · 已过期' : '')}</div>`; } html += todoRowHTML(it, today); }); return `<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:6px;">未完成事项 <span class="muted" style="color:var(--sub)">${items.length} 项</span></div>${html}</div>`; }
 function calAllPane(){ const today = todayStr(); const items = getAllTodoItems().sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time)); if (!items.length) return `<div class="card"><p class="tip" style="text-align:center;color:#8A90A2;padding:20px 0">暂无待办</p></div>`; let html = '', lastDate = ''; items.forEach(it => { if (it.date !== lastDate){ lastDate = it.date; const d = new Date(it.date + 'T00:00:00'); const wd = ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()]; const isPast = it.date < today; html += `<div style="font-size:12px;color:${isPast?'var(--hot)':'var(--sub)'};font-weight:700;margin:12px 0 4px">${it.date === today ? '今天 · ' + it.date : it.date + ' ' + wd}</div>`; } html += todoRowHTML(it, today); }); return `<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:6px;">全部待办</div>${html}</div>`; }
 function moneySection(){ const sub = state.moneySub || 'record'; const subs = [{ id:'record', label:'帮我记' },{ id:'book', label:'账本' },{ id:'export', label:'导出' }]; let content = ''; if (sub === 'record') content = moneyRecordPane(); else if (sub === 'book') content = moneyBookPane(); else content = moneyExportPane(); return `<div class="subtabs" style="margin-top:4px;">${subs.map(s => `<button class="subtab ${s.id===sub?'on':''}" data-act="moneySub" data-sub="${s.id}">${s.label}</button>`).join('')}</div>${content}`; }
-function moneyRecordPane(){ const today = todayStr(); const todayTx = transactions.filter(t => t.date === today); const iconOf = c => c === '餐饮' ? '☕' : c === '交通' ? '🚕' : c === '购物' ? '🛒' : c === '工资' ? '💼' : '💳'; const txHtml = arr => arr.length ? arr.map(t => `<div class="tx" data-tx-id="${t.id}"><div class="ic">${iconOf(t.category)}</div><div class="body"><div class="h-t-name">${esc(t.note || t.category)}</div><div class="muted" style="font-size:11.5px;color:var(--sub)">${t.time} · ${t.type === 'income' ? '收入' : '支出'}${t.account?' · '+esc(t.account):''} · ${t.category}</div></div><div class="amt ${t.type === 'income' ? 'inc' : ''}">${t.type === 'income' ? '+' : '-'}${t.amount.toFixed(2)}</div><button class="del-tx" data-del-tx="${t.id}">✕</button></div>`).join('') : '<p class="tip" style="color:#8A90A2">暂无记录</p>'; let extraHtml = ''; if (todayTx.some(t => t.amount >= 500)) { extraHtml = `<div class="card" style="background:linear-gradient(135deg,#fef3c7,#fde68a);margin-top:12px;"><div style="font-size:13.5px;font-weight:750;color:#92400e;margin-bottom:6px;">💡 发现大额支出</div><div style="font-size:12.5px;color:#a16207;line-height:1.6;margin-bottom:10px;">今天有一笔超过 500 元的账单，想练习一下如何用英语和同事描述你的财务规划吗？</div><button class="btn" style="background:#92400e;color:#fff;padding:8px 14px;font-size:12px;" data-act="goToExpressFromMoney">去练习场景 →</button></div>`; } return `<div class="card"><div class="mic-wrap"><button class="mic" id="micBtn">🎙️</button><p class="mic-hint" id="micHint">点击麦克风开始语音输入，说完后点「⏹ 停止识别」</p><div class="mic-actions"><button class="btn-ghost-h" data-act="toggleManual" style="flex:1;font-size:13px;padding:11px;">⌨️ 手动输入</button><button class="btn-ghost-h" data-act="stopVoice" style="flex:1;font-size:13px;padding:11px;background:#FFEDEA;color:var(--hot);">⏹ 停止识别</button></div><div class="text-input-area" id="textInputArea"><input type="text" id="manualTxInput" placeholder="如：午餐 35 元 / 发工资 8000"><button class="btn-ghost-h" data-act="parseManual" style="padding:11px">解析这笔</button></div></div><div id="txEditArea"></div></div><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">今日明细 <span class="muted" style="color:var(--sub);font-size:11.5px">点条目可编辑</span></div>${txHtml(todayTx)}</div>${extraHtml}`; }
+function moneyRecordPane(){ 
+  const today = todayStr(); 
+  const todayTx = transactions.filter(t => t.date === today); 
+  const iconOf = c => c === '餐饮' ? '☕' : c === '交通' ? '🚕' : c === '购物' ? '🛒' : c === '工资' ? '💼' : '💳'; 
+  
+  const txHtml = arr => arr.length ? arr.map(t => `
+    <div class="swipe-wrapper">
+      <div class="swipe-content tx" data-tx-id="${t.id}">
+        <div class="ic">${iconOf(t.category)}</div>
+        <div class="body">
+          <div class="h-t-name">${esc(t.note || t.category)}</div>
+          <div class="muted" style="font-size:11.5px;color:var(--sub)">${t.time} · ${t.type === 'income' ? '收入' : '支出'}${t.account?' · '+esc(t.account):''} · ${t.category}</div>
+        </div>
+        <div class="amt ${t.type === 'income' ? 'inc' : ''}">${t.type === 'income' ? '+' : '-'}${t.amount.toFixed(2)}</div>
+        <button class="del-tx" data-del-tx="${t.id}">✕</button>
+      </div>
+      <button class="swipe-delete" data-del-tx="${t.id}">删除</button>
+    </div>
+  `).join('') : '<p class="tip" style="color:#8A90A2">暂无记录</p>'; 
+  
+  let extraHtml = ''; 
+  if (todayTx.some(t => t.amount >= 500)) { 
+    extraHtml = `<div class="card" style="background:linear-gradient(135deg,#fef3c7,#fde68a);margin-top:12px;"><div style="font-size:13.5px;font-weight:750;color:#92400e;margin-bottom:6px;">💡 发现大额支出</div><div style="font-size:12.5px;color:#a16207;line-height:1.6;margin-bottom:10px;">今天有一笔超过 500 元的账单，想练习一下如何用英语和同事描述你的财务规划吗？</div><button class="btn" style="background:#92400e;color:#fff;padding:8px 14px;font-size:12px;" data-act="goToExpressFromMoney">去练习场景 →</button></div>`; 
+  } 
+  return `<div class="card"><div class="mic-wrap"><button class="mic" id="micBtn">🎙️</button><p class="mic-hint" id="micHint">点击麦克风开始语音输入，说完后点「⏹ 停止识别」</p><div class="mic-actions"><button class="btn-ghost-h" data-act="toggleManual" style="flex:1;font-size:13px;padding:11px;">⌨️ 手动输入</button><button class="btn-ghost-h" data-act="stopVoice" style="flex:1;font-size:13px;padding:11px;background:#FFEDEA;color:var(--hot);">⏹ 停止识别</button></div><div class="text-input-area" id="textInputArea"><input type="text" id="manualTxInput" placeholder="如：午餐 35 元 / 发工资 8000"><button class="btn-ghost-h" data-act="parseManual" style="padding:11px">解析这笔</button></div></div><div id="txEditArea"></div></div><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">今日明细 <span class="muted" style="color:var(--sub);font-size:11.5px">点条目可编辑</span></div>${txHtml(todayTx)}</div>${extraHtml}`; 
+}
 function moneyBookPane(){ const today = todayStr(); const ym = today.slice(0, 7); const monthExpense = transactions.filter(t => t.type === 'expense' && t.date.startsWith(ym)).reduce((s,t) => s + t.amount, 0); const monthIncome = transactions.filter(t => t.type === 'income' && t.date.startsWith(ym)).reduce((s,t) => s + t.amount, 0); const cats = {}; transactions.filter(t => t.type === 'expense' && t.date.startsWith(ym)).forEach(t => { cats[t.category] = (cats[t.category] || 0) + t.amount; }); const total = Object.values(cats).reduce((s,v) => s + v, 0) || 1; const catHtml = Object.entries(cats).length ? Object.entries(cats).sort((a,b) => b[1]-a[1]).map(([k,v]) => `<div class="progress"><div class="bar" style="width:${(v/total*100).toFixed(0)}%"></div></div><div class="row-between" style="margin-bottom:10px"><span class="muted" style="font-size:12px;color:var(--sub)">${k}</span><span class="muted" style="font-size:12px;color:var(--sub)">${(v/total*100).toFixed(0)}%</span></div>`).join('') : '<p class="tip" style="color:#8A90A2">本月暂无支出</p>'; const iconOf = c => c === '餐饮' ? '☕' : c === '交通' ? '🚕' : c === '购物' ? '🛒' : c === '工资' ? '💼' : '💳'; const recent = transactions.slice().sort((a,b) => (b.date + (b.time||'00:00')).localeCompare(a.date + (a.time||'00:00'))).slice(0, 20); const recentHtml = recent.length ? recent.map(t => `<div class="tx" data-tx-id="${t.id}"><div class="ic">${iconOf(t.category)}</div><div class="body"><div class="h-t-name">${esc(t.note || t.category)}</div><div class="muted" style="font-size:11.5px;color:var(--sub)">${esc(t.date)} ${esc(t.time)} · ${t.type === 'income' ? '收入' : '支出'}${t.account?' · '+esc(t.account):''} · ${esc(t.category)}</div></div><div class="amt ${t.type === 'income' ? 'inc' : ''}">${t.type === 'income' ? '+' : '-'}${t.amount.toFixed(2)}</div><button class="del-tx" data-del-tx="${t.id}">✕</button></div>`).join('') : '<p class="tip" style="color:#8A90A2">暂无记录</p>'; return `<div class="balance"><div class="lab">本月支出</div><div class="big">¥ ${monthExpense.toFixed(2)}</div><div class="foot"><span>收入 ¥ ${monthIncome.toFixed(2)}</span><span>结余 ¥ ${(monthIncome - monthExpense).toFixed(2)}</span></div></div><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">分类占比</div>${catHtml}</div><div class="card"><div class="row-between" style="margin-bottom:8px;"><div style="font-size:13px;font-weight:700;">最近记录</div><span class="muted" style="color:var(--sub);font-size:11.5px">共 ${transactions.length} 笔</span></div>${recentHtml}</div>`; }
 function moneyExportPane(){ const rangeLabel = { month:'本月', lastMonth:'上月', '3months':'近 3 月', all:'全部' }; const list = getRangeTransactions(); const totalExp = list.filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0); const totalInc = list.filter(t => t.type === 'income').reduce((s,t) => s + t.amount, 0); return `<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;">选择时间范围</div><div class="chips" style="margin:0;flex-wrap:wrap;">${['month','lastMonth','3months','all'].map(r => `<span class="chip ${state.exportRange===r?'on':''}" data-act="setExportRange" data-range="${r}">${rangeLabel[r]}</span>`).join('')}</div><p class="tip" style="margin-top:10px;font-size:12px;color:var(--sub)">当前：${rangeLabel[state.exportRange]} · 共 ${list.length} 条记录</p></div><button class="btn-primary" data-act="exportExcel" style="background:linear-gradient(135deg,#217346,#2ea85c)">📊 导出 Excel（.xls，可用 WPS/Excel 打开）</button><button class="btn-ghost-h" data-act="exportCsv" style="margin-top:8px">📄 导出 CSV（纯文本）</button><button class="btn-ghost-h" data-act="importTxCsv" style="margin-top:8px">📥 导入账单（支持 CSV / Excel .xls / .xlsx）</button><button class="btn-ghost-h" data-act="openDownloadFolder" style="margin-top:8px">📂 打开系统"下载"文件夹</button><div class="card" style="margin-top:12px"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">导出预览 <span class="muted" style="color:var(--sub);font-weight:500;font-size:11.5px">${list.length} 条</span></div><div style="font-size:12px;color:var(--sub);line-height:1.7">记录数：${list.length} 条<br>支出合计：¥ ${totalExp.toFixed(2)}<br>收入合计：¥ ${totalInc.toFixed(2)}<br><br><b>导入支持：</b>CSV / Excel .xls / .xlsx，会弹窗让您确认导入方式和跳过重复。</div></div>`; }
 function renderTxEditor(){ const p = state.pendingTx; const area = document.getElementById('txEditArea'); if (!area) return; if (!p){ area.innerHTML = ''; return; } const cats = getCatList(p.type); const customs = getCustomCats()[p.type] || []; const customSet = new Set(customs); const txDate = p.date || todayStr(); const txAcc = p.account || '现金'; area.innerHTML = `<div class="tip-card" style="background:linear-gradient(135deg,#eef0ff,#f6f0ff);border-color:#e2e5ff;"><div style="font-size:12px;font-weight:700;color:var(--brand);margin-bottom:8px;">识别结果 · 请确认</div><div style="font-size:13.5px;color:#2b3244;margin-bottom:10px;">"${esc(p.note||'')}"</div><div class="dim-row" style="padding-top:0;"><span class="lb">日期</span><input type="date" id="txDate" value="${txDate}" style="width:150px"></div><div class="dim-row"><span class="lb">金额</span><input type="number" id="txAmount" value="${p.amount||0}" step="0.01" style="width:120px"></div><div class="dim-row"><span class="lb">账户</span><select id="txAccount" style="width:130px;">${ACCOUNT_LIST.map(a => `<option value="${a}" ${a===txAcc?'selected':''}>${a}</option>`).join('')}</select></div><div style="display:flex;gap:6px;margin:10px 0;flex-wrap:wrap;"><span class="cat-chip ${p.type==='expense'?'active':''}" data-act="setTxType" data-t="expense">支出</span><span class="cat-chip ${p.type==='income'?'active':''}" data-act="setTxType" data-t="income">收入</span></div><div style="margin:10px 0;display:flex;flex-wrap:wrap;">${cats.map(c => { const isCustom = customSet.has(c); return `<span class="cat-chip ${c===p.category?'active':''}" data-act="setTxCat" data-cat="${esc(c)}" style="position:relative;${isCustom?'padding-right:22px;':''}">${esc(c)}${isCustom?`<span data-act="delTxCat" data-cat="${esc(c)}" style="position:absolute;right:3px;top:50%;transform:translateY(-50%);font-size:10px;opacity:.7;padding:0 4px;cursor:pointer;line-height:1;">✕</span>`:''}</span>`; }).join('')}</div><button class="btn-ghost-h" data-act="addTxCat" data-t="${p.type}" style="margin-top:4px;font-size:12.5px;padding:9px;">＋ 添加自定义分类</button><div class="dim-row" style="margin-top:10px;"><span class="lb">备注</span><input type="text" id="txNote" value="${esc(p.note||'')}" style="width:150px;text-align:left;"><button class="btn ghost" style="padding:8px;" data-act="speak" data-text="${esc(p.note||'')}" data-lang="zh-CN">🔊</button></div><div style="display:flex;gap:8px;margin-top:12px;"><button class="btn" style="flex:1;background:#f1f2f9;color:#4b5265;" data-act="cancelTx">取消</button><button class="btn primary" style="flex:2;" data-act="confirmTx">✓ ${p.editingId?'保存修改':'确认记账'}</button></div></div>`; }
@@ -1040,7 +1089,11 @@ async function render(options){
   let html; 
   try { html = await VIEWS[tab](); } catch(e){ console.error(e); html = `<div class="tip-card" style="color:red;">加载失败：${esc(e.message)}</div>`; } 
   if (token !== renderToken || state.tab !== tab) return; 
+  
+  view.classList.remove('fade-in'); // 先移除动画类
   view.innerHTML = html; 
+  view.classList.add('fade-in');    // 再添加，触发动画
+  
   requestAnimationFrame(() => { 
     if (keepScroll) view.scrollTop = prevScroll; 
     applyChecks(); 
@@ -1048,6 +1101,7 @@ async function render(options){
     if (tab === 'life' && state.lifeSub === 'money' && state.moneySub === 'record' && state.pendingTx) renderTxEditor(); 
   }); 
 }
+function applyChecks(){ const c = getChecks(); document.querySelectorAll('[data-check-key]').forEach(el => { if (c[el.dataset.checkKey]) el.classList.add('done'); else el.classList.remove('done'); }); }
 function applyChecks(){ const c = getChecks(); document.querySelectorAll('[data-check-key]').forEach(el => { if (c[el.dataset.checkKey]) el.classList.add('done'); else el.classList.remove('done'); }); }
 
 let _sheetCloseTimer = null;
@@ -1384,10 +1438,50 @@ view.addEventListener('click', e => {
     return;
   }
 });
+
+// === 滑动删除逻辑 ===
+let swipeStartX = 0;
+let swipeCurrentWrapper = null;
+
+view.addEventListener('touchstart', e => {
+  const wrapper = e.target.closest('.swipe-wrapper');
+  if (!wrapper) return;
+  swipeCurrentWrapper = wrapper;
+  swipeStartX = e.touches[0].clientX;
+  document.querySelectorAll('.swipe-content.active').forEach(el => {
+    if (el !== wrapper.querySelector('.swipe-content')) {
+      el.classList.remove('active');
+    }
+  });
+}, { passive: true });
+
+view.addEventListener('touchmove', e => {
+  if (!swipeCurrentWrapper) return;
+  const deltaX = e.touches[0].clientX - swipeStartX;
+  const content = swipeCurrentWrapper.querySelector('.swipe-content');
+  if (deltaX < 0 && deltaX > -75) {
+    content.style.transition = 'none';
+    content.style.transform = `translateX(${deltaX}px)`;
+  }
+}, { passive: true });
+
+view.addEventListener('touchend', e => {
+  if (!swipeCurrentWrapper) return;
+  const content = swipeCurrentWrapper.querySelector('.swipe-content');
+  const deltaX = e.changedTouches[0].clientX - swipeStartX;
+  content.style.transition = 'transform 0.3s ease';
+  content.style.transform = '';
+  if (deltaX < -30) {
+    content.classList.add('active');
+  } else {
+    content.classList.remove('active');
+  }
+  swipeCurrentWrapper = null;
+});
 view.addEventListener('click', e => { const c = e.target.closest('.check'); if (c && !c.closest('[data-toggle-todo]') && !c.dataset.act){ if (c.dataset.checkKey){ c.classList.toggle('done'); const isDone = c.classList.contains('done'); setCheck(c.dataset.checkKey, isDone); const supp = c.closest('.supp'); if (supp) supp.classList.toggle('taken', isDone); const homeItem = c.closest('.home-tl-item'); if (homeItem) homeItem.classList.toggle('is-done', isDone); syncToNativeWidget(); } return; } });
 view.addEventListener('click', e => { const tl = e.target.closest('[data-home-action]'); if (!tl || e.target.closest('.check')) return; const action = tl.dataset.homeAction; if (action === 'skin-morning' || action === 'skin-night'){ state.tab = 'life'; state.lifeSub = 'care'; state.careSub = 'skin'; render(); return; } if (action === 'supplement'){ state.tab = 'life'; state.lifeSub = 'care'; state.careSub = 'supp'; render(); return; } if (action === 'sport'){ state.tab = 'life'; state.lifeSub = 'sport'; state.sportSub = 'plan'; render(); return; } if (action === 'study'){ state.tab = 'study'; render(); return; } if (action === 'todo'){ state.tab = 'life'; state.lifeSub = 'calendar'; render(); return; } });
 view.addEventListener('click', e => { const del = e.target.closest('[data-del-tx]'); if (del){ e.stopPropagation(); const id = Number(del.dataset.delTx); if (!confirm('删除这笔记录？')) return; transactions = transactions.filter(x => x.id !== id); state.transactions = transactions; LS.set('app_h_transactions', transactions); syncToNativeWidget(); render(); return; } const tx = e.target.closest('[data-tx-id]'); if (tx){ const item = transactions.find(x => x.id === Number(tx.dataset.txId)); if (!item) return; state.pendingTx = { type:item.type, amount:item.amount, category:item.category, account:item.account||'现金', note:item.note||'', date:item.date||todayStr(), editingId:item.id }; renderTxEditor(); setTimeout(() => { const area = document.getElementById('txEditArea'); if (area) area.scrollIntoView({ block:'center', behavior:'smooth' }); }, 100); return; } });
-view.addEventListener('change', e => { if (e.target.id === 'planStartInput'){ const v = e.target.value; if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return; setPlanStart(new Date(v + 'T00:00:00')); buildCalendarFromPlans(); render(); return; } if (e.target.id === 'clothCat'){ state.closetCat = e.target.value; render({ keepScroll: true }); return; } if (e.target.dataset && e.target.dataset.gkey){ const v = parseFloat(e.target.value); if (!isNaN(v)) state.garmentDraft[e.target.dataset.gkey] = v; else delete state.garmentDraft[e.target.dataset.gkey]; render({ keepScroll: true }); return; } if (e.target.id === 'clothUpload'){ const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = ev => { const img = new Image(); img.onload = () => { const MAX = 600; const scale = Math.min(1, MAX / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale); const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, c.width, c.height); const dataUrl = c.toDataURL('image/jpeg', 0.8); const p = document.getElementById('clothPreview'); if (p){ p.src = dataUrl; p.style.display = 'block'; } }; img.src = ev.target.result; }; reader.readAsDataURL(file); } });
+view.addEventListener('change', e => { if (e.target.id === 'planStartInput'){ const v = e.target.value; if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return; setPlanStart(new Date(v + 'T00:00:00')); buildCalendarFromPlans(); render(); return; } if (e.target.id === 'clothCat'){ state.closetCat = e.target.value; render({ keepScroll: true }); return; } if (e.target.dataset && e.target.dataset.gkey){ const v = parseFloat(e.target.value); if (!isNaN(v)) state.garmentDraft[e.target.dataset.gkey] = v; else delete state.garmentDraft[e.target.dataset.gkey]; render({ keepScroll: true }); return; } if (e.target.id === 'clothUpload'){ const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = ev => { const img = new Image(); img.onload = () => { const MAX = 800; const scale = Math.min(1, MAX / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale); const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, c.width, c.height); const dataUrl = c.toDataURL('image/jpeg', 0.6); const p = document.getElementById('clothPreview'); if (p){ p.src = dataUrl; p.style.display = 'block'; } }; img.src = ev.target.result; }; reader.readAsDataURL(file); } });
 sheet.addEventListener('click', async e => { const t = e.target.closest('[data-act]'); if (!t) return; const act = t.dataset.act; if (act === 'closeSheet'){ closeSheet(); return; } if (act === 'confirmImportTx'){ confirmImportTx(t.dataset.mode); return; } if (act === 'reviewSpeak'){ toggleSpeak(t.dataset.text, t.dataset.lang||'en-US', t); return; } if (act === 'reviewSubmit'){ submitReviewAnswer(); return; } if (act === 'rate'){ rateAndNext(t.dataset.rating); return; } if (act === 'aiRole'){ state.aiRole = t.dataset.role; LS.set('ai-role', state.aiRole); openAIAssistant(); return; } if (act === 'clearAIHistory'){ if (confirm('清空？')){ LearnStore.clearAIHistory(); openAIAssistant(); } return; } if (act === 'aiSend'){ sendAIMessage(); return; } });
 
 let _voiceActive = false; let _voiceTimerHandle = null; let _voiceStartTime = 0; let _voiceResultHandled = false;
@@ -1824,6 +1918,24 @@ function initWalkReminder() {
     setInterval(() => { const el = document.getElementById('sportTimer'); if (el){ const sess = getSportSession(); if (sess && !sess.endTs && !sess.pausedAt){ let elapsed = Date.now() - sess.startTs - (sess.pausedTotal || 0); const total = Math.floor(elapsed / 1000); const h = Math.floor(total/3600), m = Math.floor((total%3600)/60), s = total%60; el.textContent = h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`; const sc = document.getElementById('sportSetCount'); if (sc) sc.textContent = Object.values(sess.sets || {}).reduce((a,b) => a + b.length, 0); } } }, 1000);
   } catch (err) { var el = document.getElementById('fatal-error'); if (el) { el.style.display = 'block'; el.innerHTML = '启动失败：' + err.message + '<br><br>' + err.stack; } else { document.getElementById('view').innerHTML = '<div style="padding:20px;color:red;">启动失败：' + err.message + '</div>'; } }
 })();
+// === 提供给 Android 物理返回键调用的方法 ===
+window.handleNativeBack = function() {
+  // 1. 如果弹窗层（Sheet）是打开的，先关弹窗
+  if (sheet.classList.contains('open')) {
+    closeSheet();
+    return true; 
+  }
+  
+  // 2. 如果不在首页（如在学习、生活、发现、我的），切回首页
+  if (state.tab !== 'home') {
+    state.tab = 'home';
+    render();
+    return true;
+  }
+  
+  // 3. 已经在首页且无弹窗，返回 false 告诉原生可以退出 App
+  return false;
+};
 const _bootDay = todayStr();
 function _checkDayRollover(){
   if (todayStr() !== _bootDay){
@@ -1836,6 +1948,8 @@ setInterval(_checkDayRollover, 60 * 1000);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') _checkDayRollover();
 });
+// === 提供给 Android 物理返回键调用 ===
+
 </script>
 </body>
 </html>

@@ -184,10 +184,19 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // 【关键修改】处理物理返回键：优先交由 H5 处理，H5 处理不了再退出 App
     @Override
     public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
+        if (webView != null) {
+            webView.evaluateJavascript("window.handleNativeBack ? window.handleNativeBack() : 'false'", new ValueCallback<String>() {
+                @Override
+                public void onReceiveValue(String value) {
+                    // 注意：evaluateJavascript 返回的字符串如果是 false，会带双引号，比如 "\"false\""
+                    if ("\"false\"".equals(value) || "false".equals(value)) {
+                        finish(); // 退出 App
+                    }
+                }
+            });
         } else {
             super.onBackPressed();
         }
