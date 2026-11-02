@@ -67,7 +67,6 @@ public class HealthWidgetProvider extends AppWidgetProvider {
     private void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_health_card);
         
-        // 点击顶部“打开APP”
         try {
             Intent openAppIntent = new Intent(context, MainActivity.class).setAction(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
             views.setOnClickPendingIntent(R.id.widget_btn_open_app, PendingIntent.getActivity(context, 4, openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
@@ -92,7 +91,6 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                 sp.edit().putString("timeline_data", new JSONArray(list).toString()).putString("last_sync_date", today).apply();
             }
 
-            // 空数据占位
             if (list.isEmpty()) {
                 for (int i = 0; i < 5; i++) {
                     JSONObject dummy = new JSONObject();
@@ -105,9 +103,15 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                 }
             }
 
-            // 与 APP 时间线保持一致：只按时间排序，不把已完成事项重新挪位。
-            Collections.sort(list, (o1, o2) ->
-                    o1.optString("time", "99:99").compareTo(o2.optString("time", "99:99")));
+            // 【核心修复】排序：未完成(false)在前，已完成(true)在后；同状态按时间排序
+            Collections.sort(list, (o1, o2) -> {
+                boolean d1 = o1.optBoolean("done", false);
+                boolean d2 = o2.optBoolean("done", false);
+                if (d1 != d2) {
+                    return d1 ? 1 : -1; // 未完成的排前面
+                }
+                return o1.optString("time", "99:99").compareTo(o2.optString("time", "99:99"));
+            });
 
             int[] layouts = {R.id.widget_item_1_layout, R.id.widget_item_2_layout, R.id.widget_item_3_layout, R.id.widget_item_4_layout, R.id.widget_item_5_layout};
             int[] icons = {R.id.widget_item_1_icon, R.id.widget_item_2_icon, R.id.widget_item_3_icon, R.id.widget_item_4_icon, R.id.widget_item_5_icon};
@@ -140,11 +144,9 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                     }
 
                     if (!key.startsWith("dummy_")) {
-                        // 点击打卡框 -> 切换状态
                         Intent toggleIntent = new Intent(context, HealthWidgetProvider.class).setAction(ACTION_WIDGET_TOGGLE_ITEM).putExtra("item_key", key).putExtra("item_done", !done);
                         views.setOnClickPendingIntent(checkIds[i], PendingIntent.getBroadcast(context, 10 + i, toggleIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
 
-                        // 点击文字 -> 跳转App
                         String route = getRouteFromKey(key);
                         Intent jumpIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("healthlife://jump?route=" + route)).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                         views.setOnClickPendingIntent(layouts[i], PendingIntent.getActivity(context, 200 + i, jumpIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
