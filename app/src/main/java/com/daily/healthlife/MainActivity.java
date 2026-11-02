@@ -50,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setAllowUniversalAccessFromFileURLs(true);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         
-        // 关键：允许自动播放媒体，解决发音没反应的问题
+        // 关键：允许自动播放媒体，解决部分系统下音频被拦截的问题
         settings.setMediaPlaybackRequiresUserGesture(false);
 
         jsBridge = new JsBridge(this, webView);
