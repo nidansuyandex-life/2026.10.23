@@ -1,7 +1,7 @@
-const EXERCISES = {
+window.EXERCISES = {
   'P1 90/90 呼吸': { name:'P1 90/90 呼吸', target:'肋骨与腹部控制', purpose:'激活深层核心与呼吸', how:'2×5 次呼吸，肋骨和腹部轻轻扩张；不耸肩、不憋气。', detail:'1. 仰卧，双腿搭在椅子或墙上，呈 90/90 姿势。\n2. 吸气约 4 秒，肋骨和腹部向两侧轻轻扩张。\n3. 呼气约 6 秒，肚子自然下沉，不强行收腹。\n4. 肩膀完全放松。', breath:'吸 4 秒，呼 6 秒。', mistakes:'耸肩、憋气、强行吸肚子。', equipment:'瑜伽垫/墙面' },
   'P2 下巴轻收': { name:'P2 下巴轻收', target:'颈深屈肌', purpose:'改善头前倾', how:'2×8，停 3 秒，头水平后移。', detail:'1. 坐直或站立，眼睛平视前方。\n2. 下巴水平向后平移（像做双下巴），不要低头。\n3. 保持 3 秒，颈后有轻微拉伸感。\n4. 缓慢回正。', breath:'自然呼吸。', mistakes:'低头、用力过猛、颈痛时强行做。', equipment:'无' },
-  'P3 墙面滑手': { name:'P3 墙面滑手', target:'肩胛与躯干协调', purpose:'改善圆肩', how:'2×8-10 次，肋骨不外翻，不耸肩。', detail:'1. 背对墙站立，脚后跟离墙一拳。\n2. 手臂呈“W”型贴墙，手背贴墙。\n3. 沿墙向上滑至“Y”型，肋骨不外翻。\n4. 缓慢回落。', breath:'上滑吸气，下落呼气。', mistakes:'耸肩、腰离开墙面、肋骨外翻。', equipment:'墙面' },
+  'P3 墙面滑手': { name:'P3 墙面滑手', target:'肩胛与躯干协调', purpose:'改善圆肩', how:'2×8-10 次，肋骨不外翻，不耸肩。', detail:'1. 背对墙站立，脚后跟离墙一拳。\n2. 手臂呈"W"型贴墙，手背贴墙。\n3. 沿墙向上滑至"Y"型，肋骨不外翻。\n4. 缓慢回落。', breath:'上滑吸气，下落呼气。', mistakes:'耸肩、腰离开墙面、肋骨外翻。', equipment:'墙面' },
   'P4 仰卧脚跟滑动': { name:'P4 仰卧脚跟滑动', target:'低负荷核心控制', purpose:'骨盆稳定', how:'2×6-8/侧，呼气脚跟滑远，腰背舒适。', detail:'1. 仰卧，双腿屈膝，双脚踩地。\n2. 呼气时一只脚贴地慢慢滑远，腰部保持贴地。\n3. 吸气缓慢收回。\n4. 如果拱腰则缩短范围。', breath:'滑出呼气，收回吸气。', mistakes:'腰部拱起、动作过快。', equipment:'瑜伽垫' },
   'P5 小范围骨盆控制': { name:'P5 小范围骨盆控制', target:'骨盆感知', purpose:'灵活骨盆', how:'1-2×5，幅度很小、无痛、呼吸顺畅。', detail:'1. 仰卧屈膝。\n2. 骨盆非常小范围地前倾和后倾。\n3. 不追求大幅度，感受轻微移动即可。', breath:'顺畅呼吸。', mistakes:'腰部代偿、幅度过大。', equipment:'瑜伽垫' },
   'S1 椅子坐站': { name:'S1 椅子坐站/箱式深蹲', target:'臀大肌、股四头肌', purpose:'下肢力量', how:'2-3×8-12，臀部后移，脚掌踩稳。', detail:'1. 站在椅子前，双脚与肩同宽。\n2. 臀部向后坐，轻触椅面。\n3. 脚掌发力站起。\n4. 膝盖内扣或弓腰时提高座椅。', breath:'下降吸气，起身呼气。', mistakes:'膝盖内扣、弓腰、完全坐死。', equipment:'椅子' },
@@ -15,81 +15,18 @@ const EXERCISES = {
   'S9 分腿蹲': { name:'S9 分腿蹲', target:'臀腿单侧力量', purpose:'平衡与下肢稳定', how:'2×6-8/侧，骶髂稳定时尝试。', detail:'1. 弓步姿势。\n2. 下蹲至前腿大腿接近平行。\n3. 前脚掌发力站起。', breath:'下蹲吸气，站起呼气。', mistakes:'膝盖内扣、身体晃动。', equipment:'自重' },
   'S10 农夫行走': { name:'S10 农夫行走', target:'全身核心与握力', purpose:'全身功能性', how:'每手 1-3kg 或更轻，20秒，可选项。', detail:'1. 双手提重物。\n2. 挺胸收腹，小步慢走。\n3. 牵扯腰骶则取消。', breath:'自然呼吸。', mistakes:'身体侧倾、弯腰。', equipment:'哑铃/水瓶' },
   '游泳': { name:'游泳', target:'全身协调', purpose:'心肺与全身', how:'水中适应、缓慢吐气、扶池边练习。', detail:'按阶段练习：水中适应、呼吸、漂浮、扶板打腿、分解练习。', breath:'水下呼气，抬头吸气。', mistakes:'憋气、慌张。', equipment:'泳衣、泳镜' },
+  '自由泳': { name:'自由泳（爬泳）', target:'背阔肌、三角肌、核心', purpose:'心肺耐力与技术学习', how:'4×25m，以技术为主，先分解再连贯。', detail:'1. 身体俯卧水面，头与脊柱保持一条直线，眼睛看池底。\n2. 手臂交替划水：入水→抱水→推水→出水→前摆。\n3. 打腿：大腿带动小腿，幅度小、频率稳，膝盖不要过度弯。\n4. 换气：一侧肩膀转出水面时侧头换气，一只泳镜在水下，换完立刻转头入水。\n5. 初期可扶板打腿、单臂划水、分解练习，熟练后再连贯。', breath:'水下鼻/口均匀呼气，侧头时口吸，转头入水后缓慢吐气。', mistakes:'抬头换气导致身体下沉、憋气、打腿幅度过大、手臂越过身体中线。', equipment:'泳衣、泳镜、泳帽（可加浮板/夹腿板）' },
   '散步': { name:'散步', target:'主动恢复', purpose:'低强度有氧', how:'轻松步行。', detail:'轻松慢走，放松心情。', breath:'自然。', mistakes:'走太快。', equipment:'运动鞋' },
   '胸肌拉伸': { name:'胸肌拉伸', target:'胸前拉伸', purpose:'改善圆肩', how:'20-30秒。', detail:'1. 站在门框或墙边，单臂贴墙。\n2. 肘与肩同高。\n3. 身体向对侧缓慢前移。', breath:'自然。', mistakes:'拉伸到疼。', equipment:'门框/墙' },
-  '小腿拉伸': { name:'小腿拉伸', target:'小腿放松', purpose:'放松', how:'20-30秒。', detail:'1. 弓步站立，后脚跟踩地。\n2. 感受后腿小腿后侧拉伸。', breath:'自然。', mistakes:'后脚跟离地。', equipment:'墙/椅子' }
+  '小腿拉伸': { name:'小腿拉伸', target:'小腿放松', purpose:'放松', how:'20-30秒。', detail:'1. 弓步站立，后脚跟踩地。\n2. 感受后腿小腿后侧拉伸。', breath:'自然。', mistakes:'后脚跟离地。', equipment:'墙/椅子' },
+  '大腿前侧拉伸': { name:'大腿前侧拉伸', target:'股四头肌', purpose:'缓解腿部紧张', how:'20-30秒。', detail:'1. 单腿站立，一手扶墙。\n2. 另一手抓住脚踝拉向臀部。\n3. 保持骨盆中立。', breath:'自然。', mistakes:'腰部反弓。', equipment:'无' },
+  '臀部拉伸': { name:'臀部拉伸', target:'臀大肌', purpose:'缓解臀部紧张', how:'20-30秒。', detail:'1. 坐在椅子上，右腿脚踝放在左膝上。\n2. 身体前倾。\n3. 感受臀部拉伸。', breath:'自然。', mistakes:'弓背。', equipment:'椅子' },
+  '背部拉伸': { name:'背部拉伸', target:'背阔肌', purpose:'放松背部', how:'20-30秒。', detail:'1. 双手抓握固定物（如门框）。\n2. 臀部向后坐，背部挺直。', breath:'自然。', mistakes:'低头。', equipment:'无' },
+  '肩部拉伸': { name:'肩部拉伸', target:'三角肌', purpose:'缓解肩部紧张', how:'20-30秒。', detail:'1. 单臂跨过胸前。\n2. 另一手压住大臂向身体靠拢。', breath:'自然。', mistakes:'耸肩。', equipment:'无' },
+
+  // === 游泳专用站立热身与拉伸 ===
+  '站姿肩绕环': { name:'站姿肩绕环', target:'肩关节', purpose:'热身', how:'站立，向前向后各绕环10次。', detail:'1. 双脚与肩同宽。\n2. 手指搭在肩上，向前画大圈10次。\n3. 再向后画大圈10次。', breath:'自然。', mistakes:'动作过快。', equipment:'无' },
+  '站姿体侧伸展': { name:'站姿体侧伸展', target:'腰侧/背阔肌', purpose:'热身', how:'左右各10次。', detail:'1. 站立，双臂向上伸直。\n2. 身体向左侧弯曲，感受右侧拉伸。\n3. 回正后向右侧弯曲。', breath:'侧弯呼气。', mistakes:'身体前倾。', equipment:'无' },
+  '站姿扩胸': { name:'站姿扩胸', target:'胸大肌、三角肌前束', purpose:'拉伸', how:'20-30秒。', detail:'1. 双手在背后交叉相握。\n2. 挺胸，手臂向后向上抬起。\n3. 保持拉伸感。', breath:'自然。', mistakes:'腰部反弓。', equipment:'无' },
+  '站姿三头肌拉伸': { name:'站姿三头肌拉伸', target:'肱三头肌、背部', purpose:'拉伸', how:'20-30秒。', detail:'1. 站立，右手向上伸直，弯曲手肘摸向后背。\n2. 左手抓住右肘向左侧轻轻拉。\n3. 换边进行。', breath:'自然。', mistakes:'用力过猛。', equipment:'无' }
 };
-
-function mkEx(code, sets, reps, load){ return { code, sets, reps, dose: reps, load, ...(EXERCISES[code]||{name:code,purpose:'',how:'',breath:'',target:'',detail:'',mistakes:'',equipment:''}) }; }
-
-function getPlanDetail(weekPhase, dow) {
-  const plan = { warmup: [], exercises: [], stretch: [], tips: [] };
-  plan.warmup = [mkEx('P1 90/90 呼吸', 1, '5次', '自重'), mkEx('P2 下巴轻收', 1, '8次', '自重'), mkEx('P3 墙面滑手', 1, '8次', '自重'), mkEx('S2 臂桥', 1, '8次', '自重')];
-  plan.stretch = [mkEx('P1 90/90 呼吸', 1, '5次', '自重')];
-  plan.tips = ['全程 RPE 4-6，不要练到力竭', '如有疼痛或不适，立刻降低幅度或停止'];
-
-  if (dow === 1) { // 周一
-    plan.label = '下肢力量+臀部塑形+骨盆控制'; plan.duration = '45-55 分钟';
-    if (weekPhase === 1) plan.exercises = [mkEx('S1 椅子坐站', 2, '8次', '自重'), mkEx('S2 臂桥', 2, '8-10次', '自重'), mkEx('S3 弹力带侧向走', 1, '6步/侧', '轻阻力'), mkEx('S7 死虫式', 2, '6次/侧', '自重')];
-    else if (weekPhase === 2) plan.exercises = [mkEx('S1 椅子坐站', 3, '8-10次', '自重'), mkEx('S2 臂桥', 3, '10次', '自重'), mkEx('S3 弹力带侧向走', 2, '8步/侧', '轻阻力'), mkEx('S7 死虫式', 2, '8次/侧', '自重')];
-    else if (weekPhase === 3) plan.exercises = [mkEx('S1 椅子坐站', 3, '8-12次', '自重'), mkEx('S2 臂桥', 3, '10-12次', '自重'), mkEx('S3 弹力带侧向走', 2, '8-10步/侧', '轻阻力'), mkEx('S7 死虫式', 2, '3x8次/侧', '自重')];
-    else plan.exercises = [mkEx('S1 椅子坐站', 3, '8-12次', '自重'), mkEx('S2 臂桥', 3, '10-15次', '自重'), mkEx('S3 弹力带侧向走', 2, '8-12步/侧', '轻阻力'), mkEx('S7 死虫式', 3, '8次/侧', '自重')];
-  } else if (dow === 2) { // 周二
-    plan.label = '康复控制+短版普拉提'; plan.duration = '20-30 分钟';
-    plan.tips = ['不应练到疲惫', '专注呼吸和骨盆小范围控制'];
-    if (weekPhase === 1) plan.exercises = [mkEx('P1 90/90 呼吸', 2, '5次', '自重'), mkEx('P2 下巴轻收', 2, '8次', '自重'), mkEx('P3 墙面滑手', 1, '8次', '自重'), mkEx('P4 仰卧脚跟滑动', 1, '6次/侧', '自重')];
-    else if (weekPhase === 2) plan.exercises = [mkEx('P1 90/90 呼吸', 2, '5次', '自重'), mkEx('P2 下巴轻收', 2, '8次', '自重'), mkEx('P3 墙面滑手', 2, '8次', '自重'), mkEx('P4 仰卧脚跟滑动', 2, '6次/侧', '自重')];
-    else plan.exercises = [mkEx('P1 90/90 呼吸', 2, '5次', '自重'), mkEx('P2 下巴轻收', 2, '8次', '自重'), mkEx('P3 墙面滑手', 2, '8次', '自重'), mkEx('P4 仰卧脚跟滑动', 2, '6次/侧', '自重')];
-  } else if (dow === 3) { // 周三
-    plan.label = '上肢力量+背部/肩胛线条'; plan.duration = '40-55 分钟';
-    if (weekPhase === 1) plan.exercises = [mkEx('S4 划船', 2, '10次', '轻阻力'), mkEx('S5 前方高位下拉', 2, '8次', '极轻'), mkEx('S6 墙/高台俯卧撑', 2, '8次', '自重'), mkEx('P3 墙面滑手', 1, '8次', '自重')];
-    else if (weekPhase === 2) plan.exercises = [mkEx('S4 划船', 3, '10次', '轻中阻力'), mkEx('S5 前方高位下拉', 2, '8-10次', '轻'), mkEx('S6 墙/高台俯卧撑', 2, '8-10次', '自重'), mkEx('S4 划船', 1, '10次', '极轻阻力')];
-    else plan.exercises = [mkEx('S4 划船', 3, '8-12次', '轻中阻力'), mkEx('S5 前方高位下拉', 2, '3x8-12次', '轻'), mkEx('S6 墙/高台俯卧撑', 3, '8-12次', '自重'), mkEx('S4 划船', 2, '10次', '极轻阻力')];
-  } else if (dow === 4) { // 周四
-    plan.label = '恢复+温和普拉提'; plan.duration = '20-30 分钟';
-    plan.tips = ['步行作为主动恢复', '保持放松'];
-    if (weekPhase === 1) plan.exercises = [mkEx('P1 90/90 呼吸', 2, '5次', '自重'), mkEx('P5 小范围骨盆控制', 1, '5次', '自重'), mkEx('散步', 1, '10-15分钟', '自重')];
-    else if (weekPhase === 2) plan.exercises = [mkEx('P1 90/90 呼吸', 2, '5次', '自重'), mkEx('P4 仰卧脚跟滑动', 1, '6次/侧', '自重'), mkEx('散步', 1, '15-20分钟', '自重')];
-    else plan.exercises = [mkEx('P1 90/90 呼吸', 2, '5次', '自重'), mkEx('P4 仰卧脚跟滑动', 1, '6次/侧', '自重'), mkEx('散步', 1, '15-25分钟', '自重')];
-  } else if (dow === 5) { // 周五
-    plan.label = '全身功能性力量'; plan.duration = '40-55 分钟';
-    if (weekPhase === 1) plan.exercises = [mkEx('S1 椅子坐站', 2, '8次', '自重'), mkEx('S4 划船', 2, '8次', '轻阻力'), mkEx('S8 Pallof 抗旋转', 2, '8次/侧', '轻阻力')];
-    else if (weekPhase === 2) plan.exercises = [mkEx('S1 椅子坐站', 2, '10次', '自重'), mkEx('S4 划船', 2, '3x8次', '轻阻力'), mkEx('S8 Pallof 抗旋转', 2, '10次/侧', '轻阻力'), mkEx('S10 农夫行走', 1, '20秒', '1-3kg')];
-    else plan.exercises = [mkEx('S1 椅子坐站', 2, '10次', '自重'), mkEx('S9 分腿蹲', 2, '6次/侧', '自重'), mkEx('S4 划船', 3, '8次', '轻阻力'), mkEx('S8 Pallof 抗旋转', 2, '10次/侧', '轻阻力')];
-  } else if (dow === 6) { // 周六
-    plan.label = '游泳技能学习'; plan.duration = '40-60 分钟';
-    plan.tips = ['一定要在有救生员的泳池', '绝对不独自在深水区练漂浮', '前 4-8 次最好请教练'];
-    plan.exercises = [mkEx('游泳', 1, '40-60分钟', '水中适应、缓慢吐气、扶池边练习')];
-  } else if (dow === 0) { // 周日
-    plan.label = '完全休息'; plan.duration = '—'; plan.isTraining = false; plan.exercises = []; plan.tips = ['完全休息', '保证睡眠'];
-  }
-  return plan;
-}
-
-function buildPlanByContent(weekPhase, dow) {
-  const plan = getPlanDetail(weekPhase, dow);
-  return { key: 'd' + dow, label: plan.label, icon: plan.isTraining === false ? '😴' : '✅', duration: plan.duration, summary: plan.label, isTraining: plan.isTraining !== false, warmup: plan.warmup || [], stretch: plan.stretch || [], exercises: plan.exercises || [], tips: plan.tips || [] };
-}
-
-function currentPlan() {
-  const planInfo = getPlanDayInfo(new Date());
-  const ov = getOverride(new Date());
-  
-  if (ov === 'leave' || ov === 'period' || ov === 'rest') return buildRestPlan(ov);
-  if (ov === 'swim') return { key:'swim', label:'游泳代替今日计划', icon:'🏊', duration:'40–60 分钟', summary:'游泳代替今日计划 · 原训练顺延', isTraining:true, warmup:[], stretch:[mkEx('胸肌拉伸',1,'20–30秒','自重')], exercises:[mkEx('游泳',4,'25m','自由'), mkEx('自由泳',4,'25m','单臂')], tips:['以水感与技术为主'] };
-  if (ov === 'reduced'){ const base = buildPlanByContent(1, 1); return { ...base, label:'身体不适（减量）', icon:'🔻', duration:'20–30 分钟', summary:'减量 · 组数减少', exercises: base.exercises.map(x=>({...x,sets:Math.max(1,x.sets-1)})) }; }
-  
-  if (!planInfo) return buildRestPlan('rest');
-  
-  let weekPhase = 1;
-  const totalWeeks = Math.floor(planInfo.effective / 7) + 1;
-  if (totalWeeks <= 4) weekPhase = 1;
-  else if (totalWeeks <= 8) weekPhase = 2;
-  else if (totalWeeks <= 12) weekPhase = 3;
-  else weekPhase = 4; 
-
-  const dow = (planInfo.dayOfWeek === 6) ? 0 : planInfo.dayOfWeek + 1;
-  const plan = buildPlanByContent(weekPhase, dow);
-  plan.weekLabel = `第 ${totalWeeks} 周`;
-  return plan;
-}

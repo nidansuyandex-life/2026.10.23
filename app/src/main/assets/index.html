@@ -7,6 +7,7 @@
 <title>日常 · 健康生活</title>
 <script src="./data/decks.js"></script>
 <script src="./data/valve.js"></script>
+<script src="./data/exercise.js"></script>
 <script src="./data/thinking.js"></script>
 <script src="./data/scenes.js"></script>
 <style>
@@ -559,30 +560,22 @@ const LS = {
   },
   del(k){ try { localStorage.removeItem(k); } catch(e){} }
 };
+
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-// ============ 内置动作库 ============
-const EXERCISES = {
-  'P1 90/90 呼吸': { name:'P1 90/90 呼吸', target:'肋骨与腹部控制', purpose:'激活深层核心与呼吸', how:'2×5 次呼吸，肋骨和腹部轻轻扩张；不耸肩、不憋气。', detail:'1. 仰卧，双腿搭在椅子或墙上，呈 90/90 姿势。\n2. 吸气约 4 秒，肋骨和腹部向两侧轻轻扩张。\n3. 呼气约 6 秒，肚子自然下沉，不强行收腹。\n4. 肩膀完全放松。', breath:'吸 4 秒，呼 6 秒。', mistakes:'耸肩、憋气、强行吸肚子。', equipment:'瑜伽垫/墙面' },
-  'P2 下巴轻收': { name:'P2 下巴轻收', target:'颈深屈肌', purpose:'改善头前倾', how:'2×8，停 3 秒，头水平后移。', detail:'1. 坐直或站立，眼睛平视前方。\n2. 下巴水平向后平移（像做双下巴），不要低头。\n3. 保持 3 秒，颈后有轻微拉伸感。\n4. 缓慢回正。', breath:'自然呼吸。', mistakes:'低头、用力过猛、颈痛时强行做。', equipment:'无' },
-  'P3 墙面滑手': { name:'P3 墙面滑手', target:'肩胛与躯干协调', purpose:'改善圆肩', how:'2×8-10 次，肋骨不外翻，不耸肩。', detail:'1. 背对墙站立，脚后跟离墙一拳。\n2. 手臂呈“W”型贴墙，手背贴墙。\n3. 沿墙向上滑至“Y”型，肋骨不外翻。\n4. 缓慢回落。', breath:'上滑吸气，下落呼气。', mistakes:'耸肩、腰离开墙面、肋骨外翻。', equipment:'墙面' },
-  'P4 仰卧脚跟滑动': { name:'P4 仰卧脚跟滑动', target:'低负荷核心控制', purpose:'骨盆稳定', how:'2×6-8/侧，呼气脚跟滑远，腰背舒适。', detail:'1. 仰卧，双腿屈膝，双脚踩地。\n2. 呼气时一只脚贴地慢慢滑远，腰部保持贴地。\n3. 吸气缓慢收回。\n4. 如果拱腰则缩短范围。', breath:'滑出呼气，收回吸气。', mistakes:'腰部拱起、动作过快。', equipment:'瑜伽垫' },
-  'P5 小范围骨盆控制': { name:'P5 小范围骨盆控制', target:'骨盆感知', purpose:'灵活骨盆', how:'1-2×5，幅度很小、无痛、呼吸顺畅。', detail:'1. 仰卧屈膝。\n2. 骨盆非常小范围地前倾和后倾。\n3. 不追求大幅度，感受轻微移动即可。', breath:'顺畅呼吸。', mistakes:'腰部代偿、幅度过大。', equipment:'瑜伽垫' },
-  'S1 椅子坐站': { name:'S1 椅子坐站/箱式深蹲', target:'臀大肌、股四头肌', purpose:'下肢力量', how:'2-3×8-12，臀部后移，脚掌踩稳。', detail:'1. 站在椅子前，双脚与肩同宽。\n2. 臀部向后坐，轻触椅面。\n3. 脚掌发力站起。\n4. 膝盖内扣或弓腰时提高座椅。', breath:'下降吸气，起身呼气。', mistakes:'膝盖内扣、弓腰、完全坐死。', equipment:'椅子' },
-  'S2 臂桥': { name:'S2 臂桥（臀桥）', target:'臀大肌、骨盆稳定', purpose:'臀部塑形', how:'2-3×8-12，呼气抬髋，不用腰顶。', detail:'1. 仰卧屈膝，脚跟离臀部一掌。\n2. 呼气臀部发力抬起，至肩-髋-膝一条线。\n3. 顶端停 1 秒。\n4. 腰不适则缩小幅度。', breath:'抬髋呼气，下降吸气。', mistakes:'腰部代偿、过度挺腰。', equipment:'瑜伽垫' },
-  'S3 弹力带侧向走': { name:'S3 弹力带侧向走', target:'臀中肌', purpose:'骨盆水平控制', how:'2×每侧6-12步，小步、骨盆水平。', detail:'1. 弹力带套在膝盖上方或脚踝。\n2. 半蹲，向一侧迈出小步，另一脚跟随。\n3. 保持骨盆水平，不要左右晃动。', breath:'自然呼吸。', mistakes:'骨盆摇晃、膝盖内扣、牵扯骶髂关节。', equipment:'弹力带' },
-  'S4 划船': { name:'S4 划船', target:'菱形肌、中下斜方肌', purpose:'背部线条', how:'2-3×8-12，肘向后拉，肩胛骨向后下。', detail:'1. 弹力带或哑铃。\n2. 背部挺直，拉至腰侧。\n3. 肩胛骨收紧，停 1 秒。', breath:'拉时呼气。', mistakes:'耸肩、腰部借力。', equipment:'弹力带/哑铃' },
-  'S5 前方高位下拉': { name:'S5 前方高位下拉', target:'背阔肌', purpose:'背部宽度', how:'2-3×8-12，极轻阻力开始，下拉至锁骨。', detail:'1. 弹力带固定在高处。\n2. 双手下拉至锁骨前方。\n3. 肋骨不外翻。', breath:'下拉呼气。', mistakes:'腰后仰借力、耸肩。', equipment:'弹力带' },
-  'S6 墙/高台俯卧撑': { name:'S6 墙/高台俯卧撑', target:'胸、肩、肱三头', purpose:'上肢推力', how:'2-3×8-12，身体一条直线。', detail:'1. 双手撑墙或桌沿。\n2. 屈肘靠近，推起。\n3. 身体保持直线。', breath:'推起呼气。', mistakes:'塌腰、肘部完全张开。', equipment:'墙面/桌子' },
-  'S7 死虫式': { name:'S7 死虫式', target:'深层核心', purpose:'躯干稳定', how:'2×6-8/侧，对侧手脚伸展，腰部贴地。', detail:'1. 仰卧，双手双脚朝天。\n2. 对侧手脚下落，腰部紧贴地面。\n3. 缓慢收回换边。', breath:'伸展呼气。', mistakes:'腰部离地、动作太快。', equipment:'瑜伽垫' },
-  'S8 Pallof 抗旋转': { name:'S8 Pallof 抗旋转', target:'抗旋转核心', purpose:'核心稳定', how:'2×8-12/侧，抵抗旋转。', detail:'1. 侧对弹力带，双手握在胸前。\n2. 向前推，核心抵抗身体被拉转。', breath:'推出呼气。', mistakes:'身体被拉转、腰部代偿。', equipment:'弹力带' },
-  'S9 分腿蹲': { name:'S9 分腿蹲', target:'臀腿单侧力量', purpose:'平衡与下肢稳定', how:'2×6-8/侧，骶髂稳定时尝试。', detail:'1. 弓步姿势。\n2. 下蹲至前腿大腿接近平行。\n3. 前脚掌发力站起。', breath:'下蹲吸气，站起呼气。', mistakes:'膝盖内扣、身体晃动。', equipment:'自重' },
-  'S10 农夫行走': { name:'S10 农夫行走', target:'全身核心与握力', purpose:'全身功能性', how:'每手 1-3kg 或更轻，20秒，可选项。', detail:'1. 双手提重物。\n2. 挺胸收腹，小步慢走。\n3. 牵扯腰骶则取消。', breath:'自然呼吸。', mistakes:'身体侧倾、弯腰。', equipment:'哑铃/水瓶' },
-  '游泳': { name:'游泳', target:'全身协调', purpose:'心肺与全身', how:'水中适应、缓慢吐气、扶池边练习。', detail:'按阶段练习：水中适应、呼吸、漂浮、扶板打腿、分解练习。', breath:'水下呼气，抬头吸气。', mistakes:'憋气、慌张。', equipment:'泳衣、泳镜' },
-  '散步': { name:'散步', target:'主动恢复', purpose:'低强度有氧', how:'轻松步行。', detail:'轻松慢走，放松心情。', breath:'自然。', mistakes:'走太快。', equipment:'运动鞋' },
-  '胸肌拉伸': { name:'胸肌拉伸', target:'胸前拉伸', purpose:'改善圆肩', how:'20-30秒。', detail:'1. 站在门框或墙边，单臂贴墙。\n2. 肘与肩同高。\n3. 身体向对侧缓慢前移。', breath:'自然。', mistakes:'拉伸到疼。', equipment:'门框/墙' },
-  '小腿拉伸': { name:'小腿拉伸', target:'小腿放松', purpose:'放松', how:'20-30秒。', detail:'1. 弓步站立，后脚跟踩地。\n2. 感受后腿小腿后侧拉伸。', breath:'自然。', mistakes:'后脚跟离地。', equipment:'墙/椅子' }
-};
-function mkEx(code, sets, reps, load){ return { code, sets, reps, dose: reps, load, ...(EXERCISES[code]||{name:code,purpose:'',how:'',breath:'',target:'',detail:'',mistakes:'',equipment:''}) }; }
+
+// ============ 动作库关联外部文件 ============
+const APP_EXERCISES = window.__EXERCISES_DATA || window.EXERCISES || {};
+
+function mkEx(code, sets, reps, load){ 
+  return { 
+    code, 
+    sets, 
+    reps, 
+    dose: reps, 
+    load, 
+    ...(APP_EXERCISES[code] || {name:code,purpose:'',how:'',breath:'',target:'',detail:'',mistakes:'',equipment:''}) 
+  }; 
+}
 function getPlanDetail(weekPhase, dow) {
   const plan = { warmup: [], exercises: [], stretch: [], tips: [] };
   plan.warmup = [mkEx('P1 90/90 呼吸', 1, '5次', '自重'), mkEx('P2 下巴轻收', 1, '8次', '自重'), mkEx('P3 墙面滑手', 1, '8次', '自重'), mkEx('S2 臂桥', 1, '8次', '自重')];
@@ -617,11 +610,13 @@ function getPlanDetail(weekPhase, dow) {
     if (weekPhase === 1) plan.exercises = [mkEx('S1 椅子坐站', 2, '8次', '自重'), mkEx('S4 划船', 2, '8次', '轻阻力'), mkEx('S8 Pallof 抗旋转', 2, '8次/侧', '轻阻力')];
     else if (weekPhase === 2) plan.exercises = [mkEx('S1 椅子坐站', 2, '10次', '自重'), mkEx('S4 划船', 2, '3x8次', '轻阻力'), mkEx('S8 Pallof 抗旋转', 2, '10次/侧', '轻阻力'), mkEx('S10 农夫行走', 1, '20秒', '1-3kg')];
     else plan.exercises = [mkEx('S1 椅子坐站', 2, '10次', '自重'), mkEx('S9 分腿蹲', 2, '6次/侧', '自重'), mkEx('S4 划船', 3, '8次', '轻阻力'), mkEx('S8 Pallof 抗旋转', 2, '10次/侧', '轻阻力')];
-  } else if (dow === 6) {
+     } else if (dow === 6) {
     plan.label = '游泳技能学习'; plan.duration = '40-60 分钟';
     plan.tips = ['一定要在有救生员的泳池', '绝对不独自在深水区练漂浮', '前 4-8 次最好请教练'];
+    plan.warmup = [mkEx('站姿肩绕环', 1, '10次', '自重'), mkEx('站姿体侧伸展', 1, '10次', '自重')];
+    plan.stretch = [mkEx('站姿扩胸', 1, '30秒', '自重'), mkEx('站姿三头肌拉伸', 1, '30秒/侧', '自重')];   // ← 加这一行
     plan.exercises = [mkEx('游泳', 1, '40-60分钟', '水中适应、缓慢吐气、扶池边练习')];
-  } else if (dow === 0) {
+  }else if (dow === 0) {
     plan.label = '完全休息'; plan.duration = '—'; plan.isTraining = false; plan.exercises = []; plan.tips = ['完全休息', '保证睡眠'];
   }
   return plan;
@@ -654,7 +649,18 @@ function currentPlan() {
   const planInfo = getPlanDayInfo(new Date());
   const ov = getOverride(new Date());
   if (ov === 'leave' || ov === 'period' || ov === 'rest') return buildRestPlan(ov);
-  if (ov === 'swim') return { key:'swim', label:'游泳代替今日计划', icon:'🏊', duration:'40–60 分钟', summary:'游泳代替今日计划 · 原训练顺延', isTraining:true, warmup:[], stretch:[mkEx('胸肌拉伸',1,'20–30秒','自重')], exercises:[mkEx('游泳',4,'25m','自由'), mkEx('自由泳',4,'25m','单臂')], tips:['以水感与技术为主'] };
+   if (ov === 'swim') return { 
+    key:'swim', 
+    label:'游泳代替今日计划', 
+    icon:'🏊', 
+    duration:'40–60 分钟', 
+    summary:'游泳代替今日计划 · 原训练顺延', 
+    isTraining:true, 
+    warmup:[mkEx('站姿肩绕环',1,'10次','自重'), mkEx('站姿体侧伸展',1,'10次','自重')], 
+    stretch:[mkEx('站姿扩胸',1,'30秒','自重'), mkEx('站姿三头肌拉伸',1,'30秒/侧','自重')], 
+    exercises:[mkEx('游泳',4,'25m','自由'), mkEx('自由泳',4,'25m','单臂')], 
+    tips:['以水感与技术为主'] 
+  };
   if (ov === 'reduced'){ const base = buildPlanByContent(1, 1); return { ...base, label:'身体不适（减量）', icon:'🔻', duration:'20–30 分钟', summary:'减量 · 组数减少', exercises: base.exercises.map(x=>({...x,sets:Math.max(1,x.sets-1)})) }; }
   if (!planInfo) return buildRestPlan('rest');
   let weekPhase = 1; const totalWeeks = Math.floor(planInfo.effective / 7) + 1;
@@ -669,7 +675,20 @@ function dailyPick(arr,n,salt=0){ if(!arr||!arr.length) return []; let seed=(DAY
 function shuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
 function raceTimeout(promise, ms, errMsg='请求超时'){ let timer = null; return Promise.race([promise, new Promise((_, rej) => { timer = setTimeout(() => rej(new Error(errMsg)), ms); })]).finally(() => { if (timer) clearTimeout(timer); }); }
 function friendlyErr(e){ const msg = (e && e.message) ? e.message : String(e || ''); if (/Failed to fetch/i.test(msg)) return '网络不通'; if (/aborted|timeout|请求超时/i.test(msg)) return '请求超时'; if (/HTTP 404/.test(msg)) return 'HTTP 404'; if (/HTTP 429/.test(msg)) return '请求过于频繁'; if (/HTTP 403/.test(msg)) return '无权限'; if (/code=130/.test(msg)) return 'QPS 超限（稍后重试）'; if (/code=140/.test(msg)) return '接口未申请'; if (/无内容/.test(msg)) return '接口返回空'; return msg || '失败'; }
-async function fetchJson(url, timeout=8000){ const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeout); try { const r = await fetch(url, { signal: controller.signal }); if (!r.ok) throw new Error('HTTP '+r.status); return await r.json(); } finally { clearTimeout(timer); } }
+// 原生 HTTP 桥：WebView 内 fetch 失败时由安卓原生代码发请求（不受 WebView 网络限制）
+function nativeGetRaw(url, timeout){
+  return new Promise((resolve, reject) => {
+    if (!window.AndroidHttp || typeof window.AndroidHttp.httpGet !== 'function'){ reject(new Error('原生桥不可用')); return; }
+    window.__nativeHttpCbs = window.__nativeHttpCbs || {};
+    window.__nativeHttpSeq = (window.__nativeHttpSeq || 0) + 1;
+    const id = 'h' + window.__nativeHttpSeq;
+    const timer = setTimeout(() => { delete window.__nativeHttpCbs[id]; reject(new Error('原生请求超时')); }, (timeout || 8000) + 6000);
+    window.__nativeHttpCbs[id] = res => { clearTimeout(timer); delete window.__nativeHttpCbs[id]; resolve(res); };
+    try { window.AndroidHttp.httpGet(url, id); } catch(e){ clearTimeout(timer); delete window.__nativeHttpCbs[id]; reject(e); }
+  });
+}
+window.__nativeHttpCb = function(id, res){ const cbs = window.__nativeHttpCbs || {}; if (cbs[id]) cbs[id](res); };
+async function fetchJson(url, timeout=8000){ const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeout); try { const r = await fetch(url, { signal: controller.signal }); if (!r.ok) throw new Error('HTTP '+r.status); return await r.json(); } catch(e){ try { const raw = await nativeGetRaw(url, timeout); const j = JSON.parse(raw); if (!j.ok) throw new Error('HTTP ' + (j.status || 0) + (j.error ? ' ' + j.error : '')); return JSON.parse(j.body); } catch(e2){ throw (e2 && e2.message === '原生桥不可用') ? e : e2; } } finally { clearTimeout(timer); } }
 async function fetchText(url, timeout=8000){ const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeout); try { const r = await fetch(url, { signal: controller.signal }); if (!r.ok) throw new Error('HTTP '+r.status); return await r.text(); } finally { clearTimeout(timer); } }
 function extractList(result){ if (!result) return []; if (Array.isArray(result)) return result; if (Array.isArray(result.newslist)) return result.newslist; if (Array.isArray(result.list)) return result.list; if (result.title || result.content || result.description || result.en) return [result]; return []; }
 function toast(msg){ const el = document.createElement('div'); el.className = 'toast'; el.textContent = msg; document.querySelector('.phone').appendChild(el); requestAnimationFrame(() => el.classList.add('show')); setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, 1900); }
@@ -683,9 +702,58 @@ const TianapiQueue = { _lastTs: 0, _tail: Promise.resolve(), _pending: 0, async 
 async function tianapiFetch(url, timeout=8000){ return await TianapiQueue.run(async () => await raceTimeout(fetchJson(url, timeout), timeout + 1000)); }
 
 const NEWS_SOURCES = [{ id:'generalnews', label:'综合新闻', icon:'📰', max:3 }, { id:'caijing', label:'财经新闻', icon:'💰', max:2 }, { id:'bulletin', label:'每日简报', icon:'📋', max:1 }, { id:'woman', label:'女性新闻', icon:'👩', max:2 }, { id:'networkhot', label:'全网热搜', icon:'🔥', max:3 }];
-const QUOTE_SOURCES = [{ id:'ensentence', label:'天聚 · 英语一句话', icon:'💬' }, { id:'enmaxim', label:'天聚 · 英语格言', icon:'✒️' }, { id:'quotable', label:'Quotable', icon:'🌐' }];
-const STORY_SOURCES = [{ id:'gutendex', label:'Gutendex', icon:'📚' }, { id:'ensentence', label:'天聚 · 英语一句话', icon:'💬' }, { id:'enmaxim', label:'天聚 · 英语格言', icon:'✒️' }];
-const SEED = { DECKS:[], VALVE:{}, THINKING:[], SCENES:{}, EXPRESS_PASSAGES:[{title:'静夜思',text:'床前明月光，疑是地上霜。举头望明月，低头思故乡。',tips:'五言绝句。'}, {title:'春晓',text:'春眠不觉晓，处处闻啼鸟。夜来风雨声，花落知多少。',tips:'孟浩然。'}], RECOMMEND: {} };
+const QUOTE_SOURCES = [];
+const STORY_SOURCES = [];
+// ===== 内置兜底内容库（在线接口失败时也保证每天有内容，按天轮换）=====
+const WHY_BANK = [
+  { q:'天空为什么是蓝色的？', a:'阳光进入大气层时，波长较短的蓝光被空气分子散射得最厉害，蓝光散布到整个天空，所以我们抬头看到的天空是蓝色的。' },
+  { q:'为什么秋天树叶会变黄？', a:'秋天气温降低、日照变短，叶片中的叶绿素被分解，原本被绿色掩盖的黄色类胡萝卜素显现出来，叶子就变黄了。' },
+  { q:'冰箱为什么能制冷？', a:'制冷剂在压缩机里被压缩成高温高压气体，再经冷凝放热、蒸发吸热，把冰箱内部的热量"搬"到外面，从而让箱内温度降低。' },
+  { q:'为什么企鹅不怕冷？', a:'企鹅皮下有厚厚的脂肪层，羽毛密实且防水，重叠的羽毛能锁住空气形成保温层，所以能在南极冰原上生存。' },
+  { q:'指纹是怎么形成的？', a:'指纹在胎儿时期就形成了，是皮肤发育过程中表皮与真皮生长速度不同、互相挤压产生的纹路，每个人的指纹都独一无二。' },
+  { q:'为什么打哈欠会传染？', a:'打哈欠与大脑中的镜像神经元有关，看到别人打哈欠会不自觉地模仿，这是一种与共情能力相关的本能反应。' },
+  { q:'蜜蜂跳舞是在干什么？', a:'蜜蜂用"8字舞"告诉同伴花蜜的方向和距离：摆尾的角度对应太阳方位，跳舞的持续时间代表距离远近。' },
+  { q:'飞机为什么能飞起来？', a:'机翼上表面弯曲、下表面平直，气流经过时上方流速快、压强小，下方压强大，产生的升力就把飞机托上了天空。' },
+  { q:'为什么星星会眨眼？', a:'星光穿过大气层时被不断流动的空气折射，光线时聚时散，看上去就像星星在一闪一闪地眨眼。' },
+  { q:'猫为什么爱舔毛？', a:'舔毛可以清洁身体、去除浮毛，唾液蒸发还能帮助降温；毛上留下的气味也是猫标记自己、安抚情绪的方式。' },
+  { q:'海水为什么是咸的？', a:'岩石中的盐分被雨水溶解后随河流汇入海洋，经过几十亿年的不断积累与蒸发浓缩，海水变得越来越咸。' },
+  { q:'火车铁轨下面为什么铺石子？', a:'石子道砟能分散火车的巨大压力、固定枕木位置，还能排水减震，让路基保持稳定平整。' },
+  { q:'闪电和打雷为什么不同步？', a:'光速远快于声速，闪电的光几乎瞬间到达，雷声却要几秒后才传来，所以我们总是先看到闪电后听到雷声。' },
+  { q:'萤火虫为什么会发光？', a:'萤火虫腹部有发光器，荧光素和氧气在酶的作用下发生反应发出冷光，主要用来求偶和警告天敌。' },
+  { q:'人一哭为什么鼻子会堵？', a:'哭泣时泪腺分泌大量泪水，多余的泪水通过鼻泪管流入鼻腔，和鼻黏膜分泌物混在一起，鼻子就堵住了。' },
+  { q:'坐飞机为什么要关手机？', a:'手机的信号可能干扰飞机的导航和通信系统。虽然现代飞机抗干扰能力增强，但起飞降落是最关键阶段，仍要求全程关闭或飞行模式。' }
+];
+const QUOTE_BANK = [
+  { text:'The only limit to our realization of tomorrow will be our doubts of today.', author:'Franklin D. Roosevelt', cn:'实现明天理想的唯一障碍，是今天的疑虑。' },
+  { text:'Life is like riding a bicycle. To keep your balance, you must keep moving.', author:'Albert Einstein', cn:'生活就像骑自行车，想保持平衡就得往前走。' },
+  { text:'Success is not final, failure is not fatal: it is the courage to continue that counts.', author:'Winston Churchill', cn:'成功不是终点，失败也非末日，重要的是继续前进的勇气。' },
+  { text:'In the middle of difficulty lies opportunity.', author:'Albert Einstein', cn:'困难之中，藏着机会。' },
+  { text:'The best way to predict the future is to invent it.', author:'Alan Kay', cn:'预测未来的最好方式，就是亲手创造它。' },
+  { text:'It does not matter how slowly you go as long as you do not stop.', author:'Confucius', cn:'不怕慢，只怕停。' },
+  { text:'What we know is a drop, what we do not know is an ocean.', author:'Isaac Newton', cn:'我们所知的是一滴水，所不知的是一片海洋。' },
+  { text:'Genius is one percent inspiration and ninety-nine percent perspiration.', author:'Thomas Edison', cn:'天才是百分之一的灵感，加百分之九十九的汗水。' }
+];
+const STORY_BANK = [
+  { title:'The Early Bird', text:'The morning is quiet and cool. A small bird sings on the branch. It starts to look for food while the city still sleeps. The early bird gets the worm, but more than that: it owns the whole peaceful morning.', cn:'清晨宁静凉爽，小鸟在枝头歌唱。城市还在沉睡，它已开始觅食。早起的鸟儿有虫吃，更重要的是，它拥有了整个宁静的清晨。' },
+  { title:'A Cup of Tea', text:'Grandma makes tea the old way. The leaves dance in the hot water, slowly turning it golden. She says good tea cannot be rushed, and neither can a good life. We sit by the window, sip, and let time slow down.', cn:'奶奶用老办法泡茶，茶叶在热水中舒展，水慢慢变金黄。她说好茶急不得，好日子也一样。我们坐在窗边小口喝着，让时间慢下来。' },
+  { title:'The First Snow', text:'Overnight, the world turned white. Footprints cross the yard like a secret message. Children run out with red cheeks, catching snowflakes on their tongues. Winter first gift is not the snow itself, but the joy it brings.', cn:'一夜之间世界变白，院子里的脚印像秘密留言。孩子们红着脸跑出来，用舌尖接雪花。冬天最初的礼物不是雪，而是雪带来的欢乐。' },
+  { title:'Learn to Fall', text:'When I learned to skate, my coach taught me to fall first. "If you are not afraid of falling, you will dare to go fast." He was right. Once I stopped fearing failure, I finally began to move forward.', cn:'学滑冰时，教练先教我摔倒："不怕摔，才敢滑得快。"他说得对。当我不再害怕失败，才真正开始前进。' },
+  { title:'The Old Bookstore', text:'The bookstore at the corner has no wifi, but it has wooden floors that talk. The owner knows every book by name. "Books are slow friends," he says. I spent the whole afternoon there and forgot to check my phone.', cn:'街角书店没有WiFi，却有会"说话"的木地板。店主记得每本书的名字。"书是慢朋友。"我在那里待了一下午，忘了看手机。' },
+  { title:'Rainy Day', text:'Rain taps on the window like a patient friend. Nobody hurries today. The streets shine, umbrellas bloom like flowers. Some days are for running ahead, and some days are simply for walking in the rain.', cn:'雨点敲窗，像一位耐心的朋友。今天没人赶路，街道发亮，雨伞像花一样绽放。有些日子用来奔跑，有些日子只适合在雨中散步。' },
+  { title:'The Lighthouse', text:'The lighthouse keeper job is simple: light the lamp before dark. For forty years he never missed a night. "I just do one small thing," he smiles, "and I do it every single day." Perhaps that is what persistence means.', cn:'守塔人的工作很简单：天黑前点亮灯。四十年他从未错过一晚。"我只是做一件小事，"他笑着说，"但每天都做。"这大概就是坚持的意思。' },
+  { title:'Plant a Tree', text:'The best time to plant a tree was twenty years ago. The second best time is now. Grandpa planted an apple tree the year I was born. Now every autumn, its branches bend with sweet fruit, and I taste twenty years of patience.', cn:'种一棵树最好的时间是二十年前，其次是现在。爷爷在我出生那年种下苹果树，如今每年秋天果实压弯枝头，我尝到的是二十年的耐心。' }
+];
+// 推荐分类：科学/历史/人物/文化走 60s 百科接口；电影/电视走豆瓣周榜；播客走网易云音乐；APP 走少数派（全部 API 实时抓取，无内置数据）
+const DISCOVER_TOPICS = {
+  '科学':['黑洞','引力波','量子纠缠','DNA','光合作用','人工智能','疫苗','半导体','超导体','相对论','光速','基因编辑'],
+  '历史':['丝绸之路','兵马俑','大运河','郑和下西洋','四大发明','科举制度','紫禁城','金字塔','文艺复兴','工业革命','甲骨文','长城'],
+  '人物':['爱因斯坦','居里夫人','钱学森','袁隆平','屠呦呦','达芬奇','莎士比亚','牛顿','张衡','李时珍','苏格拉底','邓稼先'],
+  '文化':['十万个为什么','西游记','红楼梦','清明上河图','京剧','二十四节气','唐诗','宋词','故宫','敦煌莫高窟','端午节','中国茶']
+};
+// 播客搜索词（网易云音乐播客搜索，按天+换一批轮换）
+const PODCAST_TERMS = ['科技','商业','历史','文化','心理','电影','生活','教育'];
+const WHY_TYPE_MAP = { 1:'人体奥秘', 2:'天文地理', 3:'军事与交通', 4:'生物王国', 5:'数理化之谜', 6:'信息与科技', 7:'历史的长河', 8:'文化与艺术', 9:'国家与体育', 10:'营养与健康', 11:'青少儿' };
+const SEED = { DECKS:[], VALVE:{}, THINKING:[], SCENES:{}, EXPRESS_PASSAGES:[], RECOMMEND: {} };
 SEED.VALVE_ALL = [];
 const DATA_STATUS = { valve:0, words:0, decks:0, valveOk:false, wordsOk:false, thinking:0, scenes:0 };
 
@@ -703,16 +771,41 @@ function getSizeType(cat){ if (cat === 'pants') return 'pants'; if (cat === 'sho
 const PRODUCT_CATS = { makeupRemover:{ label:'卸妆', icon:'🧴', order:0 }, cleanser:{ label:'洁面', icon:'🧼', order:1 }, toner:{ label:'爽肤水/化妆水', icon:'💧', order:2 }, serum:{ label:'精华', icon:'✨', order:3 }, lotion:{ label:'乳液', icon:'🥛', order:4 }, cream:{ label:'面霜', icon:'🫙', order:5 }, sunscreen:{ label:'防晒', icon:'☀️', order:6 }, mask:{ label:'面膜', icon:'🎭', order:7 }, exfoliant:{ label:'去角质/清洁泥膜', icon:'🪨', order:8 }, other:{ label:'其他', icon:'✨', order:99 } };
 
 function loadDataFromGlobals(){
-  if (window.__VALVE_DATA && typeof window.__VALVE_DATA === 'object'){ SEED.VALVE = window.__VALVE_DATA; SEED.VALVE_ALL = Object.keys(SEED.VALVE).flatMap(cat => (Array.isArray(SEED.VALVE[cat])?SEED.VALVE[cat]:[]).map(v => ({ ...v, cat }))); DATA_STATUS.valve = SEED.VALVE_ALL.length; DATA_STATUS.valveOk = SEED.VALVE_ALL.length > 0; } else { SEED.VALVE = { '基础知识': [{q:'闸阀为什么不适合调节流量？',a:'闸板开启过程中流体阻力变化大。',key:'闸阀设计用于全开/全关。'}] }; SEED.VALVE_ALL = [{...SEED.VALVE['基础知识'][0], cat:'基础知识'}]; DATA_STATUS.valve = 1; }
+  // 1. 阀门知识
+  if (window.__VALVE_DATA && typeof window.__VALVE_DATA === 'object'){ 
+    SEED.VALVE = window.__VALVE_DATA; 
+    SEED.VALVE_ALL = Object.keys(SEED.VALVE).flatMap(cat => (Array.isArray(SEED.VALVE[cat])?SEED.VALVE[cat]:[]).map(v => ({ ...v, cat }))); 
+    DATA_STATUS.valve = SEED.VALVE_ALL.length; DATA_STATUS.valveOk = SEED.VALVE_ALL.length > 0; 
+  } else { 
+    SEED.VALVE = {}; SEED.VALVE_ALL = []; DATA_STATUS.valve = 0; 
+  }
+
+  // 2. 词库
   window.__WORD_DECK_DATA = window.__WORD_DECK_DATA || {};
-  
   if (Array.isArray(window.__WORD_DECKS) && window.__WORD_DECKS.length) SEED.DECKS = window.__WORD_DECKS;
- 
-  if (Array.isArray(window.__WORDS_DATA) && window.__WORDS_DATA.length){ window.__WORD_DECK_DATA['default'] = window.__WORDS_DATA.map(w => ({ ...w, deck: 'default' })); if (!SEED.DECKS.find(d => d.id === 'default')) SEED.DECKS.push({ id:'default', name:'内置词库', icon:'📗', count: window.__WORDS_DATA.length }); }
-  if (Array.isArray(window.__THINKING_DATA) && window.__THINKING_DATA.length){ SEED.THINKING = window.__THINKING_DATA.map(m => ({ name: m.n||m.name, emoji: m.e||m.emoji, core: m.c||m.core, how: m.h||m.how||[], exercise: m.x||m.exercise, hint: m.t||m.hint })); } else { SEED.THINKING = [{name:'第一性原理',emoji:'🔬',core:'拆到基本事实，再往上重建。',how:['问底层事实','剔除假设','重新推导'],exercise:'把你最头疼的问题拆到最基本事实。',hint:'真问题可能是介质里有颗粒。'}]; }
-  if (window.__SCENES_DATA && typeof window.__SCENES_DATA === 'object'){ const out = {}; Object.keys(window.__SCENES_DATA).forEach(cat => { out[cat] = window.__SCENES_DATA[cat].map(s => ({ q: s.q, guide: s.g || s.guide })); }); SEED.SCENES = out; } else { SEED.SCENES = { '通用': [{q:'今天想说点什么？', guide:'自由发挥。'}] }; }
+  if (Array.isArray(window.__WORDS_DATA) && window.__WORDS_DATA.length){ 
+    window.__WORD_DECK_DATA['default'] = window.__WORDS_DATA.map(w => ({ ...w, deck: 'default' })); 
+    if (!SEED.DECKS.find(d => d.id === 'default')) SEED.DECKS.push({ id:'default', name:'内置词库', icon:'📗', count: window.__WORDS_DATA.length }); 
+  }
+  
+  // 3. 思维模型
+  if (Array.isArray(window.__THINKING_DATA) && window.__THINKING_DATA.length){ 
+    SEED.THINKING = window.__THINKING_DATA.map(m => ({ name: m.n||m.name, emoji: m.e||m.emoji, core: m.c||m.core, how: m.h||m.how||[], exercise: m.x||m.exercise, hint: m.t||m.hint })); 
+  } else { 
+    SEED.THINKING = []; 
+  }
+  
+  // 4. 表达场景
+  if (window.__SCENES_DATA && typeof window.__SCENES_DATA === 'object'){ 
+    const out = {}; 
+    Object.keys(window.__SCENES_DATA).forEach(cat => { out[cat] = window.__SCENES_DATA[cat].map(s => ({ q: s.q, guide: s.g || s.guide })); }); 
+    SEED.SCENES = out; 
+  } else { 
+    SEED.SCENES = {}; 
+  }
+
   DATA_STATUS.decks = SEED.DECKS.length; DATA_STATUS.words = SEED.DECKS.reduce((s,d) => s + (d.count || 0), 0); DATA_STATUS.wordsOk = DATA_STATUS.words > 0;
-  DATA_STATUS.thinking = SEED.THINKING.length; DATA_STATUS.scenes = Object.values(SEED.SCENES).reduce((s,a) => s + (a?.length||0), 0);
+  DATA_STATUS.thinking = SEED.THINKING.length; DATA_STATUS.scenes = Object.values(SEED.SCENES).reduce((s,a) => s + (a && a.length || 0), 0);
   window.__dataStatus = DATA_STATUS;
 }
 
@@ -784,7 +877,7 @@ function setPlanStart(date){ if (!date) return; PLAN_START = new Date(localDateS
 function getOverrides(){ return LS.get('app_h_planOverrides', {}); }
 function setOverride(date, mode){ const o = getOverrides(); const k = localDateStr(date); if (!mode || mode === 'original') delete o[k]; else o[k] = mode; LS.set('app_h_planOverrides', o); }
 function getOverride(date){ return getOverrides()[localDateStr(date)] || null; }
-function getPlanDayInfo(date = new Date()){ const d = new Date(date); d.setHours(0,0,0,0); const start = new Date(PLAN_START); start.setHours(0,0,0,0); if (d < start) return null; const ov = getOverride(d); if (ov === 'leave' || ov === 'period' || ov === 'rest') return null; let effective = 0; const cur = new Date(start); while (cur < d){ const o = getOverride(cur); if (o !== 'leave' && o !== 'period' && o !== 'rest') effective++; cur.setDate(cur.getDate() + 1); } if (effective >= 84) return null; return { diff: Math.floor((d - start) / 86400000), effective, weekIndex: Math.floor(effective / 7) + 1, dayOfWeek: effective % 7 }; }
+function getPlanDayInfo(date = new Date()){ const d = new Date(date); d.setHours(0,0,0,0); const start = new Date(PLAN_START); start.setHours(0,0,0,0); if (d < start) return null; const ov = getOverride(d); if (ov === 'leave' || ov === 'period' || ov === 'rest') return null; let effective = 0; const cur = new Date(start); while (cur < d){ const o = getOverride(cur); if (o !== 'leave' && o !== 'period' && o !== 'rest') effective++; cur.setDate(cur.getDate() + 1); } if (effective >= 61*7) return null; return { diff: Math.floor((d - start) / 86400000), effective, weekIndex: Math.floor(effective / 7) + 1, dayOfWeek: effective % 7 }; }
 
 const BODY_DEFAULT = { height:165, weight:51.7, bodyFat:33, shoulder:38, neck:32, bust:86, underbust:74, waist:68, abdomen:78, hip:92, upperArm:27, forearm:23, wrist:15.5, thigh:52, calf:34, ankle:21, armLength:56, legLength:96, inseam:72, footLength:23.5, footWidth:9 };
 const body = { ...BODY_DEFAULT, ...HealthStore.load('body', {}) };
@@ -802,7 +895,46 @@ function getDayIndexForSkin(){ const d = new Date().getDay(); return d === 0 ? 7
 
 function calcShape(){ const s = body.shoulder, w = body.waist, h = body.hip; const whr = w / h, shr = s / h; if (whr <= 0.76) { if (Math.abs(shr - 1) < 0.06) return { name:'沙漏型', desc:'肩臀接近，腰线明显' }; if (shr > 1.06) return { name:'倒三角型', desc:'肩部较宽' }; return { name:'梨形', desc:'臀胯较宽' }; } if (shr >= 1.06) return { name:'倒三角型', desc:'肩部偏宽' }; if (h - s >= 6) return { name:'梨形', desc:'臀胯偏宽' }; return { name:'矩形', desc:'肩腰臀比例接近' }; }
 function fitEase(ease, soft, hard){ if (ease < -hard) return { k:'tight', t:'偏紧', color:'#FF6B5B', bg:'#FFEDEA' }; if (ease < -soft) return { k:'slight-tight', t:'略紧', color:'#D98A0B', bg:'#FFF4E0' }; if (ease <= soft) return { k:'ok', t:'合身', color:'#1FBFA9', bg:'#E7F9F5' }; if (ease <= hard) return { k:'slight-loose', t:'略松', color:'#4A9EFF', bg:'#EAF3FF' }; return { k:'loose', t:'偏松', color:'#8B7CF6', bg:'#F1EEFF' }; }
-function analyzeGarment(){ const cat = state.closetCat || 'top'; const sizeType = getSizeType(cat); if (sizeType === 'free') return null; const g = state.garmentDraft || {}; const rows = [], suggestions = []; const shape = calcShape(); if (sizeType === 'cloth'){ if (g.bust){ const e = g.bust - body.bust; rows.push({ label:'胸围松量', value:(e>0?'+':'')+e.toFixed(1)+' cm', fit:fitEase(e,2,6) }); } if (g.shoulder){ const d = body.shoulder - g.shoulder; rows.push({ label:'肩宽差', value:d>0?`身体宽 ${d.toFixed(1)} cm`:`衣服宽 ${(-d).toFixed(1)} cm`, fit:fitEase(d,1.5,3.5) }); } if (g.length){ const bodyLen = body.height * 0.37; const e = g.length - bodyLen; rows.push({ label:'衣长 vs 身高', value:`衣长 ${g.length}cm · 参考 ${bodyLen.toFixed(0)}cm`, fit:fitEase(e,-5,10) }); } if (g.sleeve){ const refSleeve = body.armLength * 0.85; const e = g.sleeve - refSleeve; rows.push({ label:'袖长', value:`袖长 ${g.sleeve}cm · 参考 ${refSleeve.toFixed(0)}cm`, fit:fitEase(e,-3,5) }); } if (g.waist && cat === 'coat'){ const e = g.waist - body.waist; rows.push({ label:'腰围松量（收腰款）', value:(e>0?'+':'')+e.toFixed(1)+' cm', fit:fitEase(e,4,10) }); } if (shape.name === '梨形') suggestions.push('梨形：上半身穿亮色、有设计感的款式，下半身选深色简洁剪裁。'); if (shape.name === '倒三角型') suggestions.push('倒三角：避免垫肩、泡泡袖，下半身可选阔腿裤/A字裙平衡。'); if (shape.name === '沙漏型') suggestions.push('沙漏：适合收腰、V领、合身剪裁，突出腰线。'); if (shape.name === '矩形') suggestions.push('矩形：可用腰带、荷叶边、A字裙制造曲线感。'); if (rows.filter(r=>r.fit.k==='tight').length) suggestions.push('肩宽/胸围偏紧：建议选大一号，或换落肩/宽松版型。'); } if (sizeType === 'pants'){ if (g.waist){ const e = g.waist - body.waist; rows.push({ label:'腰围松量', value:(e>0?'+':'')+e.toFixed(1)+' cm', fit:fitEase(e,2,5) }); } if (g.hip){ const e = g.hip - body.hip; rows.push({ label:'臀围松量', value:(e>0?'+':'')+e.toFixed(1)+' cm', fit:fitEase(e,2.5,6) }); } if (g.length){ const ref = body.inseam; const e = g.length - ref; rows.push({ label:'裤长 vs 内腿长', value:`裤长 ${g.length}cm · 内腿 ${ref}cm`, fit:fitEase(e,-3,5) }); } if (g.thigh){ const e = g.thigh - body.thigh; rows.push({ label:'大腿围松量', value:(e>0?'+':'')+e.toFixed(1)+' cm', fit:fitEase(e,2,6) }); } if (shape.name === '梨形') suggestions.push('梨形：选高腰、直筒或微喇裤，避免过紧的臀部。'); if (shape.name === '倒三角型') suggestions.push('倒三角：选阔腿裤、喇叭裤平衡比例。'); if (shape.name === '矩形') suggestions.push('矩形：选高腰裤 + 短上衣制造比例。'); if (rows.filter(r=>r.fit.k==='tight').length) suggestions.push('臀围偏紧：建议选大一码或弹力面料。'); } if (sizeType === 'shoes'){ if (g.footLength){ const e = g.footLength - body.footLength; rows.push({ label:'脚长松量', value:(e>0?'+':'')+e.toFixed(1)+' cm', fit:fitEase(e,0.4,0.9) }); } if (g.footWidth){ const e = g.footWidth - body.footWidth; rows.push({ label:'脚宽松量', value:(e>0?'+':'')+e.toFixed(1)+' cm', fit:fitEase(e,0.2,0.6) }); } suggestions.push('选鞋建议：下午/晚上试穿（脚会略微膨胀），脚趾前留 0.5-1cm 活动空间。'); } const hardTight = rows.filter(r => r.fit.k === 'tight' || r.fit.k === 'loose').length; const slightCount = rows.filter(r => r.fit.k === 'slight-tight' || r.fit.k === 'slight-loose').length; const score = Math.max(0, 100 - hardTight * 8 - slightCount * 3); return { rows, suggestions, score, sizeType }; }
+function analyzeGarment(){ 
+  const cat = state.closetCat || 'top'; 
+  const sizeType = getSizeType(cat); 
+  if (sizeType === 'free') return null; 
+  const g = state.garmentDraft || {}; 
+  const rows = [], suggestions = []; 
+  const shape = calcShape(); 
+  
+  if (sizeType === 'cloth'){ 
+    if (g.bust){ const e = g.bust - body.bust; rows.push({ key:'bust', label:'胸围松量', value:(e>0?'+':'')+e.toFixed(1)+' cm', fit:fitEase(e,2,6) }); } 
+    if (g.shoulder){ const d = body.shoulder - g.shoulder; rows.push({ key:'shoulder', label:'肩宽差', value:d>0?`身体宽 ${d.toFixed(1)} cm`:`衣服宽 ${(-d).toFixed(1)} cm`, fit:fitEase(d,1.5,3.5) }); } 
+    if (g.length){ const bodyLen = body.height * 0.37; const e = g.length - bodyLen; rows.push({ key:'length', label:'衣长 vs 身高', value:`衣长 ${g.length}cm · 参考 ${bodyLen.toFixed(0)}cm`, fit:fitEase(e,-5,10) }); } 
+    if (g.sleeve){ const refSleeve = body.armLength * 0.85; const e = g.sleeve - refSleeve; rows.push({ key:'sleeve', label:'袖长', value:`袖长 ${g.sleeve}cm · 参考 ${refSleeve.toFixed(0)}cm`, fit:fitEase(e,-3,5) }); } 
+    if (g.waist && cat === 'coat'){ const e = g.waist - body.waist; rows.push({ key:'waist', label:'腰围松量（收腰款）', value:(e>0?'+':'')+e.toFixed(1)+' cm', fit:fitEase(e,4,10) }); } 
+    if (shape.name === '梨形') suggestions.push('梨形：上半身穿亮色、有设计感的款式，下半身选深色简洁剪裁。'); 
+    if (shape.name === '倒三角型') suggestions.push('倒三角：避免垫肩、泡泡袖，下半身可选阔腿裤/A字裙平衡。'); 
+    if (shape.name === '沙漏型') suggestions.push('沙漏：适合收腰、V领、合身剪裁，突出腰线。'); 
+    if (shape.name === '矩形') suggestions.push('矩形：可用腰带、荷叶边、A字裙制造曲线感。'); 
+    if (rows.filter(r=>r.fit.k==='tight').length) suggestions.push('肩宽/胸围偏紧：建议选大一号，或换落肩/宽松版型。'); 
+  } 
+  if (sizeType === 'pants'){ 
+    if (g.waist){ const e = g.waist - body.waist; rows.push({ key:'waist', label:'腰围松量', value:(e>0?'+':'')+e.toFixed(1)+' cm', fit:fitEase(e,2,5) }); } 
+    if (g.hip){ const e = g.hip - body.hip; rows.push({ key:'hip', label:'臀围松量', value:(e>0?'+':'')+e.toFixed(1)+' cm', fit:fitEase(e,2.5,6) }); } 
+    if (g.length){ const ref = body.inseam; const e = g.length - ref; rows.push({ key:'length', label:'裤长 vs 内腿长', value:`裤长 ${g.length}cm · 内腿 ${ref}cm`, fit:fitEase(e,-3,5) }); } 
+    if (g.thigh){ const e = g.thigh - body.thigh; rows.push({ key:'thigh', label:'大腿围松量', value:(e>0?'+':'')+e.toFixed(1)+' cm', fit:fitEase(e,2,6) }); } 
+    if (shape.name === '梨形') suggestions.push('梨形：选高腰、直筒或微喇裤，避免过紧的臀部。'); 
+    if (shape.name === '倒三角型') suggestions.push('倒三角：选阔腿裤、喇叭裤平衡比例。'); 
+    if (shape.name === '矩形') suggestions.push('矩形：选高腰裤 + 短上衣制造比例。'); 
+    if (rows.filter(r=>r.fit.k==='tight').length) suggestions.push('臀围偏紧：建议选大一码或弹力面料。'); 
+  } 
+  if (sizeType === 'shoes'){ 
+    if (g.footLength){ const e = g.footLength - body.footLength; rows.push({ key:'footLength', label:'脚长松量', value:(e>0?'+':'')+e.toFixed(1)+' cm', fit:fitEase(e,0.4,0.9) }); } 
+    if (g.footWidth){ const e = g.footWidth - body.footWidth; rows.push({ key:'footWidth', label:'脚宽松量', value:(e>0?'+':'')+e.toFixed(1)+' cm', fit:fitEase(e,0.2,0.6) }); } 
+    suggestions.push('选鞋建议：下午/晚上试穿（脚会略微膨胀），脚趾前留 0.5-1cm 活动空间。'); 
+  } 
+  const hardTight = rows.filter(r => r.fit.k === 'tight' || r.fit.k === 'loose').length; 
+  const slightCount = rows.filter(r => r.fit.k === 'slight-tight' || r.fit.k === 'slight-loose').length; 
+  const score = Math.max(0, 100 - hardTight * 8 - slightCount * 3); 
+  return { rows, suggestions, score, sizeType }; 
+}
 
 function cnToNumber(str){ if (str == null) return NaN; const s = String(str).trim(); if (!s) return NaN; if (/^\d+(\.\d+)?$/.test(s)) return parseFloat(s); const map = { '零':0, '〇':0, '一':1, '二':2, '两':2, '三':3, '四':4, '五':5, '六':6, '七':7, '八':8, '九':9 }; if (s.length === 1){ if (map[s] !== undefined) return map[s]; if (/^\d$/.test(s)) return parseInt(s); return NaN; } if (s === '十') return 10; if (/^十[一二三四五六七八九]$/.test(s)) return 10 + map[s[1]]; if (/^[一二三四五六七八九]十$/.test(s)) return map[s[0]] * 10; if (/^[一二三四五六七八九]十[一二三四五六七八九]$/.test(s)) return map[s[0]] * 10 + map[s[2]]; let result = 0; for (const ch of s){ let d; if (map[ch] !== undefined) d = map[ch]; else if (/^\d$/.test(ch)) d = parseInt(ch); else return NaN; result = result * 10 + d; } return result; }
 function round2(n){ return Math.round(n * 100) / 100; }
@@ -815,18 +947,45 @@ function getRangeTransactions(){ const today = todayStr(), ym = today.slice(0,7)
 function AI_get_provider(){ return LS.get('ai-provider', 'none'); } function AI_get_apiKey(){ return LS.get('ai-key', ''); } function AI_get_model(){ return LS.get('ai-model', ''); }
 const AI = { get provider(){ return AI_get_provider(); }, get apiKey(){ return AI_get_apiKey(); }, get model(){ return AI_get_model(); }, set(p,k,m){ LS.set('ai-provider', p||'none'); LS.set('ai-key', k||''); LS.set('ai-model', m||''); }, enabled(){ return this.provider !== 'none' && !!this.apiKey; }, roles: { engineer:{ name:'👷 工程师', prompt:'你是阀门行业资深工程师。' }, customer:{ name:'👤 客户', prompt:'你是一个挑剔的客户。' }, boss:{ name:'💼 老板', prompt:'你是一个务实的老板。' }, teacher:{ name:'🎓 英语老师', prompt:'你是英语老师。' }, health:{ name:'💊 健康顾问', prompt:'你是健康生活顾问。' }, skincare:{ name:'💄 护肤顾问', prompt:'你是专业护肤顾问。' } }, endpoints(){ return { deepseek:{ base:'https://api.deepseek.com/v1/chat/completions', model:'deepseek-chat' }, qwen:{ base:'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model:'qwen-turbo' }, zhipu:{ base:'https://open.bigmodel.cn/api/paas/v4/chat/completions', model:'glm-4-flash' } }; }, async call(system, user, maxTokens, temp){ const cfg = this.endpoints()[this.provider]; if (!cfg) throw new Error('AI 未配置'); const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 30000); try { const r = await fetch(cfg.base, { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + this.apiKey }, body: JSON.stringify({ model: this.model || cfg.model, messages: [{ role:'system', content:system }, { role:'user', content:user }], temperature: temp == null ? 0.4 : temp, max_tokens: maxTokens || 1000 }), signal: controller.signal }); if (!r.ok) throw new Error('HTTP '+r.status); const d = await r.json(); return (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || null; } catch(e) { if (e && e.name === 'AbortError') throw new Error('AI 请求超时，请检查网络后重试'); throw e; } finally { clearTimeout(timer); } }, parseJSON(content){ if (!content) return null; let json = content.trim(); if (json.startsWith('```')) json = json.replace(/^```(?:json)?\s*/, '').replace(/```\s*$/, ''); const i = json.indexOf('{'), j = json.lastIndexOf('}'); if (i>=0 && j>i) json = json.slice(i, j+1); return JSON.parse(json); }, async scoreAnswer(q,a,ref){ if (!this.enabled()) return null; const system = `严格导师。只输出 JSON：{"accuracy":0-100,"correct":[],"missing":[],"supplement":""}`; return this.parseJSON(await this.call(system, `【问题】\n${q}\n\n【参考】\n${ref}\n\n【学员】\n${a}\n\n请评分。`, 1000, 0.2)); }, async judgeWord(w,a,cn){ if (!this.enabled()) return null; const system = `英语单词判卷。只输出 JSON：{"correct":true/false,"score":0-100,"feedback":"20字以内"}`; return this.parseJSON(await this.call(system, `单词：${w}\n参考：${cn}\n学员：${a}`, 200, 0.1)); }, async answerQuestion(q, ctx){ if (!this.enabled()) return null; const system = `专业助手。回答专业准确。1.直接回答 2.给适用边界 3.分点，400字内。`; return await this.call(system, ctx ? `背景：${ctx}\n\n问题：${q}` : q, 1000, 0.4); }, async assistant(q, role){ if (!this.enabled()) throw new Error('AI 未配置'); const cfg = this.roles[role] || this.roles.engineer; return await this.call(cfg.prompt + '\n分点作答，每点短句，400字内。', q, 1000, 0.4); }, async gradeExpression(scene, q, guide, answer){ if (!this.enabled()) return null; const system = `表达训练教练。场景「${scene}」\n题目：${q}\n要求：${guide}\n只输出 JSON：{"score":0-100,"level":"","strengths":[],"issues":[],"improved":"","advice":""}`; return this.parseJSON(await this.call(system, '用户的回答：\n'+answer, 1200, 0.3)); }, async recommendRoutine(skinKey, skinProfile, products){ if (!this.enabled()) return null; const system = `你是专业护肤顾问。根据皮肤状态、肤质档案和用户产品库（已开封未过期），生成今日早间和晚间护肤流程。只输出 JSON：{"morning":[{"step":"步骤名","product":"产品名","note":"注意（可空）"}],"night":[...],"reason":"一句话推荐说明"}。重要规则：1. 只用给定产品，不可虚构，product 必须是产品库中的产品名之一；2. 你要根据产品名和成分，自行判断每个产品属于哪一类（卸妆/洁面/爽肤水/精华/乳液/面霜/防晒/面膜/去角质），并决定它放在护肤流程的哪一步；3. 标准顺序：卸妆 → 洁面 → 爽肤水 → 精华 → 乳液 → 面霜 → 防晒（防晒只白天用）；面膜/去角质放在精华之前或替代精华；4. 早间优先抗氧化（VC、烟酰胺等），晚间优先修复/抗老（A醇、壬二酸、胜肽等）；A醇、酸类、去角质只能晚间用；VC白天需配合防晒；5. 严重期（severe）：只用最温和的洁面、水、修复精华（B5/积雪草/神经酰胺等）、简单保湿霜、物理防晒，避免所有活性成分；6. 痘痘期（acne）：早间温和洁面+控油水+烟酰胺类+保湿乳+防晒，晚间卸妆(如有)+洁面+局部壬二酸/水杨酸+修复+保湿，避开A醇；7. 稳定期（stable）：早间抗氧化精华+保湿+防晒，晚间活性精华（A醇/壬二酸/VC/胜肽等轮换）+修复+保湿；周三周日可安排面膜，周六可安排去角质；8. 关键：让产品库中所有开封产品在一周内都被用到，不要反复只用其中1-2件；同类产品（如多个精华）按日期轮换，不要每天用同一支；9. 如果某产品不适合当前皮肤状态，可以不用它，但要在 reason 里说明。`; const userMsg = `今日：${todayStr()}（星期${'日一二三四五六'[new Date().getDay()]}）\n皮肤状态：${skinKey}\n肤质档案：${JSON.stringify(skinProfile)}\n可用产品（已开封未过期）：\n${products.map(p => `- ${p.name}（大类：${(PRODUCT_CATS[p.majorCat]||{}).label || p.majorCat}${p.ingredients ? '；成分：'+p.ingredients.slice(0,120) : ''}）`).join('\n')}\n\n请安排今天早间和晚间的护肤流程，确保所有产品在一周内轮换使用。`; return this.parseJSON(await this.call(system, userMsg, 2500, 0.3)); } };
 
-const CACHE_KEY_KNOWLEDGE = 'knowledge-v9';
-function getLastRefreshBoundary(){ const bj = bjDate(); const h = bj.getUTCHours(); const today0 = Date.UTC(bj.getUTCFullYear(), bj.getUTCMonth(), bj.getUTCDate()); let lastHour = h >= 19 ? 19 : (h >= 12 ? 12 : 0); return today0 + lastHour*3600*1000 - 8*3600*1000; }
+const CACHE_KEY_KNOWLEDGE = 'knowledge-v11';
+// 自动清理旧版本缓存
+(function cleanOldCache(){
+  try {
+    const ver = localStorage.getItem('cache-version');
+    if (ver !== 'v2') {
+      Object.keys(localStorage).forEach(k => {
+        if (k.startsWith('cache:') || k.startsWith('rec-')) localStorage.removeItem(k);
+      });
+      localStorage.setItem('cache-version', 'v2');
+      console.log('已自动清理旧缓存');
+    }
+  } catch(e){}
+})();
+// 每天只在早上 8 点刷新一次缓存，绝不多消耗一点接口额度
+function getLastRefreshBoundary(){ const bj = bjDate(); const today0 = Date.UTC(bj.getUTCFullYear(), bj.getUTCMonth(), bj.getUTCDate()); return today0 + 8*3600*1000 - 8*3600*1000; }
 const CacheStore = { shouldRefresh(key){ const c = LS.get('cache:'+key, null); if (!c || !c.t || !c.d) return true; return c.t < getLastRefreshBoundary(); }, save(key, data){ if (data == null){ LS.del('cache:'+key); return; } LS.set('cache:'+key, { t: Date.now(), d: data }); }, load(key){ const c = LS.get('cache:'+key, null); return c && c.d ? c.d : null; }, getTime(key){ const c = LS.get('cache:'+key, null); return c && c.t ? new Date(c.t).toLocaleString('zh-CN', {hour12:false}) : '从未'; } };
 
-const state = { tab:'home', studySub:'today', englishSub:'today', englishDeck: LS.get('english-deck', '') || '',  englishPage: 1, valvePage: 1, discoverSub:'news', recommendCat:'书', openKnow:null, openThink:null, thinkHint:null, searchQuery:'', valveCat:'全部', review:null, aiLoading:false, aiAnsweringFor:null, aiSkincareLoading:false, passageHidden:false, aiRole: LS.get('ai-role','engineer'), generalData:null, generalLoading:false, quoteResults:[], quoteLoading:false, storyResults:[], storyLoading:false, yiyanData:null, yiyanLoading:false, newsResults:[], newsLoading:false, jokeResults:[], jokeLoading:false, recData:null, recLoading:false, lifeSub:'calendar', calendarSub:'month', moneySub:'record', sportSub:'plan', closetSub:'add', careSub:'skin', closetCat:'top', garmentDraft:{ bust:88, shoulder:38, length:62, sleeve:58, waist:70, hip:96, thigh:54, footLength:24, footWidth:9.5 }, selectedDate: HealthStore.load('selectedDate', todayStr()), calYear: HealthStore.load('calYear', new Date().getFullYear()), calMonth: HealthStore.load('calMonth', new Date().getMonth()), setsDone: HealthStore.load('setsDone', {}), restTimers: {}, exportRange: HealthStore.load('exportRange', 'month'), pendingTx: null, calendarData: {}, profileDraft: { ...profile }, _pendingImport: null, showPastTodos: false, todoDraft: null, aiContext: null };
-
+const state = { 
+  tab:'home', studySub:'today', englishSub:'today', englishDeck: LS.get('english-deck', '') || '',  
+  englishPage: 1, valvePage: 1, recommendCat:'', recOffset:0, openKnow:null, openThink:null, 
+  thinkHint:null, searchQuery:'', valveCat:'全部', review:null, aiLoading:false, aiAnsweringFor:null, 
+  aiSkincareLoading:false, passageHidden:false, aiRole: LS.get('ai-role','engineer'), generalData:null, 
+  generalLoading:false, quoteResults:[], quoteLoading:false, storyResults:[], storyLoading:false, 
+  yiyanData:null, yiyanLoading:false, newsResults:[], newsLoading:false, 
+  recData:null, recLoading:false, lifeSub:'calendar', calendarSub:'month', moneySub:'record', sportSub:'plan', 
+  closetSub:'add', careSub:'skin', closetCat:'top', garmentDraft:{ bust:88, shoulder:38, length:62, sleeve:58, waist:70, hip:96, thigh:54, footLength:24, footWidth:9.5 }, 
+  selectedDate: HealthStore.load('selectedDate', todayStr()), calYear: HealthStore.load('calYear', new Date().getFullYear()), 
+  calMonth: HealthStore.load('calMonth', new Date().getMonth()), setsDone: HealthStore.load('setsDone', {}), 
+  restTimers: {}, exportRange: HealthStore.load('exportRange', 'month'), pendingTx: null, calendarData: {}, 
+  profileDraft: { ...profile }, _pendingImport: null, showPastTodos: false, todoDraft: null, aiContext: null,
+  passageData: null, passageLoading: false
+};
 const view = document.getElementById('view'); const tabbar = document.getElementById('tabbar'); const sheet = document.getElementById('sheet'); const fab = document.getElementById('fab');
 
 function updateTopbar(){ const s = LearnStore.getStreak(); const tasks = LearnStore.getTodayTasks(); const done = tasks.filter(t => t.done).length; const el = document.getElementById('todayLabel'); if (!el) return; el.innerHTML = (s.count>0?`<span class="streak-badge">🔥 ${s.count}天</span>`:'') + `<span class="streak-badge" style="background:linear-gradient(135deg,#eef0ff,#f6f0ff);color:#4f46e5;">☑ ${done}/${tasks.length}</span>`; }
 
 
-const TABS = [{ id:'home', icon:'🏠', label:'首页' },{ id:'study', icon:'📚', label:'学习' },{ id:'life', icon:'✨', label:'生活' },{ id:'discover', icon:'🌍', label:'发现' },{ id:'me', icon:'👤', label:'我的' }];
+const TABS = [{ id:'home', icon:'🏠', label:'首页' },{ id:'study', icon:'🌍', label:'世界' },{ id:'life', icon:'✨', label:'生活' },{ id:'me', icon:'👤', label:'我的' }];
 function renderTabs(){ tabbar.innerHTML = TABS.map(t => `<button class="tab ${t.id===state.tab?'on':''}" data-tab="${t.id}"><span class="tab-icon">${t.icon}</span><span>${t.label}</span></button>`).join(''); }
 
 function homeView(){
@@ -892,7 +1051,7 @@ function homeView(){
 
 async function studyView(){ 
   const sub = state.studySub; 
-  const subs = [{ id:'today', label:'今日' },{ id:'english', label:'英语' },{ id:'valve', label:'专业' },{ id:'general', label:'每日知识' },{ id:'logic', label:'逻辑' },{ id:'express', label:'表达' },{ id:'wrong', label:'错题本' },{ id:'weekly', label:'周测' },{ id:'alltest', label:'总测' }]; 
+  const subs = [{ id:'today', label:'今日' },{ id:'english', label:'英语' },{ id:'valve', label:'专业' },{ id:'general', label:'每日知识' },{ id:'logic', label:'逻辑' },{ id:'express', label:'表达' },{ id:'news', label:'今日世界' },{ id:'recommend', label:'推荐' },{ id:'wrong', label:'错题本' },{ id:'weekly', label:'周测' },{ id:'alltest', label:'总测' }]; 
   let content = ''; 
   try { 
     if (sub === 'today') content = todaySection(); 
@@ -901,11 +1060,13 @@ async function studyView(){
     else if (sub === 'general') content = await generalSection(); 
     else if (sub === 'logic') content = logicSection(); 
     else if (sub === 'express') content = await expressSection();
+    else if (sub === 'news') content = await newsSection();
+    else if (sub === 'recommend') content = await recommendSection();
     else if (sub === 'wrong') content = wrongBookSection(); 
     else if (sub === 'weekly') content = weeklyTestSection(); 
     else if (sub === 'alltest') content = allTestSection(); 
   } catch(e){ content = `<div class="tip-card">加载失败：${esc(e.message)}</div>`; } 
-  return `<div class="hero"><div class="hero-k">学习 · ${todayStr()}</div><h1>每天进步一点</h1></div><div class="subtabs">${subs.map(x => `<button class="subtab ${x.id===sub?'on':''}" data-act="studySub" data-sub="${x.id}">${x.label}</button>`).join('')}</div><div>${content}</div>`; 
+  return `<div class="hero"><div class="hero-k">世界 · ${todayStr()}</div><h1>每天进步一点</h1></div><div class="subtabs">${subs.map(x => `<button class="subtab ${x.id===sub?'on':''}" data-act="studySub" data-sub="${x.id}">${x.label}</button>`).join('')}</div><div>${content}</div>`; 
 }
 
 function todaySection(){ const tasks = LearnStore.getTodayTasks(); const done = tasks.filter(t => t.done).length; const streak = LearnStore.getStreak(); const schedEn = LearnStore.getAllScheduledKeys('english').length; const schedWk = LearnStore.getAllScheduledKeys('work').length; return `<div class="task-card"><div class="task-head"><div class="task-title">☀️ 今日待办</div><div class="task-progress">${done}/${tasks.length}${streak.count>0?' · 🔥'+streak.count+'天':''}</div></div>${tasks.map(t => `<div class="task-row" data-act="taskJump" data-key="${t.key}"><div class="task-check ${t.done?'on':''}">${t.done?'✓':''}</div><div class="task-label ${t.done?'on':''}">${t.label}</div><div class="task-count">${t.current}/${t.total} →</div></div>`).join('')}</div>${(schedEn+schedWk>0)?`<div class="review-entry"><div class="r-title"><span>🔁 开始复习</span><span>共 ${schedEn+schedWk} 条</span></div><div style="display:flex;gap:8px;">${schedEn?`<button class="btn" style="flex:1;background:#92400e;color:#fff;" data-act="startReview" data-type="english">英语复习</button>`:''}${schedWk?`<button class="btn" style="flex:1;background:#92400e;color:#fff;" data-act="startReview" data-type="work">专业复习</button>`:''}</div></div>`:''}`; }
@@ -1017,8 +1178,75 @@ function knowCard(v, i, isDone, isDoneToday){
   </div>`;
 }
 function wrongBookSection(){ const list = LearnStore.getWrongBook(); if (!list.length) return `<div class="card" style="text-align:center;padding:40px 20px;"><div style="font-size:46px;margin-bottom:10px;">🎉</div><div style="font-size:15px;font-weight:750;color:var(--ok);">错题本是空的</div><div style="font-size:12.5px;color:var(--sub);margin-top:6px;">继续加油！</div></div>`; const typeLabel = { english:'英语', work:'专业' }; return `<div class="card"><div class="sec-title" style="margin:0 0 12px;"><span>📕 错题本</span><span class="muted" style="font-weight:500;font-size:11.5px">共 ${list.length} 题</span></div>${list.map(x => `<div style="padding:12px 0;border-bottom:1px dashed #eceef4;"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;"><div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;"><span class="tag" style="background:#eef0ff;color:var(--brand);">${typeLabel[x.type]||x.type}</span><span style="font-size:10.5px;color:var(--sub);">错误 ${x.count||1} 次</span></div><div style="font-size:14px;font-weight:700;color:#2b3244;line-height:1.5;">${esc(x.q)}</div><div style="font-size:12px;color:var(--sub);margin-top:4px;">你的回答：${esc(x.userAnswer||'（未答）')}</div>${x.feedback ? `<div style="font-size:12px;color:var(--warn);margin-top:4px;">点评：${esc(x.feedback)}</div>` : ''}</div><button class="del-tx" data-act="removeWrong" data-type="${x.type}" data-key="${esc(x.key)}" style="margin-top:2px;">✕</button></div></div>`).join('')}</div>`; }
-async function generalSection(){ const doneToday = LS.get('general-done:'+DAY, false); if (!state.generalData && !state.generalLoading){ const cached = CacheStore.load(CACHE_KEY_KNOWLEDGE); if (cached && !CacheStore.shouldRefresh(CACHE_KEY_KNOWLEDGE)){ state.generalData = cached; } else { state.generalLoading = true; KnowledgeSource.fetchAll().then(results => { state.generalData = results; state.generalLoading = false; if (results && results.length) CacheStore.save(CACHE_KEY_KNOWLEDGE, results); if (state.tab === 'study' && state.studySub === 'general') render({ keepScroll: true }); }).catch(() => { state.generalLoading = false; state.generalData = []; render({ keepScroll: true }); }); } } const labelMap = { wiki:'维基百科', oioweb:'接口盒子', showapi:'ShowAPI', why:'天聚 · 十万为什么' }; const iconMap = { wiki:'🌐', oioweb:'🧠', showapi:'📚', why:'❓' }; if (state.generalLoading || !state.generalData){ return `<div class="loading-card"><div style="font-size:38px;animation:pulse 1.2s ease-in-out infinite;">🌐</div><div style="font-size:13.5px;font-weight:750;margin-top:14px;">正在并发抓取 4 个源…</div></div>`; } const okCount = state.generalData.filter(x => !x.error).length; const head = `<div class="card" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:0;"><div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">DAILY KNOWLEDGE</div><div style="font-size:19px;font-weight:750;margin-bottom:10px;">每日知识 · 4 源并发</div><div style="font-size:13.5px;opacity:.92;line-height:1.7;">成功 ${okCount}/4 · 上次 ${CacheStore.getTime(CACHE_KEY_KNOWLEDGE)}</div></div>`; if (!state.generalData.length){ return head + `<div class="tip-card">暂时没抓到内容，点下面重试。</div><button class="btn primary wide" data-act="refreshGeneral">🔄 全部换一批</button>`; } const items = state.generalData.map(item => { const label = labelMap[item.source] || item.source; const icon = iconMap[item.source] || '🌐'; if (item.error){ return `<div class="card" style="border-left:3px solid #dc2626;"><span class="src-tag">${icon} ${label}</span><div class="err-inline">❌ ${esc(item.error)}</div></div>`; } return `<div class="card"><span class="src-tag">${icon} ${label}</span><div class="know-q" style="font-size:16px;font-weight:800;line-height:1.4;margin-top:4px;">${esc(item.q)}</div><div class="know-a" style="font-size:13px;">${esc(item.a)}</div>${item.key?`<div class="know-key" style="font-size:11.5px;">${esc(item.key)}</div>`:''}<div style="display:flex;gap:8px;margin-top:14px;"><button class="btn ghost" data-act="speak" data-text="${esc(item.q + '。' + item.a)}" data-lang="zh-CN"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.321 4.358 3.25 6.938 3.25c1.504 0 2.826.741 3.66 1.85.834-1.109 2.156-1.85 3.66-1.85 2.58 0 4.688 2.071 4.688 5 0 3.926-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z"></path></svg> 朗读</button></div></div>`; }).join(''); const tail = `<div style="display:flex;gap:8px;margin-top:6px;"><button class="btn primary wide" data-act="refreshGeneral">🔄 全部换一批</button><button class="btn wide" style="background:#f1f2f9;color:#4b5265;" data-act="markGeneralDone" ${doneToday?'disabled':''}>${doneToday?'✓ 今日已读':'✓ 标记已读'}</button></div>`; return head + items + tail; }
-function logicSection(){ const all = SEED.THINKING; if (!all.length) return `<div class="tip-card">思维模型未加载。</div>`; const unlearned = all.filter(m => LearnStore.getThinkDoneDays(m.name).length === 0); let today = null; if (unlearned.length > 0) today = dailyPick(unlearned, 1, 201)[0]; else { const sorted = all.slice().sort((a,b) => LearnStore.getThinkDoneDays(a.name).length - LearnStore.getThinkDoneDays(b.name).length); today = sorted[0]; } const totalLearned = all.filter(m => LearnStore.getThinkDoneDays(m.name).length > 0).length; const todayDone = today && LearnStore.getThinkDoneDays(today.name).includes(todayStr()); return `<div class="card" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:0;"><div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">THINKING MODEL</div><div style="font-size:19px;font-weight:750;margin-bottom:10px;">每天一个思维模型</div><div style="font-size:13.5px;opacity:.92;line-height:1.7;">共 ${all.length} 个 · 已学 ${totalLearned} 个</div></div>${todayDone?'<div style="margin-bottom:12px;padding:10px 14px;background:#ecfdf5;border-radius:12px;font-size:12.5px;color:#047857;font-weight:650;text-align:center;">✓ 今天的思维模型已练习完成</div>':''}${today?logicCard(today, todayDone):'<div class="tip-card">暂无可用模型。</div>'}`; }
+async function generalSection(){ 
+  const doneToday = LS.get('general-done:'+DAY, false); 
+  if (!state.generalData && !state.generalLoading){ 
+    const cached = CacheStore.load(CACHE_KEY_KNOWLEDGE); 
+    if (cached && !CacheStore.shouldRefresh(CACHE_KEY_KNOWLEDGE)){ 
+      state.generalData = cached; 
+    } else { 
+      state.generalLoading = true; 
+      KnowledgeSource.fetchAll().then(results => { 
+        state.generalData = results; 
+        state.generalLoading = false; 
+        if (results && results.length) CacheStore.save(CACHE_KEY_KNOWLEDGE, results); 
+        if (state.tab === 'study' && state.studySub === 'general') render({ keepScroll: true }); 
+      }).catch(() => { 
+        state.generalLoading = false; state.generalData = []; render({ keepScroll: true }); 
+      }); 
+    } 
+  } 
+  // 修改这里，加入 why 的映射
+  const labelMap = { wiki:'维基百科', oioweb:'接口盒子', why:'每日一问', tenwhy:'十万个为什么' }; 
+  const iconMap = { wiki:'🌐', oioweb:'🧠', why:'💬', tenwhy:'❓' }; 
+  if (state.generalLoading || !state.generalData){ 
+    return `<div class="loading-card"><div style="font-size:38px;animation:pulse 1.2s ease-in-out infinite;">🌐</div><div style="font-size:13.5px;font-weight:750;margin-top:14px;">正在并发抓取 4 个源…</div></div>`; 
+  } 
+  const okData = state.generalData.filter(x => !x.error); 
+  const okCount = okData.length; 
+  const head = `<div class="card" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:0;"><div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">DAILY KNOWLEDGE</div><div style="font-size:19px;font-weight:750;margin-bottom:10px;">每日知识</div><div style="font-size:13.5px;opacity:.92;line-height:1.7;">成功 ${okCount} 条 · 上次 ${CacheStore.getTime(CACHE_KEY_KNOWLEDGE)}</div></div>`; 
+  if (!okData.length){ 
+    return head + `<div class="card" style="text-align:center;padding:30px;color:var(--sub);"><div style="font-size:40px;margin-bottom:10px;">📚</div><div>今日接口额度用尽或网络受限</div></div><button class="btn primary wide" data-act="refreshGeneral">🔄 重试</button>`; 
+  } 
+  const items = okData.map(item => { 
+    const label = labelMap[item.source] || item.source; 
+    const icon = iconMap[item.source] || '🌐'; 
+    return `<div class="card"><span class="src-tag">${icon} ${label}</span><div class="know-q" style="font-size:16px;font-weight:800;line-height:1.4;margin-top:4px;">${esc(item.q)}</div><div class="know-a" style="font-size:13px;">${esc(item.a)}</div>${item.key?`<div class="know-key" style="font-size:11.5px;">${esc(item.key)}</div>`:''}<div style="display:flex;gap:8px;margin-top:14px;"><button class="btn ghost" data-act="speak" data-text="${esc(item.q + '。' + item.a)}" data-lang="zh-CN">🔊 朗读</button></div></div>`; 
+  }).join(''); 
+  const tail = `<div style="display:flex;gap:8px;margin-top:6px;"><button class="btn primary wide" data-act="refreshGeneral">🔄 全部换一批</button><button class="btn wide" style="background:#f1f2f9;color:#4b5265;" data-act="markGeneralDone" ${doneToday?'disabled':''}>${doneToday?'✓ 今日已读':'✓ 标记已读'}</button></div>`; 
+  return head + items + tail; 
+}
+function logicSection(){ 
+  const all = SEED.THINKING; 
+  if (!all.length) return `<div class="tip-card">思维模型未加载。</div>`; 
+  const unlearned = all.filter(m => LearnStore.getThinkDoneDays(m.name).length === 0); 
+  let today = null; 
+  if (unlearned.length > 0) today = dailyPick(unlearned, 1, 201)[0]; 
+  else { const sorted = all.slice().sort((a,b) => LearnStore.getThinkDoneDays(a.name).length - LearnStore.getThinkDoneDays(b.name).length); today = sorted[0]; } 
+  const totalLearned = all.filter(m => LearnStore.getThinkDoneDays(m.name).length > 0).length; 
+  const todayDone = today && LearnStore.getThinkDoneDays(today.name).includes(todayStr()); 
+
+  const sceneCats = Object.keys(SEED.SCENES); 
+  const allScenes = sceneCats.flatMap(c => (SEED.SCENES[c]||[]).map(s => ({ ...s, cat:c }))); 
+  const todayScene = allScenes.length ? dailyPick(allScenes, 1, 47)[0] : {cat:'通用', q:'今天想说点什么？', guide:'自由发挥。'}; 
+  const key = 'expr-'+todayScene.cat+'-'+todayScene.q; 
+  const savedAnswer = LS.get('expr-ans:'+key, ''); 
+  const savedGrade = LS.get('expr-grade:'+key, null); 
+
+  return `<div class="card" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:0;"><div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">THINKING MODEL</div><div style="font-size:19px;font-weight:750;margin-bottom:10px;">每天一个思维模型</div><div style="font-size:13.5px;opacity:.92;line-height:1.7;">共 ${all.length} 个 · 已学 ${totalLearned} 个</div></div>${todayDone?'<div style="margin-bottom:12px;padding:10px 14px;background:#ecfdf5;border-radius:12px;font-size:12.5px;color:#047857;font-weight:650;text-align:center;">✓ 今天的思维模型已练习完成</div>':''}${today?logicCard(today, todayDone):'<div class="tip-card">暂无可用模型。</div>'}
+  
+  <div class="sec-title" style="margin-top:24px;">🎭 今日场景练习</div>
+  <div class="card">
+    <div style="display:inline-block;font-size:11px;font-weight:750;color:#b45309;background:#fef3c7;padding:3px 9px;border-radius:6px;margin-bottom:10px;">${esc(todayScene.cat)}</div>
+    <div class="know-q">${esc(todayScene.q)}</div>
+    <div style="margin-top:11px;padding:11px 13px;background:#f8f9fd;border-left:3px solid var(--brand);border-radius:0 10px 10px 0;font-size:12.5px;line-height:1.75;color:#4b5265;"><b>要求：</b>${esc(todayScene.guide)}</div>
+    <textarea class="answer-input" id="exprAnswer" placeholder="写下你的回答…">${esc(savedAnswer)}</textarea>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+      <button class="btn primary" data-act="gradeAnswer" data-scene="${esc(todayScene.cat)}" data-q="${esc(todayScene.q)}" data-guide="${esc(todayScene.guide)}">${savedGrade?'🔄 重新评分':'✨ 让 AI 评分'}</button>
+    </div>
+    <div id="gradeResult">${renderGradeCard(savedGrade)}</div>
+  </div>`; 
+}
 function logicCard(m, todayDone){ const ans = LearnStore.getThinkAns(m.name); const open = state.openThink === m.name; const hasAns = !!(ans||'').trim(); return `<div class="card know ${open?'open':''}" data-think="${esc(m.name)}"><div style="cursor:pointer" data-act="thinkToggle"><div style="display:flex;gap:12px;align-items:flex-start;"><div style="font-size:26px;line-height:1;flex-shrink:0;">${m.emoji}</div><div style="flex:1;min-width:0;"><div class="know-q" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${esc(m.name)}${hasAns?'<span style="font-size:11px;color:#047857;font-weight:600;background:#ecfdf5;padding:1px 7px;border-radius:5px;">✓ 已练</span>':''}</div><div style="font-size:12.5px;color:var(--sub);margin-top:6px;line-height:1.6;">${esc(m.core)}</div></div><span style="font-size:12px;color:var(--sub);flex-shrink:0;">${open?'▴':'▾'}</span></div></div><div class="know-body"><div class="know-key"><b>怎么做：</b><ol class="score-list" style="margin-top:6px;">${(m.how||[]).map(h => `<li>${esc(h)}</li>`).join('')}</ol></div><div style="margin-top:14px;padding-top:14px;border-top:1px dashed #eceef4;"><div style="font-size:12px;color:var(--brand);margin-bottom:8px;font-weight:700;">✏️ 今日练习</div><div style="font-size:13.5px;line-height:1.78;color:#3f4658;margin-bottom:10px;">${esc(m.exercise||'')}</div><textarea style="width:100%;min-height:60px;border:1px solid #e6e8f0;border-radius:12px;padding:11px 12px;font-size:13.5px;line-height:1.65;background:#fafbfe;font-family:inherit;" data-think-ans="${esc(m.name)}" placeholder="写下你的思考过程…">${esc(ans)}</textarea><div style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap;"><button style="background:var(--brand);color:#fff;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:650;border:0;cursor:pointer;" data-act="thinkDone" data-name="${esc(m.name)}" ${todayDone?'disabled style="opacity:.5;"':''}>${todayDone?'✓ 今日已练':'✓ 标记今日已练'}</button></div></div></div></div>`; }
 function weeklyTestSection(){ const words = LearnStore.getWeekLearnedWords(); const knowledges = LearnStore.getWeekLearnedKnowledge(); const result = LS.get('weekly-result:'+Math.floor(DAY/7), null); const total = words.length + knowledges.length; if (total === 0) return `<div class="tip-card">本周还没学过的内容。</div>`; if (result){ return `<div class="card" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:0;"><div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">WEEKLY TEST · 本周内容</div><div style="font-size:36px;font-weight:850;line-height:1;margin-bottom:8px;">${result.score}<span style="font-size:14px;opacity:.55;">/100</span></div><div style="font-size:13.5px;opacity:.92;line-height:1.7;">共 ${result.total} 题 · 答对 ${result.correct} 题</div><button class="btn" style="background:rgba(255,255,255,.9);color:var(--brand);margin-top:16px;" data-act="startWeeklyTest">🔁 再来一次</button></div>`; } return `<div class="card" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:0;"><div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">WEEKLY TEST · 本周内容</div><div style="font-size:19px;font-weight:750;margin-bottom:10px;">本周综合测试</div><div style="font-size:13.5px;opacity:.92;line-height:1.7;">从最近 7 天学过的内容中抽题：<br>本周学了 <b>${words.length}</b> 个单词 + <b>${knowledges.length}</b> 条知识。</div><button class="btn" style="background:#fff;color:var(--brand);font-weight:700;margin-top:16px;" data-act="startWeeklyTest">开始测试 →</button></div>`; }
 function allTestSection(){ const words = LearnStore.getAllLearnedEver(); const knowledges = LearnStore.getAllKnowDoneEver(); const total = words.length + knowledges.length; if (total === 0) return `<div class="tip-card">还没学过的内容。</div>`; const result = LS.get('alltest-result', null); if (result){ const ago = Math.floor((Date.now() - result.takenAt) / 60000); const agoText = ago < 60 ? `${ago} 分钟前` : (ago < 1440 ? `${Math.floor(ago/60)} 小时前` : `${Math.floor(ago/1440)} 天前`); return `<div class="card" style="background:linear-gradient(135deg,#0891b2,#06b6d4);color:#fff;border:0;"><div style="font-size:36px;font-weight:850;line-height:1;margin-bottom:8px;">${result.score}<span style="font-size:14px;opacity:.55;">/100</span></div><div style="font-size:13.5px;">共 ${result.total} 题 · 答对 ${result.correct} 题</div><div style="font-size:11.5px;opacity:.7;margin-top:6px;">上次：${agoText}</div><button class="btn" style="background:rgba(255,255,255,.9);color:#0891b2;margin-top:16px;" data-act="startAllTest">🔁 再来一次</button></div>`; } return `<div class="card" style="background:linear-gradient(135deg,#0891b2,#06b6d4);color:#fff;border:0;"><div style="font-size:19px;font-weight:750;margin-bottom:10px;">全部内容综合测试</div><div style="font-size:13.5px;">随机抽 <b>30 题</b> · 当前题库 ${total} 题</div><button class="btn" style="background:#fff;color:#0891b2;font-weight:700;margin-top:16px;" data-act="startAllTest">开始总测 →</button></div>`; }
@@ -1065,9 +1293,74 @@ function renderTxEditor(){ const p = state.pendingTx; const area = document.getE
 function sportSection(){ const sub = state.sportSub || 'plan'; const subs = [{ id:'plan', label:'今日计划' },{ id:'body', label:'身体/身材数据' },{ id:'formal', label:'正式训练' }]; let content = ''; if (sub === 'plan') content = sportPlanPane(); else if (sub === 'body') content = sportBodyPane(); else content = sportFormalPane(); return `<div class="subtabs-secondary">${subs.map(s => `<button class="subtab ${s.id===sub?'on':''}" data-act="sportSub" data-sub="${s.id}">${s.label}</button>`).join('')}</div>${content}`; }
 function sportPlanPane(){ const plan = currentPlan(); if (!plan.weekLabel) plan.weekLabel = '今日'; const sess = getSportSession(); const info = getPlanDayInfo(new Date()); const weekInfo = info ? `第 ${info.weekIndex} 周 / 共 12 周` : (new Date() < PLAN_START ? '计划未开始' : '计划已结束'); const today = new Date(); today.setHours(0,0,0,0); const dow = (today.getDay() + 6) % 7; const monday = new Date(today); monday.setDate(monday.getDate() - dow); const dayNames = ['周一','周二','周三','周四','周五','周六','周日']; const weekRows = []; for (let i = 0; i < 7; i++) { const d = new Date(monday); d.setDate(d.getDate() + i); const pd = getPlanDayInfo(d); const ov = getOverride(d); let label = '—', duration = '—', cls = []; if (i === dow) cls.push('today'); if (ov === 'leave' || ov === 'period' || ov === 'rest'){ label = '休息'; cls.push('rest'); } else if (ov === 'swim'){ label = '游泳（替换）'; duration = '40–60′'; } else if (ov === 'reduced'){ label = '身体不适（减量）'; duration = '20–30′'; } else if (pd){ const labels = ['臀腿 + 核心','上肢 + 圆肩','恢复日','全身功能性','体态修正','游泳','主动恢复']; const durations = ['45–55′','40–50′','40–50′','45–55′','40–45′','40–60′','40–50′']; label = labels[pd.dayOfWeek]; duration = durations[pd.dayOfWeek]; } weekRows.push(`<div class="week-row ${cls.join(' ')}"><span class="d">${dayNames[i]}</span><span class="dt">${fmtShort(d)}</span><span class="a">${label}</span><span class="t">${duration}</span></div>`); } let sessionBlock = ''; if (!sess){ sessionBlock = `<div class="dim-row"><span class="lb">开始时间</span><input type="time" id="sportStartTime" value="${fmtTime(new Date())}" style="width:130px"></div><p class="tip" style="color:var(--sub);margin-top:8px;font-size:12.5px">设置开始时间后点击「开始打卡」。</p><button class="btn-primary" data-act="startSport" style="margin-top:14px">▶ 开始打卡</button>`; } else if (sess.endTs){ const total = sess.endTs - sess.startTs - (sess.pausedTotal||0); const setCount = Object.values(sess.sets || {}).reduce((a,b) => a + b.length, 0); const totalMin = Math.floor(total/60000); sessionBlock = `<div class="sport-timer">${Math.floor(totalMin/60) > 0 ? Math.floor(totalMin/60) + ':' + pad(totalMin % 60) : totalMin + '分'}</div><div class="sport-timer-sub">本次训练净时长</div><div class="sport-meta"><span>开始 <b>${sess.startLabel || '—'}</b></span><span>结束 <b>${fmtTime(new Date(sess.endTs))}</b></span><span>完成组数 <b>${setCount}</b></span></div><div style="text-align:center"><span class="sport-done-badge">🎉 今日训练已完成</span></div><button class="btn-ghost-h" data-act="resetSport" style="margin-top:14px">↺ 重置今日打卡</button>`; } else if (sess.pausedAt){ sessionBlock = `<div class="sport-timer" style="color:#b45309;">⏸ 已暂停</div><div class="sport-timer-sub">从 ${sess.startLabel || '—'} 开始</div><div class="sport-meta"><span>已完成组数 <b id="sportSetCount">${Object.values(sess.sets||{}).reduce((a,b)=>a+b.length,0)}</b></span></div><button class="btn-primary" data-act="resumeSport" style="margin-top:14px;background:linear-gradient(135deg,#059669,#10b981);">▶ 继续训练</button><button class="btn-ghost-h" data-act="endSport" style="margin-top:8px;">■ 结束打卡</button><button class="btn-ghost-h" data-act="resetSport" style="margin-top:8px;background:#FFEDEA;color:var(--hot);">↺ 重置今日打卡</button>`; } else { sessionBlock = `<div class="sport-timer" id="sportTimer">00:00</div><div class="sport-timer-sub">已训练时长（从 ${sess.startLabel || '—'} 开始）</div><div class="sport-meta"><span>已完成组数 <b id="sportSetCount">${Object.values(sess.sets||{}).reduce((a,b)=>a+b.length,0)}</b></span><span>开始于 <b>${sess.startLabel || '—'}</b></span></div><button class="btn-primary" data-act="pauseSport" style="margin-top:14px;background:linear-gradient(135deg,#b45309,#f59e0b);">⏸ 暂停打卡</button><button class="btn-ghost-h" data-act="endSport" style="margin-top:8px;">■ 结束打卡</button><button class="btn-ghost-h" data-act="resetSport" style="margin-top:8px;background:#FFEDEA;color:var(--hot);">↺ 重置今日打卡</button>`; } return `<div class="card" style="background:linear-gradient(135deg,var(--hot),var(--hot2));color:#fff;border:0;"><div style="font-size:19px;font-weight:750;margin-bottom:8px;">${esc(plan.label)} <span style="font-size:12px;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:6px;margin-left:6px;">${plan.weekLabel || ''}</span></div><div style="font-size:13.5px;opacity:.92;">${esc(plan.summary)} · ${plan.duration}</div></div><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;">训练打卡</div>${sessionBlock}</div><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;">本周固定结构 <span class="muted" style="color:var(--sub);font-size:11.5px">${weekInfo}</span></div>${weekRows.join('')}</div><div class="card" style="background:var(--accent-soft);"><div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:6px;">💡 当前阶段目标</div><div style="font-size:12.5px;line-height:1.65;color:#065f46;">${plan.weekLabel.includes('第 1') || plan.weekLabel.includes('第 2') || plan.weekLabel.includes('第 3') || plan.weekLabel.includes('第 4') ? 'RPE 4-5（约还能做 4 次），重点在动作质量与稳定，不追求力竭。' : (plan.weekLabel.includes('第 5') || plan.weekLabel.includes('第 6') || plan.weekLabel.includes('第 7') || plan.weekLabel.includes('第 8') ? 'RPE 5-6，优先增加重复次数，再考虑最小档阻力，每次只改变一个变量。' : (plan.weekLabel.includes('第 9') || plan.weekLabel.includes('第 10') || plan.weekLabel.includes('第 11') || plan.weekLabel.includes('第 12') ? 'RPE 最高 6，动作质量稳定后再小幅进阶，不练到力竭。' : 'RPE 5-6，进入长期维持期。动作顺畅、次日无加重即视为达标。') )}</div></div><div class="card" style="background:linear-gradient(135deg,#FFF6F2,#FFEDE6);border:1.5px solid #FFD9CC;"><div class="row-between" style="margin-bottom:8px;"><div style="font-size:13px;font-weight:700;color:#E4573D;">📅 计划开始日期</div><span style="font-size:11.5px;color:#8A5A48;">${weekInfo}</span></div><div class="dim-row" style="border-bottom:none;"><span class="lb" style="color:#8A5A48;">从哪天开始</span><input type="date" id="planStartInput" value="${localDateStr(PLAN_START)}" style="width:150px"></div><div style="display:flex;gap:8px;margin-top:10px;"><button class="mini-add" data-act="resetPlanStart" style="flex:1">重置为今天</button><button class="mini-add ghost" data-act="shiftPlanStart" style="flex:1">往后顺延 1 周</button></div></div>`; }
 function sportBodyPane(){ const todayRec = getBodyHistory().find(x => x.date === todayStr()); const w = todayRec ? todayRec.weight : body.weight; const bf = todayRec ? todayRec.bodyFat : body.bodyFat; const y = getYesterdayBody(); const dw = y ? (w - y.weight) : null; const plan = currentPlan(); const hSessions = getSportSessions(); const now = new Date(); let sportCount = 0, sportMin = 0; for (let i = 0; i < 7; i++){ const d = new Date(now); d.setDate(d.getDate() - i); const s = hSessions[localDateStr(d)]; if (s && s.endTs){ sportCount++; sportMin += Math.round((s.endTs - s.startTs - (s.pausedTotal||0)) / 60000); } } const shape = calcShape(); const bodyFormHtml = BODY_GROUPS.map(g => `<div class="body-group-title">${esc(g.title)}</div>${g.fields.map(f => `<div class="dim-row"><span class="lb">${esc(f.label)}</span><input type="number" step="${f.step}" data-bkey="${f.key}" value="${typeof body[f.key] !== 'undefined' && body[f.key] !== null ? body[f.key] : ''}" style="width:100px;text-align:right"><span class="unit">${esc(f.unit)}</span></div>`).join('')}`).join(''); return `<div class="stats" style="grid-template-columns:repeat(2,1fr)"><div class="stat"><div class="v">${w.toFixed(1)}</div><div class="k">体重 kg</div><div class="d">${dw === null ? '—' : (dw > 0.05 ? '↑' + dw.toFixed(1) : dw < -0.05 ? '↓' + Math.abs(dw).toFixed(1) : '持平')}</div></div><div class="stat"><div class="v">${bf.toFixed(1)}%</div><div class="k">体脂率</div><div class="d">—</div></div></div><div class="card" style="background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;border:0;"><div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">体型识别</div><div style="font-size:19px;font-weight:750;margin-bottom:6px;">${shape.name}</div><div style="font-size:13px;opacity:.92;">${shape.desc}</div></div><div class="card" style="border:2px solid var(--purple);background:#FBFAFF;"><div class="row-between" style="margin-bottom:8px;"><div style="font-size:14px;font-weight:800;color:var(--purple);">📐 详细身材尺寸登记表</div><span style="font-size:11.5px;color:var(--sub)">按实际测量填写</span></div>${bodyFormHtml}<button class="btn-primary" data-act="saveBodyForm" style="margin-top:14px;background:linear-gradient(135deg,var(--purple),var(--purple2))">💾 保存身材尺寸</button></div><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;">📊 近 7 天概览</div><div class="kv"><span class="k">训练</span><span class="v">完成 <b>${sportCount}</b> 次 · 共 <b>${sportMin}</b> 分钟</span></div><div class="kv"><span class="k">当前计划</span><span class="v hl">${esc(plan.label)}</span></div></div>`; }
-function sportFormalPane(){ const plan = currentPlan(); const sess = getSportSession(); if (!plan.isTraining){ return `<div class="card" style="background:var(--accent-soft);text-align:center;padding:28px 20px"><div style="font-size:40px;margin-bottom:12px">${plan.icon}</div><div style="font-size:16px;font-weight:700;margin-bottom:10px">${esc(plan.label)}</div><p class="tip" style="text-align:left">${plan.tips.map(t => esc(t)).join('<br>')}</p></div>`; } if (!sess){ return `<div class="card" style="background:linear-gradient(135deg,#FFF6F2,#FFEDE6);border:1.5px solid #FFD9CC;text-align:center;padding:32px 20px"><div style="font-size:48px;margin-bottom:14px">⏱️</div><div style="font-size:17px;font-weight:700;color:#E4573D;margin-bottom:10px">请先开始打卡</div><p class="tip" style="text-align:left;color:#8A5A48">请先回到「今日计划」页，点击「▶ 开始打卡」。</p><button class="btn-primary" data-act="sportSub" data-sub="plan" style="background:linear-gradient(135deg,#FF6B5B,#FFA36B);margin-top:14px">← 去今日计划页</button></div>`; } const mkDetail = (ex) => `<div class="ex-detail" style="margin-top:8px;">${ex.target?`<div style="margin-bottom:6px"><b>🎯 目标肌群：</b>${esc(ex.target)}</div>`:''}${ex.detail?`<div style="margin-bottom:6px"><b>📋 动作步骤：</b><div style="white-space:pre-line;margin-top:4px;color:#3A4152">${esc(ex.detail)}</div></div>`:(ex.how?`<div style="margin-bottom:6px"><b>📋 动作要点：</b>${esc(ex.how)}</div>`:'')}<div style="margin-bottom:6px"><b>🌬️ 呼吸：</b>${esc(ex.breath||'自然呼吸')}</div>${ex.mistakes?`<div style="margin-bottom:6px;color:#B45309"><b>⚠️ 常见错误：</b>${esc(ex.mistakes)}</div>`:''}${ex.equipment?`<div><b>🛠️ 器械：</b>${esc(ex.equipment)}</div>`:''}</div>`; const mk = (ex, isWarm) => { const done = state.setsDone[`${todayStr()}_${ex.code}`] || 0; const finished = done >= ex.sets; if (isWarm){ const checkKey = `${isWarm?'warm':'set'}_${todayStr()}_${ex.code}`; return `<div class="h-task" style="align-items:flex-start;padding:12px 0"><span class="check" data-check-key="${checkKey}" style="margin-top:2px"></span><div class="body"><div class="h-t-name">${esc(ex.name)} <span class="muted" style="font-weight:400;font-size:12px">· ${ex.dose}</span></div>${mkDetail(ex)}</div></div>`; } const dots = Array.from({length: ex.sets}, (_, i) => `<i class="${i < done ? 'on' : ''}"></i>`).join(''); return `<div class="ex-item"><div class="ex-top"><span class="code">${ex.code}</span><div class="body"><div class="t-name">${esc(ex.name)}</div><div class="sets">${ex.sets} 组 × ${ex.reps} · ${ex.load}</div></div>${finished ? '<span class="tag on">已完成</span>' : ''}</div>${mkDetail(ex)}<div class="ex-bottom"><div class="sets-dots">${dots}</div><span class="sets-count">${done}/${ex.sets} 组</span><button class="cnt-btn" data-act="incSet" data-code="${ex.code}" ${finished ? 'disabled' : ''}>${finished ? '✓ 完成' : '＋ 完成一组'}</button></div><div class="rest-inline"><span class="rest-lb">组间休息</span><span class="rest-num-sm" id="rest-${ex.code}">--</span><button class="rest-btn-sm" data-act="startRest" data-code="${ex.code}" data-sec="45">45s</button><button class="rest-btn-sm" data-act="startRest" data-code="${ex.code}" data-sec="60">60s</button><button class="rest-btn-sm" data-act="startRest" data-code="${ex.code}" data-sec="90">90s</button></div></div>`; }; let html = `<div class="card" style="background:var(--hot-soft)"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">📋 ${esc(plan.label)}</div><p class="tip">${esc(plan.summary)}</p></div>`; if (Array.isArray(plan.warmup) && plan.warmup.length) html += `<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">🔥 热身</div>${plan.warmup.map(e => mk(e, true)).join('')}</div>`; html += `<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">🏋️ 主训练</div>${(Array.isArray(plan.exercises) ? plan.exercises : []).map(e => mk(e, false)).join('')}</div>`; if (Array.isArray(plan.stretch) && plan.stretch.length) html += `<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">🧘 拉伸</div>${plan.stretch.map(e => mk(e, true)).join('')}</div>`; html += `<div class="card" style="background:var(--hot-soft)"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">⚠️ 注意事项</div><p class="tip">${plan.tips.map(t => '· ' + esc(t)).join('<br>')}</p></div>`; return html; }
+function sportFormalPane(){ const plan = currentPlan(); const sess = getSportSession(); if (!plan.isTraining){ return `<div class="card" style="background:var(--accent-soft);text-align:center;padding:28px 20px"><div style="font-size:40px;margin-bottom:12px">${plan.icon}</div><div style="font-size:16px;font-weight:700;margin-bottom:10px">${esc(plan.label)}</div><p class="tip" style="text-align:left">${plan.tips.map(t => esc(t)).join('<br>')}</p></div>`; } if (!sess){ return `<div class="card" style="background:linear-gradient(135deg,#FFF6F2,#FFEDE6);border:1.5px solid #FFD9CC;text-align:center;padding:32px 20px"><div style="font-size:48px;margin-bottom:14px">⏱️</div><div style="font-size:17px;font-weight:700;color:#E4573D;margin-bottom:10px">请先开始打卡</div><p class="tip" style="text-align:left;color:#8A5A48">请先回到「今日计划」页，点击「▶ 开始打卡」。</p><button class="btn-primary" data-act="sportSub" data-sub="plan" style="background:linear-gradient(135deg,#FF6B5B,#FFA36B);margin-top:14px">← 去今日计划页</button></div>`; } const mkDetail = (ex) => `<div class="ex-detail" style="margin-top:8px;">
+  ${ex.target?`<div style="margin-bottom:6px"><b>🎯 目标肌群：</b>${esc(ex.target)}</div>`:''}
+  ${ex.detail?`<div style="margin-bottom:6px"><b>📋 动作步骤：</b><div style="white-space:pre-line;margin-top:4px;color:#3A4152">${esc(ex.detail)}</div></div>`:(ex.how?`<div style="margin-bottom:6px"><b>📋 动作要点：</b>${esc(ex.how)}</div>`:'')}
+  <div style="margin-bottom:6px"><b>🌬️ 呼吸：</b>${esc(ex.breath||'自然呼吸')}</div>
+  ${ex.mistakes?`<div style="margin-bottom:6px;color:#B45309"><b>⚠️ 常见错误：</b>${esc(ex.mistakes)}</div>`:''}
+  ${ex.equipment?`<div><b>🛠️ 器械：</b>${esc(ex.equipment)}</div>`:''}
+  <div style="margin-top:10px;text-align:right;"><button class="mini-add" style="background:var(--purple-soft);color:var(--purple);" data-act="aiExExplain" data-name="${esc(ex.name)}" data-detail="${esc(ex.detail||ex.how||'')}">🤖 AI 动作解析</button></div>
+</div>`;const mk = (ex, isWarm) => { const done = state.setsDone[`${todayStr()}_${ex.code}`] || 0; const finished = done >= ex.sets; if (isWarm){ const checkKey = `${isWarm?'warm':'set'}_${todayStr()}_${ex.code}`; return `<div class="h-task" style="align-items:flex-start;padding:12px 0"><span class="check" data-check-key="${checkKey}" style="margin-top:2px"></span><div class="body"><div class="h-t-name">${esc(ex.name)} <span class="muted" style="font-weight:400;font-size:12px">· ${ex.dose}</span></div>${mkDetail(ex)}</div></div>`; } const dots = Array.from({length: ex.sets}, (_, i) => `<i class="${i < done ? 'on' : ''}"></i>`).join(''); return `<div class="ex-item"><div class="ex-top"><span class="code">${ex.code}</span><div class="body"><div class="t-name">${esc(ex.name)}</div><div class="sets">${ex.sets} 组 × ${ex.reps} · ${ex.load}</div></div>${finished ? '<span class="tag on">已完成</span>' : ''}</div>${mkDetail(ex)}<div class="ex-bottom"><div class="sets-dots">${dots}</div><span class="sets-count">${done}/${ex.sets} 组</span><button class="cnt-btn" data-act="incSet" data-code="${ex.code}" ${finished ? 'disabled' : ''}>${finished ? '✓ 完成' : '＋ 完成一组'}</button></div><div class="rest-inline"><span class="rest-lb">组间休息</span><span class="rest-num-sm" id="rest-${ex.code}">--</span><button class="rest-btn-sm" data-act="startRest" data-code="${ex.code}" data-sec="45">45s</button><button class="rest-btn-sm" data-act="startRest" data-code="${ex.code}" data-sec="60">60s</button><button class="rest-btn-sm" data-act="startRest" data-code="${ex.code}" data-sec="90">90s</button></div></div>`; }; let html = `<div class="card" style="background:var(--hot-soft)"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">📋 ${esc(plan.label)}</div><p class="tip">${esc(plan.summary)}</p></div>`; if (Array.isArray(plan.warmup) && plan.warmup.length) html += `<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">🔥 热身</div>${plan.warmup.map(e => mk(e, true)).join('')}</div>`; html += `<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">🏋️ 主训练</div>${(Array.isArray(plan.exercises) ? plan.exercises : []).map(e => mk(e, false)).join('')}</div>`; if (Array.isArray(plan.stretch) && plan.stretch.length) html += `<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">🧘 拉伸</div>${plan.stretch.map(e => mk(e, true)).join('')}</div>`; html += `<div class="card" style="background:var(--hot-soft)"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">⚠️ 注意事项</div><p class="tip">${plan.tips.map(t => '· ' + esc(t)).join('<br>')}</p></div>`; return html; }
 function closetSection(){ const sub = state.closetSub || 'add'; const subs = [{ id:'add', label:'增加衣服' },{ id:'lib', label:'产品库' },{ id:'free', label:'自由搭配台' }]; let content = ''; if (sub === 'add') content = closetAddPane(); else if (sub === 'lib') content = closetLibPane(); else content = closetFreePane(); return `<div class="subtabs-secondary">${subs.map(s => `<button class="subtab ${s.id===sub?'on':''}" data-act="closetSub" data-sub="${s.id}">${s.label}</button>`).join('')}</div>${content}`; }
-function closetAddPane(){ const sh = calcShape(); const cat = state.closetCat || 'top'; const sizeType = getSizeType(cat); const fields = GARMENT_FIELDS[sizeType] || []; const analysis = analyzeGarment(); const garmentHtml = fields.length ? `<div class="card"><div class="row-between" style="margin-bottom:8px;"><div style="font-size:13px;font-weight:700;">该件衣服实际尺寸</div><span style="font-size:11.5px;color:var(--sub)">按商品详情填写</span></div>${fields.map(f => `<div class="dim-row"><span class="lb">${f.label}</span><input type="number" step="0.5" data-gkey="${f.key}" value="${typeof state.garmentDraft[f.key] !== 'undefined' && state.garmentDraft[f.key] !== null ? state.garmentDraft[f.key] : ''}" style="width:100px"><span class="unit">${f.unit}</span></div>`).join('')}</div>` : ''; const analysisHtml = analysis ? `<div class="card"><div class="row-between" style="margin-bottom:10px;"><div style="font-size:13px;font-weight:700;">适配分析（多维）</div><span class="tag ${analysis.score >= 75 ? 'on' : ''}" style="background:${analysis.score >= 75 ? '#E7F9F5' : '#FFF4E0'};color:${analysis.score >= 75 ? '#1FBFA9' : '#D98A0B'};padding:3px 10px;border-radius:9px;font-size:11px;font-weight:700;">匹配度 ${analysis.score}%</span></div>${analysis.rows.length ? analysis.rows.map(r => `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F3F5F9;font-size:13px;"><span style="flex:1;color:#5A6175;">${r.label}</span><span style="font-size:11.5px;color:var(--sub);text-align:right;">${r.value}</span><span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:9px;background:${r.fit.bg};color:${r.fit.color};flex:none;">${r.fit.t}</span></div>`).join('') : '<p class="tip" style="color:#8A90A2">填好尺寸后可分析</p>'}${analysis.suggestions && analysis.suggestions.length ? `<div style="margin-top:12px;padding:11px 13px;background:#EAF3FF;border-radius:10px;font-size:12.5px;line-height:1.75;color:#1E40AF;"><b>💡 选款建议：</b><br>${analysis.suggestions.map(s => '· ' + esc(s)).join('<br>')}</div>` : ''}</div>` : `<div class="card" style="background:#F7F8FC;"><div style="font-size:12.5px;color:var(--sub);text-align:center;padding:8px 0;">该品类无需尺寸分析</div></div>`; return `<div class="card" style="background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;border:0;"><div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">身材类型</div><div style="font-size:19px;font-weight:750;margin-bottom:6px;">${sh.name}</div><div style="font-size:13px;opacity:.92;">${sh.desc}</div><button class="btn" style="background:rgba(255,255,255,.92);color:var(--purple);margin-top:12px;font-weight:700;" data-act="gotoBodyData">📐 修改身材数据 →</button></div><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;">添加单品</div><label class="upload" style="min-height:120px;"><span class="plus">＋</span><span>点击上传衣物照片</span><input type="file" id="clothUpload" accept="image/*"><img id="clothPreview" style="display:none" alt="预览"></label><div class="dim-row"><span class="lb">名称</span><input type="text" id="clothName" placeholder="如 米色风衣" style="width:180px;text-align:left"></div><div class="dim-row"><span class="lb">品类</span><select id="clothCat" style="width:180px;text-align:left;font-weight:600;">${Object.values(CATEGORIES).map(c => `<option value="${c.key}" ${c.key === cat ? 'selected' : ''}>${c.icon} ${c.label}</option>`).join('')}</select></div><div class="dim-row"><span class="lb">尺码</span><input type="text" id="clothSize" placeholder="如 M / 38" style="width:180px;text-align:left"></div><div class="dim-row"><span class="lb">颜色</span><input type="text" id="clothColor" placeholder="米白" style="width:180px;text-align:left"></div></div>${garmentHtml}${analysisHtml}<button class="btn-primary" data-act="saveCloth" style="margin-top:6px;background:linear-gradient(135deg,var(--purple),var(--purple2))">保存到衣橱</button>`; }
+function closetAddPane(){ 
+  const sh = calcShape(); 
+  const cat = state.closetCat || 'top'; 
+  const sizeType = getSizeType(cat); 
+  const fields = GARMENT_FIELDS[sizeType] || []; 
+  const analysis = analyzeGarment(); 
+  
+  const garmentHtml = fields.length ? `
+    <div class="card">
+      <div class="row-between" style="margin-bottom:8px;">
+        <div style="font-size:13px;font-weight:700;">该件衣服实际尺寸</div>
+        <span style="font-size:11.5px;color:var(--sub)">填完自动分析合身度</span>
+      </div>
+      ${fields.map(f => { 
+        const row = analysis ? analysis.rows.find(r => r.key === f.key) : null;
+        const fitHtml = row ? `<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:${row.fit.bg};color:${row.fit.color};margin-left:6px;white-space:nowrap;">${row.fit.t}</span>` : '';
+        return `
+          <div class="dim-row" style="justify-content:space-between;align-items:center;padding:6px 0;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span class="lb" style="flex:none;">${f.label}</span>
+              ${fitHtml}
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <input type="number" step="0.5" data-gkey="${f.key}" value="${typeof state.garmentDraft[f.key] !== 'undefined' && state.garmentDraft[f.key] !== null ? state.garmentDraft[f.key] : ''}" style="width:70px;text-align:right;padding:6px 8px;">
+              <span class="unit" style="width:24px;font-size:11px;">${f.unit}</span>
+            </div>
+          </div>`; 
+      }).join('')}
+    </div>` : '';
+  
+  const analysisHtml = analysis ? `
+    <div class="card" style="padding:14px;">
+      <div class="row-between" style="margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:700;">综合匹配度</div>
+        <span class="tag ${analysis.score >= 75 ? 'on' : ''}" style="background:${analysis.score >= 75 ? '#E7F9F5' : '#FFF4E0'};color:${analysis.score >= 75 ? '#1FBFA9' : '#D98A0B'};padding:3px 10px;border-radius:9px;font-size:11px;font-weight:700;">${analysis.score}%</span>
+      </div>
+      ${analysis.suggestions && analysis.suggestions.length ? `<div style="padding:11px 13px;background:#EAF3FF;border-radius:10px;font-size:12.5px;line-height:1.75;color:#1E40AF;"><b>💡 选款建议：</b><br>${analysis.suggestions.map(s => '· ' + esc(s)).join('<br>')}</div>` : '<p class="tip" style="color:#8A90A2;text-align:center;">填好尺寸后给出建议</p>'}
+    </div>` : `<div class="card" style="background:#F7F8FC;"><div style="font-size:12.5px;color:var(--sub);text-align:center;padding:8px 0;">该品类无需尺寸分析</div></div>`;
+
+  return `
+    <div class="card" style="background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;border:0;">
+      <div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">身材类型</div>
+      <div style="font-size:19px;font-weight:750;margin-bottom:6px;">${sh.name}</div>
+      <div style="font-size:13px;opacity:.92;">${sh.desc}</div>
+      <button class="btn" style="background:rgba(255,255,255,.92);color:var(--purple);margin-top:12px;font-weight:700;" data-act="gotoBodyData">📐 修改身材数据 →</button>
+    </div>
+    <div class="card">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px;">添加单品</div>
+      <label class="upload" style="min-height:120px;"><span class="plus">＋</span><span>点击上传衣物照片</span><input type="file" id="clothUpload" accept="image/*"><img id="clothPreview" style="display:none" alt="预览"></label>
+      <div class="dim-row"><span class="lb">名称</span><input type="text" id="clothName" placeholder="如 米色风衣" style="width:180px;text-align:left"></div>
+      <div class="dim-row"><span class="lb">品类</span><select id="clothCat" style="width:180px;text-align:left;font-weight:600;">${Object.values(CATEGORIES).map(c => `<option value="${c.key}" ${c.key === cat ? 'selected' : ''}>${c.icon} ${c.label}</option>`).join('')}</select></div>
+      <div class="dim-row"><span class="lb">尺码</span><input type="text" id="clothSize" placeholder="如 M / 38" style="width:180px;text-align:left"></div>
+      <div class="dim-row"><span class="lb">颜色</span><input type="text" id="clothColor" placeholder="米白" style="width:180px;text-align:left"></div>
+    </div>
+    ${garmentHtml}
+    ${analysisHtml}
+    <button class="btn-primary" data-act="saveCloth" style="margin-top:6px;background:linear-gradient(135deg,var(--purple),var(--purple2))">保存到衣橱</button>
+  `; 
+}
 function closetLibPane(){ const counts = Object.keys(CATEGORIES).map(k => ({ k, label:CATEGORIES[k].label, count: clothes.filter(c => c.cat === k).length })); let listHtml = ''; if (clothes.length) { listHtml = `<div class="lib-grid">${clothes.map(c => { const meta = CATEGORIES[c.cat]; let thumbHtml = `<span class="placeholder">${meta.icon}</span>`; if (c.imagePath){ const src = readImageFromNative(c.imagePath); if (src) thumbHtml = `<img src="${src}" style="max-width:100%;max-height:100%;object-fit:contain">`; } else if (c.image){ thumbHtml = `<img src="${c.image}" style="max-width:100%;max-height:100%;object-fit:contain">`; } return `<div class="lib-item"><button class="del" data-act="delCloth" data-id="${c.id}">✕</button><div class="thumb">${thumbHtml}</div><div class="n">${esc(c.name||meta.label)}</div><div class="s">${meta.label} · ${esc(c.size||'均码')}</div></div>`; }).join('')}</div>`; } else { listHtml = `<div class="empty-state" style="margin-top:16px;"><div class="es-icon">👗</div><div class="es-title">衣橱空空的</div><div class="es-desc">添加你的第一件衣服，系统会帮你<br>计算版型适配度。</div></div>`; } return `<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;">我的产品库 <span class="muted" style="color:var(--sub);font-size:11.5px">${clothes.length} 件</span></div><div class="cat-tabs">${counts.map(c => `<button class="cat-tab">${c.label} ${c.count}</button>`).join('')}</div>${listHtml}</div>`; }
 function closetFreePane(){ const slots = ['上装','下装','鞋/包/饰品']; const slotHTML = slots.map((label, i) => `<div style="border:2px dashed #D9DEEA;border-radius:16px;padding:16px;text-align:center;color:#9AA0B2;font-size:12px;background:#fff;margin-bottom:10px;"><span style="font-size:26px;display:block;margin-bottom:6px">＋</span>点击选择${label}</div>`).join(''); return `<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;">搭配台</div>${slotHTML}</div>`; }
 function careSection(){ const sub = state.careSub || 'skin'; const subs = [{ id:'skin', label:'护肤推荐' },{ id:'productLib', label:'产品库' },{ id:'supp', label:'补剂' },{ id:'suppLib', label:'补剂库' }]; let content = ''; if (sub === 'skin') content = careSkinPane(); else if (sub === 'productLib') content = careProductLibPane(); else if (sub === 'supp') content = careSuppPane(); else content = careSuppLibPane(); return `<div class="subtabs-secondary">${subs.map(s => `<button class="subtab ${s.id===sub?'on':''}" data-act="careSub" data-sub="${s.id}">${s.label}</button>`).join('')}</div>${content}`; }
@@ -1076,35 +1369,359 @@ function careProductLibPane(){ const lib = getProductLibrary(); const openedCoun
 function renderRoutineStep(r, idx){ const p = r.product; const productName = p ? p.name : (r.productName || r.product || '—'); const major = p ? (PRODUCT_CATS[p.majorCat]||{}).label || '' : ''; const daysLeft = p ? productDaysLeft(p) : null; let daysCls = '', daysText = ''; if (daysLeft !== null){ if (daysLeft < 0){ daysCls = 'danger'; daysText = '已过期'; } else if (daysLeft <= 7){ daysCls = 'danger'; daysText = '剩 ' + daysLeft + ' 天'; } else if (daysLeft <= 30){ daysCls = 'warn'; daysText = '剩 ' + daysLeft + ' 天'; } else { daysCls = ''; daysText = '剩 ' + daysLeft + ' 天'; } } return `<div class="routine-step"><span class="rs-num">${idx+1}</span><div class="rs-body"><div class="rs-title">${esc(r.step)}</div><div class="rs-prod">🧴 ${esc(productName)}${major ? ' <span style="font-size:10.5px;opacity:.7;">· '+esc(major)+'</span>' : ''}</div>${r.note ? `<div class="rs-note">💡 ${esc(r.note)}</div>` : ''}</div>${daysText ? `<span class="rs-days ${daysCls}">${daysText}</span>` : ''}</div>`; }
 function resolveAIProduct(name){ if (!name) return null; const lib = getProductLibrary(); return lib.find(p => p.name === name) || lib.find(p => p.name && p.name.indexOf(name) >= 0) || lib.find(p => name.indexOf(p.name) >= 0) || null; }
 function buildRoutineFromAI(aiRoutine){ const morning = (aiRoutine.morning || []).map(r => { const p = resolveAIProduct(r.product || ''); return { step: r.step || '', product: p, productName: r.product || '', note: r.note || '' }; }); const night = (aiRoutine.night || []).map(r => { const p = resolveAIProduct(r.product || ''); return { step: r.step || '', product: p, productName: r.product || '', note: r.note || '' }; }); return { morning, night, empty: false }; }
-function careSkinPane(){ const s = SKIN_STATES[skinState]; const day = getDayIndexForSkin(); const dayNames = ['周一','周二','周三','周四','周五','周六','周日']; const profileChanged = Object.keys(profile).some(k => state.profileDraft[k] !== profile[k]); const aiResult = getAIRoutine(todayStr()); const routine = aiResult ? buildRoutineFromAI(aiResult) : generateRoutine(todayStr(), skinState); const lib = getProductLibrary(); const openedCount = lib.filter(p => p.openedDate && !isProductExpired(p)).length; const routineBlock = routine.empty ? `<div class="empty-state"><div class="es-icon">🧴</div><div class="es-title">还没有开封的产品</div><div class="es-desc">去产品库添加产品并填写开封时间，<br>AI 会自动为你安排每日护肤流程。</div><button class="btn-primary" data-act="careSub" data-sub="productLib" style="margin-top:16px;background:linear-gradient(135deg,var(--pink),var(--pink2))">📦 去添加产品</button></div>` : `<div class="card" style="border:2px solid var(--pink);background:#FFFBFC;"><div class="row-between" style="margin-bottom:10px;"><div style="font-size:14px;font-weight:800;color:var(--pink);">✨ 今日推荐流程</div><button class="mini-add" data-act="aiRecommendRoutine" style="background:var(--purple-soft);color:var(--purple);" ${state.aiSkincareLoading?'disabled':''}>${state.aiSkincareLoading?'⏳ AI 生成中':'🤖 AI 重新安排'}</button></div><div style="font-size:11.5px;color:var(--sub);margin-bottom:10px;">${dayNames[day-1]} · 皮肤${s.label} · 可用产品 ${openedCount} 件${aiResult ? ' · 🤖 AI 生成' : ' · 本地算法'}${aiResult ? `<button class="link-btn" data-act="clearAIRoutine" style="padding:0 4px;font-size:11px;">用本地算法</button>` : ''}</div><div style="background:#fff;border-radius:12px;padding:10px 14px;margin-bottom:10px;"><div style="font-size:13px;font-weight:750;color:#2b3244;margin-bottom:6px;">☀️ 早间流程</div>${routine.morning.length ? routine.morning.map((r,i) => renderRoutineStep(r, i)).join('') : '<p class="tip" style="color:#8A90A2;text-align:center;padding:8px 0">暂无可用产品</p>'}</div><div style="background:#fff;border-radius:12px;padding:10px 14px;"><div style="font-size:13px;font-weight:750;color:#2b3244;margin-bottom:6px;">🌙 晚间流程</div>${routine.night.length ? routine.night.map((r,i) => renderRoutineStep(r, i)).join('') : '<p class="tip" style="color:#8A90A2;text-align:center;padding:8px 0">暂无可用产品</p>'}</div>${aiResult && aiResult.reason ? `<div style="margin-top:10px;padding:10px 12px;background:#F1EEFF;border-radius:10px;font-size:12px;line-height:1.65;color:#4C1D95;">💡 ${esc(aiResult.reason)}</div>` : ''}<button class="btn-ghost-h" data-act="careSub" data-sub="productLib" style="margin-top:12px;background:var(--pink-soft);color:var(--pink);">📦 去产品库管理 / 补货</button></div>`; return `<div class="card" style="background:linear-gradient(135deg,var(--pink),var(--pink2));color:#fff;border:0;"><div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">${s.icon} 皮肤状态</div><div style="font-size:19px;font-weight:750;margin-bottom:8px;">${s.label}</div><div style="font-size:13px;opacity:.92;line-height:1.7;">${esc(s.desc)}</div></div><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;">切换状态</div><div class="opt-list">${Object.values(SKIN_STATES).map(v => `<div class="opt-item ${skinState === v.key ? 'active' : ''}" data-act="setSkin" data-skin="${v.key}"><span style="font-size:16px;">${v.icon}</span><span class="oi-lb">${v.label}</span><span class="oi-ck">${skinState === v.key ? '✓' : ''}</span></div>`).join('')}</div></div><div class="profile-card"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">我的肤质档案</div>${[{ k:'skinType', label:'肤质', opts:['干性','油性','混合性','中性'] },{ k:'oiliness', label:'油度', opts:['低','中','高'] },{ k:'sensitivity', label:'敏感度', opts:['低','中','高'] },{ k:'aging', label:'老化度', opts:['低','中','高'] }].map(row => `<div class="profile-row"><span class="pr-lb">${row.label}</span><div class="pr-opts">${row.opts.map(o => `<span class="pr-opt ${state.profileDraft[row.k] === o ? 'active' : ''}" data-act="setProfileDraft" data-key="${row.k}" data-val="${o}">${o}</span>`).join('')}</div></div>`).join('')}<div class="row-between" style="margin-top:10px;padding-top:10px;border-top:1px solid #F0F2F7;"><span style="font-size:11.5px;color:var(--hot);${profileChanged ? '' : 'visibility:hidden'}">⚠️ 有未保存的修改</span><button class="btn primary" data-act="confirmProfile" ${profileChanged ? '' : 'disabled style="opacity:.4"'} style="padding:9px 20px;font-size:13px;">确定更改</button></div></div>${routineBlock}`; }
+function careSkinPane(){ 
+  const s = SKIN_STATES[skinState]; 
+  const day = getDayIndexForSkin(); 
+  const dayNames = ['周一','周二','周三','周四','周五','周六','周日']; 
+  const profileChanged = Object.keys(profile).some(k => state.profileDraft[k] !== profile[k]); 
+  const aiResult = getAIRoutine(todayStr()); 
+  const routine = aiResult ? buildRoutineFromAI(aiResult) : generateRoutine(todayStr(), skinState); 
+  const lib = getProductLibrary(); 
+  const openedCount = lib.filter(p => p.openedDate && !isProductExpired(p)).length; 
+  
+  const routineBlock = routine.empty ? `<div class="empty-state"><div class="es-icon">🧴</div><div class="es-title">还没有开封的产品</div><div class="es-desc">去产品库添加产品并填写开封时间，<br>AI 会自动为你安排每日护肤流程。</div><button class="btn-primary" data-act="careSub" data-sub="productLib" style="margin-top:16px;background:linear-gradient(135deg,var(--pink),var(--pink2))">📦 去添加产品</button></div>` : `<div class="card" style="border:2px solid var(--pink);background:#FFFBFC;"><div class="row-between" style="margin-bottom:10px;"><div style="font-size:14px;font-weight:800;color:var(--pink);">✨ 今日推荐流程</div><button class="mini-add" data-act="aiRecommendRoutine" style="background:var(--purple-soft);color:var(--purple);" ${state.aiSkincareLoading?'disabled':''}>${state.aiSkincareLoading?'⏳ AI 生成中':'🤖 AI 重新安排'}</button></div><div style="font-size:11.5px;color:var(--sub);margin-bottom:10px;">${dayNames[day-1]} · 皮肤${s.label} · 可用产品 ${openedCount} 件${aiResult ? ' · 🤖 AI 生成' : ' · 本地算法'}${aiResult ? `<button class="link-btn" data-act="clearAIRoutine" style="padding:0 4px;font-size:11px;">用本地算法</button>` : ''}</div><div style="background:#fff;border-radius:12px;padding:10px 14px;margin-bottom:10px;"><div style="font-size:13px;font-weight:750;color:#2b3244;margin-bottom:6px;">☀️ 早间流程</div>${routine.morning.length ? routine.morning.map((r,i) => renderRoutineStep(r, i)).join('') : '<p class="tip" style="color:#8A90A2;text-align:center;padding:8px 0">暂无可用产品</p>'}</div><div style="background:#fff;border-radius:12px;padding:10px 14px;"><div style="font-size:13px;font-weight:750;color:#2b3244;margin-bottom:6px;">🌙 晚间流程</div>${routine.night.length ? routine.night.map((r,i) => renderRoutineStep(r, i)).join('') : '<p class="tip" style="color:#8A90A2;text-align:center;padding:8px 0">暂无可用产品</p>'}</div>${aiResult && aiResult.reason ? `<div style="margin-top:10px;padding:10px 12px;background:#F1EEFF;border-radius:10px;font-size:12px;line-height:1.65;color:#4C1D95;">💡 ${esc(aiResult.reason)}</div>` : ''}<button class="btn-ghost-h" data-act="careSub" data-sub="productLib" style="margin-top:12px;background:var(--pink-soft);color:var(--pink);">📦 去产品库管理 / 补货</button></div>`; 
+
+  const statusBlock = `
+    <div class="card" style="padding:12px 14px;margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px;">切换皮肤状态</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+        ${Object.values(SKIN_STATES).map(v => `
+          <div class="opt-item ${skinState === v.key ? 'active' : ''}" data-act="setSkin" data-skin="${v.key}" style="flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:10px 4px;gap:6px;border-radius:10px;">
+            <span style="font-size:18px;">${v.icon}</span>
+            <span class="oi-lb" style="font-size:12px;font-weight:600;">${v.label.replace('部分位置长痘','局部长痘').replace('严重（皮炎/过敏/爆发）','严重期')}</span>
+          </div>
+        `).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--sub);margin-top:8px;text-align:center;">${esc(s.desc)}</div>
+    </div>
+  `;
+
+  const profileBlock = `
+    <div class="profile-card" style="padding:12px 14px;margin-bottom:12px;border-radius:16px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;">肤质档案</div>
+      ${[{ k:'skinType', label:'肤质', opts:['干性','油性','混合性','中性'] },{ k:'oiliness', label:'油度', opts:['低','中','高'] },{ k:'sensitivity', label:'敏感度', opts:['低','中','高'] },{ k:'aging', label:'老化度', opts:['低','中','高'] }].map(row => `
+        <div class="profile-row" style="padding:5px 0;">
+          <span class="pr-lb" style="font-size:12px;width:48px;">${row.label}</span>
+          <div class="pr-opts" style="gap:4px;">
+            ${row.opts.map(o => `<span class="pr-opt ${state.profileDraft[row.k] === o ? 'active' : ''}" data-act="setProfileDraft" data-key="${row.k}" data-val="${o}" style="padding:4px 8px;font-size:11px;">${o}</span>`).join('')}
+          </div>
+        </div>
+      `).join('')}
+      <div class="row-between" style="margin-top:8px;padding-top:8px;border-top:1px dashed #eceef4;">
+        <span style="font-size:11px;color:var(--hot);${profileChanged ? '' : 'visibility:hidden'}">⚠️ 未保存</span>
+        <button class="btn primary" data-act="confirmProfile" ${profileChanged ? '' : 'disabled style="opacity:.4"'} style="padding:6px 16px;font-size:12px;">确定更改</button>
+      </div>
+    </div>
+  `;
+  
+  return statusBlock + profileBlock + routineBlock; 
+}
 function careSuppPane(){ const todaySupps = getTodaySupps(); const suppHtml = todaySupps.length ? todaySupps.map(s => { let stockWarn = ''; const libItem = suppLib.find(x => x.name === s.name); if (libItem && libItem.stock !== null && libItem.stock !== undefined && Number(libItem.stock) <= 7) { stockWarn = `<span style="font-size:10px;color:var(--hot);background:#FFEDEA;padding:2px 6px;border-radius:4px;margin-left:6px;">仅剩 ${libItem.stock} 件</span>`; } return `<div class="supp" data-today-supp="${s._uid}"><span class="check" data-act="takeSupp" data-uid="${s._uid}"></span><div class="e">💊</div><div class="body"><div class="n">${esc(s.name)}${stockWarn}</div><div class="s">${esc(s.dose||'')} · ${esc(s.time||'')}</div></div></div>`; }).join('') : '<p class="tip" style="color:#8A90A2;padding:8px 0;text-align:center">🎉 今日补剂都吃完了！<br>去「补剂库」添加/编辑清单</p>'; return `<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;">今日补剂 <span class="muted" style="color:var(--sub);font-weight:500;font-size:11.5px">${todaySupps.length} 项 · 勾选即消除</span></div><p style="font-size:11.5px;color:var(--sub);margin:0 0 10px;line-height:1.6;">每天早上会自动从「补剂库」复制一份清单。勾选已服用的补剂，就会从今天列表里删除。</p>${suppHtml}</div><div class="card" style="background:#F7F8FC;"><button class="btn-ghost-h" data-act="careSub" data-sub="suppLib" style="background:var(--pink-soft);color:var(--pink)">📚 去补剂库管理</button></div>`; }
 function careSuppLibPane(){ const list = suppLib.map(s => { let stockHtml = ''; if (s.stock !== undefined && s.stock !== null && s.stock !== "") { stockHtml = `<span style="font-size:11px;color:var(--sub);margin-left:8px;">库存: ${s.stock}</span>`; } else { stockHtml = `<span style="font-size:11px;color:var(--sub);margin-left:8px;">库存未设置</span>`; } return `<div class="supp"><div class="e">💊</div><div class="body"><div class="n">${esc(s.name)}${stockHtml}</div><div class="s">${esc(s.dose||'')} · ${esc(s.time||'')}</div></div><div style="display:flex;gap:5px;align-items:center;"><input type="number" min="0" step="1" value="${s.stock == null ? '' : Number(s.stock)}" placeholder="库存" data-stock-id="${s.id}" style="width:64px;padding:6px;border:1px solid var(--line);border-radius:8px;font-size:12px;"><button class="del" data-act="saveSuppStock" data-id="${s.id}" title="保存库存">✓</button><button class="del" data-act="delSuppLib" data-id="${s.id}">✕</button></div></div>`; }).join('') || '<p class="tip" style="color:#8A90A2;padding:8px 0">补剂库为空</p>'; return `<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;">补剂库 <span class="muted" style="color:var(--sub);font-weight:500;font-size:11.5px">${suppLib.length} 项</span></div><p style="font-size:11.5px;color:var(--sub);margin:0 0 10px;line-height:1.6;">这里是你所有的补剂清单，每天会自动把它们复制到「补剂」页作为今日待办。打卡会自动扣除库存。</p>${list}</div><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;">添加补剂到库</div><div class="dim-row"><span class="lb">名称</span><input type="text" id="suppLibName" placeholder="如 复合维生素B" style="width:160px;text-align:left"></div><div class="dim-row"><span class="lb">剂量</span><input type="text" id="suppLibDose" placeholder="如 1 粒" style="width:160px;text-align:left"></div><div class="dim-row"><span class="lb">服用时间</span><input type="text" id="suppLibTime" placeholder="如 早餐后" style="width:160px;text-align:left"></div><div class="dim-row"><span class="lb">当前库存</span><input type="number" min="0" step="1" id="suppLibStock" placeholder="实际数量" style="width:160px;text-align:left"></div><button class="btn-primary" data-act="addSuppLib" style="margin-top:12px;background:linear-gradient(135deg,var(--pink),var(--pink2))">＋ 添加到补剂库</button></div>`; }
 async function aiRecommendRoutine(){ if (!AI.enabled()){ toast('请先在「我的」配置 AI'); return; } const lib = getProductLibrary().filter(p => p.openedDate && !isProductExpired(p)); if (!lib.length){ toast('产品库还没有开封产品'); return; } state.aiSkincareLoading = true; render({ keepScroll: true }); try { const result = await AI.recommendRoutine(skinState, profile, lib); if (result && (result.morning || result.night)){ saveAIRoutine(todayStr(), result); toast('🤖 AI 已生成今日流程'); } else { toast('AI 返回格式异常，已保留本地推荐'); } } catch(e){ toast('AI 推荐失败：' + friendlyErr(e)); } finally { state.aiSkincareLoading = false; render({ keepScroll: true }); } }
 
-async function discoverView(){ 
-  const sub = state.discoverSub; 
-  const subs = [{ id:'news', label:'今日世界' },{ id:'joke', label:'笑话' },{ id:'recommend', label:'推荐' }]; 
-  let content = ''; 
-  try { 
-    if (sub === 'joke') content = await jokeSection(); 
-    else if (sub === 'recommend') content = await recommendSection(); 
-    else content = await newsSection(); 
-  } catch(e){ content = `<div class="tip-card">加载失败：${esc(e.message)}</div>`; } 
-  const title = sub === 'news' ? '今日世界' : sub === 'joke' ? '笑话' : '发现好东西'; 
-  return `<div class="hero"><div class="hero-k">发现 · 认知提升</div><h1>${title}</h1></div><div class="subtabs">${subs.map(s => `<button class="subtab ${s.id===sub?'on':''}" data-act="discoverSub" data-sub="${s.id}">${s.label}</button>`).join('')}</div><div>${content}</div>`; 
+async function fetchNewsOfDay(){
+  // ① 60s API：每天60秒读懂世界（国内 CDN，稳定，15 条精选新闻）
+  try {
+    const d = await raceTimeout(fetchJson('https://60s.viki.moe/v2/60s', 8000), 9000);
+    if (d && d.code === 200 && d.data && Array.isArray(d.data.news) && d.data.news.length){
+      state.newsMeta = { date: d.data.date || '', tip: d.data.tip || '', src: '每天60秒读懂世界' };
+      return d.data.news.map((t, i) => ({ t: t, d: '', url: '', time: '', rank: i + 1 }));
+    }
+  } catch(e){}
+  // ② 60s 微博热搜兜底（带原文链接）
+  try {
+    const d = await raceTimeout(fetchJson('https://60s.viki.moe/v2/weibo', 8000), 9000);
+    if (d && d.code === 200 && Array.isArray(d.data) && d.data.length){
+      state.newsMeta = { date: todayStr(), tip: '微博实时热搜', src: '微博热搜' };
+      return d.data.slice(0, 15).map((x, i) => ({ t: x.title || '', d: x.hot_value ? ('🔥 ' + x.hot_value) : '', url: x.link || '', time: '', rank: i + 1 }));
+    }
+  } catch(e){}
+  throw new Error('无内容');
 }
-async function newsSection(){ if (!state.newsResults.length && !state.newsLoading){ const cached = CacheStore.load('news-all'); if (cached && cached.length && !CacheStore.shouldRefresh('news-all')){ state.newsResults = cached; } else { state.newsLoading = true; NewsSource.fetchAll().then(({results}) => { state.newsResults = results || []; state.newsLoading = false; if (state.newsResults.length) CacheStore.save('news-all', state.newsResults); if (state.tab === 'discover' && state.discoverSub === 'news') render({ keepScroll: true }); }).catch(() => { state.newsLoading = false; state.newsResults = []; render({keepScroll:true}); }); } } if (state.newsLoading && !state.newsResults.length){ return `<div class="loading-card"><div style="font-size:38px;animation:pulse 1.2s ease-in-out infinite;">🌍</div><div style="font-size:13.5px;font-weight:750;margin-top:14px;">正在抓取…</div></div>`; } const okCount = state.newsResults.filter(r => r.ok).length; const totalCount = state.newsResults.length; let body = ''; if (!state.newsResults.length || okCount === 0){ body = `<div class="tip-card">网络异常，无法获取新闻数据。<br><button class="btn ghost" style="margin-top:10px;" data-act="refreshNews">🔄 重试</button></div>`; } else { body = state.newsResults.map(result => { if (!result.ok){ return `<div class="card" style="border-left:3px solid #f59e0b;"><span class="src-tag">${result.icon} ${esc(result.label)}</span><div style="font-size:12px;color:var(--warn);margin-top:6px;">⚠️ ${esc(result.error)}（已跳过）</div></div>`; } if (!result.list.length) return `<div class="card"><span class="src-tag">${result.icon} ${esc(result.label)}</span><div class="tip-card" style="margin-top:6px;">暂无内容</div></div>`; const rows = result.list.map((n, i) => { const thinkKey = 'news-think-'+todayStr()+'-'+result.id+'-'+i; const think = LS.get(thinkKey, ''); return `<div style="padding:11px 0;${i < result.list.length-1 ? 'border-bottom:1px dashed #eceef4;' : ''}"><div style="font-size:10.5px;color:var(--sub);margin-bottom:6px;">${n.time?esc(n.time)+' · ':''}#${n.rank||i+1}</div><div style="font-size:14.5px;font-weight:700;line-height:1.5;color:#2b3244;">${esc(n.t)}</div>${n.d?`<div style="font-size:12.5px;color:#4b5265;margin-top:6px;line-height:1.65;padding:9px 11px;background:#f8f9fd;border-radius:8px;">${esc(n.d.slice(0,140))}</div>`:''}<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">${n.url?`<button style="border:0;background:var(--brand);color:#fff;padding:7px 14px;border-radius:9px;font-size:12px;font-weight:650;cursor:pointer;" data-act="openNews" data-url="${esc(n.url)}">🌐 看原文</button>`:''}</div><div style="margin-top:8px;"><div style="font-size:11px;color:var(--sub);font-weight:700;margin-bottom:4px;">💭 我的思考</div><textarea data-news-think="${esc(thinkKey)}" placeholder="这条新闻对我意味着什么？" style="width:100%;border:1px dashed #dfe2ee;border-radius:8px;padding:8px 10px;font-size:12.5px;line-height:1.6;resize:vertical;min-height:48px;font-family:inherit;">${esc(think)}</textarea></div></div>`; }).join(''); return `<div class="card"><div class="row-between" style="margin-bottom:8px;"><span class="src-tag" style="margin-bottom:0;">${result.icon} ${esc(result.label)}</span><span style="font-size:10.5px;color:var(--sub);">${result.list.length} 条</span></div>${rows}</div>`; }).join(''); } return `<div class="card" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:0;"><div class="row-between" style="margin-bottom:10px;"><div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;">🌍 今日世界</div><button class="link-btn" data-act="refreshNews" style="color:#fff;opacity:.92;font-size:12.5px;">🔄 换一批</button></div><div style="font-size:19px;font-weight:750;margin-bottom:10px;">5 源 · 成功 ${okCount}/${totalCount}</div></div>${body}`; }
-async function expressSection(){ const sceneCats = Object.keys(SEED.SCENES); const allScenes = sceneCats.flatMap(c => (SEED.SCENES[c]||[]).map(s => ({ ...s, cat:c }))); const todayScene = allScenes.length ? dailyPick(allScenes, 1, 47)[0] : {cat:'通用', q:'今天想说点什么？', guide:'自由发挥。'}; const key = 'expr-'+todayScene.cat+'-'+todayScene.q; const savedAnswer = LS.get('expr-ans:'+key, ''); const savedGrade = LS.get('expr-grade:'+key, null); const passageDone = LS.get('passage-done:'+DAY, false); const quoteDone = LS.get('quote-done:'+DAY, false); const storyDone = LS.get('story-done:'+DAY, false); const yiyanDone = LS.get('yiyan-done:'+DAY, false); if (!state.yiyanData && !state.yiyanLoading){ const cached = CacheStore.load('yiyan'); if (cached && !CacheStore.shouldRefresh('yiyan')){ state.yiyanData = cached; } else { state.yiyanLoading = true; YiyanSource.fetch().then(d => { state.yiyanData = d; state.yiyanLoading = false; CacheStore.save('yiyan', d); render({keepScroll:true}); }).catch(e => { state.yiyanData = { error: friendlyErr(e) }; state.yiyanLoading = false; render({keepScroll:true}); }); } } if (!state.quoteResults.length && !state.quoteLoading){ const cached = CacheStore.load('quote-results'); if (cached && cached.length && !CacheStore.shouldRefresh('quote-results')){ state.quoteResults = cached; } else { state.quoteLoading = true; QuoteSource.fetchAll().then(results => { state.quoteResults = results || []; state.quoteLoading = false; if (state.quoteResults.length) CacheStore.save('quote-results', state.quoteResults); render({keepScroll:true}); }).catch(() => { state.quoteLoading = false; render({keepScroll:true}); }); } } if (!state.storyResults.length && !state.storyLoading){ const cached = CacheStore.load('story-results'); if (cached && cached.length && !CacheStore.shouldRefresh('story-results')){ state.storyResults = cached; } else { state.storyLoading = true; StorySource.fetchAll().then(results => { state.storyResults = results || []; state.storyLoading = false; if (state.storyResults.length) CacheStore.save('story-results', state.storyResults); render({keepScroll:true}); }).catch(() => { state.storyLoading = false; render({keepScroll:true}); }); } } const yiyanBlock = state.yiyanLoading || !state.yiyanData ? `<div class="loading-card" style="padding:18px;"><div style="font-size:24px;animation:pulse 1.2s ease-in-out infinite;">💬</div></div>` : (state.yiyanData.error ? `<div class="card"><div class="err-inline">❌ ${esc(state.yiyanData.error)}</div><button class="btn ghost" style="margin-top:10px;" data-act="refreshYiyan">🔄 重试</button></div>` : `<div class="card" style="background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fbbf24;"><div style="font-size:14.5px;line-height:1.75;color:#b45309;font-weight:600;">${esc(state.yiyanData.text)}</div>${state.yiyanData.from?`<div style="font-size:12px;color:#92400e;text-align:right;margin-top:8px;">—— ${esc(state.yiyanData.from)}</div>`:''}<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;"><button class="btn ghost" style="background:#b45309;color:#fff;" data-act="speak" data-text="${esc(state.yiyanData.text)}" data-lang="zh-CN">🔊 朗读</button><button class="btn ghost" data-act="refreshYiyan">🔄 换一条</button>${!yiyanDone?`<button class="btn ghost" data-act="markYiyanDone">✓ 已读</button>`:'<span style="align-self:center;font-size:11.5px;color:#92400e;font-weight:650;">✓ 今日已读</span>'}</div></div>`); const quoteOkCount = state.quoteResults.filter(r => r.ok).length; const storyOkCount = state.storyResults.filter(r => r.ok).length; const todayPassage = dailyPick(SEED.EXPRESS_PASSAGES, 1, 41)[0]; return `<div class="card" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:0;"><div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">📖 今日诗词</div><div style="font-size:19px;font-weight:750;margin-bottom:8px;">${esc(todayPassage.title)}</div><div style="font-size:15px;line-height:2;opacity:.95;white-space:pre-wrap;${state.passageHidden?'filter:blur(8px);user-select:none;':''}">${esc(todayPassage.text)}</div><div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;"><button class="btn" style="background:rgba(255,255,255,.9);color:var(--brand);" data-act="speak" data-text="${esc(todayPassage.text)}" data-lang="zh-CN">🔊 朗读一遍</button><button class="btn" style="background:rgba(255,255,255,.18);color:#fff;" data-act="togglePassage">${state.passageHidden?'👁 显示原文':'🎤 开始复述'}</button>${!passageDone?`<button class="btn" style="background:rgba(255,255,255,.18);color:#fff;" data-act="markPassageDone">✓ 读完了</button>`:'<span style="align-self:center;font-size:12px;opacity:.7;">✓ 今日已读</span>'}</div></div><div class="sec-title">中文金句</div>${yiyanBlock}<div class="sec-title">英文名言 <span class="muted">成功 ${quoteOkCount}/3</span></div>${state.quoteLoading || !state.quoteResults.length ? `<div class="loading-card" style="padding:18px;">💬</div>` : state.quoteResults.map(r => { if (!r.ok) return `<div class="card" style="border-left:3px solid #f59e0b;"><span class="src-tag">${r.icon} ${esc(r.label)}</span><div style="font-size:12px;color:var(--warn);margin-top:6px;">⚠️ ${esc(r.error)}（已跳过）</div></div>`; const q = r.data; return `<div class="card" style="padding:14px;"><span class="src-tag">${r.icon} ${esc(r.label)}</span><div style="font-size:14px;line-height:1.75;color:#3b0764;font-weight:600;font-style:italic;margin-top:4px;">"${esc(q.text)}"</div><div style="font-size:12px;line-height:1.65;color:#6b21a8;margin-top:8px;padding-top:8px;border-top:1px dashed #f0abfc;">${esc(q.cn || '（中文翻译暂不可用，可点🔊朗读英文原文）')}</div><div style="font-size:12px;color:#6b21a8;margin-top:8px;text-align:right;">—— ${esc(q.author||'Unknown')}</div><div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;"><button class="btn ghost" data-act="speak" data-text="${esc(q.text)}" data-lang="en-US">🔊 朗读</button></div></div>`; }).join('')}<div class="sec-title">英文短文 <span class="muted">成功 ${storyOkCount}/3</span></div>${state.storyLoading || !state.storyResults.length ? `<div class="loading-card" style="padding:18px;">📚</div>` : state.storyResults.map(r => { if (!r.ok) return `<div class="card" style="border-left:3px solid #f59e0b;"><span class="src-tag">${r.icon} ${esc(r.label)}</span><div style="font-size:12px;color:var(--warn);margin-top:6px;">⚠️ ${esc(r.error)}（已跳过）</div></div>`; const s = r.data; return `<div class="card" style="padding:14px;"><span class="src-tag">${r.icon} ${esc(r.label)}</span><div style="font-size:14px;font-weight:750;color:#065f46;line-height:1.5;margin-top:4px;">${esc(s.title)}</div><div style="font-size:12.5px;line-height:1.7;color:#064e3b;margin-top:8px;">${esc((s.preview||'').slice(0,180))}...</div><div style="font-size:12px;line-height:1.65;color:#047857;margin-top:8px;padding-top:8px;border-top:1px dashed #a7f3d0;">${esc(s.cn || '（中文翻译暂不可用，可点🔊朗读英文原文）')}</div><div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;"><button class="btn ghost" data-act="speak" data-text="${esc(s.preview)}" data-lang="en-US">🔊 朗读</button></div></div>`; }).join('')}<div class="sec-title">今日场景练习</div><div class="card"><div style="display:inline-block;font-size:11px;font-weight:750;color:#b45309;background:#fef3c7;padding:3px 9px;border-radius:6px;margin-bottom:10px;">${esc(todayScene.cat)}</div><div class="know-q">${esc(todayScene.q)}</div><div style="margin-top:11px;padding:11px 13px;background:#f8f9fd;border-left:3px solid var(--brand);border-radius:0 10px 10px 0;font-size:12.5px;line-height:1.75;color:#4b5265;"><b>要求：</b>${esc(todayScene.guide)}</div><textarea class="answer-input" id="exprAnswer" placeholder="写下你的回答…">${esc(savedAnswer)}</textarea><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;"><button class="btn primary" data-act="gradeAnswer" data-scene="${esc(todayScene.cat)}" data-q="${esc(todayScene.q)}" data-guide="${esc(todayScene.guide)}">${savedGrade?'🔄 重新评分':'✨ 让 AI 评分'}</button></div><div id="gradeResult">${renderGradeCard(savedGrade)}</div></div>`; }
-function renderGradeCard(g){ if (!g) return ''; if (g.error) return `<div class="score-card" style="background:#fef3c7;"><div style="font-size:13px;color:#92400e;">⚠️ ${esc(g.error)}</div></div>`; const score = g.score || 0; const level = g.level || (score>=85?'优秀':score>=70?'良好':score>=55?'合格':'待提升'); return `<div class="score-card"><div class="score-head"><div class="score-num">${score}<span style="font-size:14px;opacity:.55;font-weight:600;">/100</span></div><div class="score-label">${esc(level)} · AI 评分</div></div>${g.strengths&&g.strengths.length?`<div class="score-row"><div class="score-row-title" style="color:var(--ok)">✅ 优点</div><ul class="score-list">${g.strengths.map(s => `<li>${esc(s)}</li>`).join('')}</ul></div>`:''}${g.issues&&g.issues.length?`<div class="score-row"><div class="score-row-title" style="color:var(--warn)">⚠️ 改进</div><ul class="score-list">${g.issues.map(s => `<li>${esc(s)}</li>`).join('')}</ul></div>`:''}${g.improved?`<div class="score-row"><div class="score-row-title">✍️ 修改后</div><div class="score-extra">${esc(g.improved)}</div></div>`:''}</div>`; }
-async function jokeSection(){ if (!state.jokeResults.length && !state.jokeLoading){ const cached = CacheStore.load('joke-results'); if (cached && cached.length && !CacheStore.shouldRefresh('joke-results')){ state.jokeResults = cached; } else { state.jokeLoading = true; JokeSource.fetchAll().then(results => { state.jokeResults = results || []; state.jokeLoading = false; if (state.jokeResults.length) CacheStore.save('joke-results', state.jokeResults); render({keepScroll:true}); }).catch(() => { state.jokeLoading = false; state.jokeResults = []; render({keepScroll:true}); }); } } if (state.jokeLoading && !state.jokeResults.length){ return `<div class="loading-card"><div style="font-size:32px;animation:pulse 1.2s ease-in-out infinite;">😄</div></div>`; } const body = state.jokeResults.map(r => { if (!r.ok) return `<div class="card" style="border-left:3px solid #f59e0b;"><span class="src-tag">${r.icon} ${esc(r.label)}</span><div style="font-size:12px;color:var(--warn);margin-top:6px;">⚠️ ${esc(r.error)}（已跳过）</div></div>`; const j = r.data; return `<div class="card" style="padding:14px;"><span class="src-tag">${r.icon} ${esc(r.label)}</span><div style="font-size:13.5px;line-height:1.85;color:#78350f;white-space:pre-wrap;background:linear-gradient(135deg,#fef3c7,#fde68a);padding:12px;border-radius:10px;border:1px solid #fbbf24;margin-top:4px;">${esc(j.text)}</div><div style="display:flex;gap:6px;margin-top:10px;"><button class="btn ghost" data-act="speak" data-text="${esc(j.text)}" data-lang="zh-CN">🔊 朗读</button></div></div>`; }).join('') || '<div class="tip-card">加载失败，点下面重试</div>'; return `<div class="card" style="background:linear-gradient(135deg,#f59e0b,#f97316);color:#fff;border:0;"><div class="row-between" style="margin-bottom:10px;"><div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;">😄 笑话</div><button class="link-btn" data-act="refreshJoke" style="color:#fff;opacity:.92;font-size:12.5px;">🔄 换一批</button></div><div style="font-size:19px;font-weight:750;">天聚 · 雷人笑话</div></div>${body}`; }
-async function recommendSection(){ const catList = ['书','电影','播客','工具']; const catEmoji = { '书':'📚','电影':'🎬','播客':'🎧','工具':'🛠️' }; const todayCat = state.recommendCat || catList[DAY % catList.length]; const cacheKey = 'rec-' + todayCat + '-' + DAY; let item = CacheStore.load(cacheKey); if (!item){ try { if (todayCat === '电影') item = await fetchRecommendMovie(); else if (todayCat === '书') item = await fetchRecommendBook(); else if (todayCat === '播客') item = await fetchRecommendPodcast(); else item = await fetchRecommendTool(); if (item) CacheStore.save(cacheKey, item); } catch(e){ console.error('推荐抓取失败', e); } } const chips = `<div class="chips">${catList.map(c => `<button class="chip ${c===todayCat?'on':''}" data-act="recCat" data-cat="${esc(c)}">${catEmoji[c]} ${esc(c)}</button>`).join('')}</div>`; if (!item){ return chips + `<div class="card" style="text-align:center;padding:32px 20px;"><div style="font-size:32px;margin-bottom:10px;">📡</div><div style="font-size:14px;color:var(--sub);margin-bottom:14px;">推荐接口暂时不可用</div><button class="btn primary" data-act="refreshRec">🔄 重新抓取</button></div>`; } return chips + `<div class="card"><div class="row-between" style="margin-bottom:12px;"><span class="src-tag" style="margin-bottom:0;">${catEmoji[todayCat]} ${todayCat} · 今日推荐</span><span style="font-size:10.5px;color:var(--sub);">${todayStr()}</span></div><div style="display:flex;align-items:flex-start;gap:12px;">${item.cover ? `<img src="${esc(item.cover)}" style="width:70px;height:100px;object-fit:cover;border-radius:8px;flex-shrink:0;" alt="">` : `<div style="font-size:34px;line-height:1;flex-shrink:0;">${item.emoji||catEmoji[todayCat]}</div>`}<div style="flex:1;min-width:0;"><div style="font-size:17px;font-weight:750;line-height:1.4;">${esc(item.name)}</div><div style="font-size:12.5px;color:var(--sub);margin-top:4px;">${esc(item.author||'')}</div>${item.rating ? `<div style="font-size:12.5px;color:#f59e0b;margin-top:6px;font-weight:650;">⭐ ${item.rating}</div>` : ''}</div></div><div style="font-size:13.5px;line-height:1.78;color:#3f4658;margin-top:13px;padding-top:13px;border-top:1px dashed #eceef4;">${esc(item.why||'')}</div>${item.url ? `<button class="btn primary wide" style="margin-top:14px;" data-act="openNews" data-url="${esc(item.url)}">查看详情 →</button>` : ''}</div>`; }
+async function newsSection(){ 
+  if (!state.newsResults.length && !state.newsLoading && !state.newsFailed){ 
+    const cached = CacheStore.load('news-v3'); 
+    if (cached && cached.length && !CacheStore.shouldRefresh('news-v3')){ 
+      state.newsResults = cached; 
+    } else { 
+      state.newsLoading = true; 
+      fetchNewsOfDay().then(list => { 
+        state.newsLoading = false; 
+        if (list && list.length){ state.newsResults = list; CacheStore.save('news-v3', list); } 
+        else { state.newsFailed = true; } 
+        render({ keepScroll: true }); 
+      }).catch(() => { 
+        state.newsLoading = false; state.newsFailed = true; render({keepScroll:true}); 
+      }); 
+    } 
+  } 
+  if (state.newsLoading){ 
+    return `<div class="loading-card"><div style="font-size:38px;animation:pulse 1.2s ease-in-out infinite;">🌍</div><div style="font-size:13.5px;font-weight:750;margin-top:14px;">正在抓取今日新闻…</div></div>`; 
+  } 
+  if (state.newsFailed || !state.newsResults || state.newsResults.length === 0){ 
+    return `<div class="card" style="text-align:center;padding:30px;color:var(--sub);"><div style="font-size:40px;margin-bottom:10px;">🌐</div><div>接口请求失败，请点击重试</div><button class="btn primary wide" style="margin-top:16px;" data-act="refreshNews">🔄 重新抓取</button></div>`; 
+  } 
+  
+  const meta = state.newsMeta || { date: '', tip: '', src: '今日新闻' };
+  const rows = state.newsResults.map((n, i) => { 
+    const thinkKey = 'news-think-'+todayStr()+'-news-'+i; 
+    const think = LS.get(thinkKey, ''); 
+    return `<div style="padding:11px 0;${i < state.newsResults.length-1 ? 'border-bottom:1px dashed #eceef4;' : ''}"><div style="font-size:10.5px;color:var(--sub);margin-bottom:6px;">#${n.rank||i+1}</div><div style="font-size:14.5px;font-weight:700;line-height:1.5;color:#2b3244;">${esc(n.t)}</div>${n.d?`<div style="font-size:11.5px;color:var(--sub);margin-top:3px;">${esc(n.d)}</div>`:''}${n.url?`<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;"><button style="border:0;background:var(--brand);color:#fff;padding:7px 14px;border-radius:9px;font-size:12px;font-weight:650;cursor:pointer;" data-act="openNews" data-url="${esc(n.url)}">🌐 看原文</button></div>`:''}<div style="margin-top:8px;"><div style="font-size:11px;color:var(--sub);font-weight:700;margin-bottom:4px;">💭 我的思考</div><textarea data-news-think="${esc(thinkKey)}" placeholder="这条新闻对我意味着什么？" style="width:100%;border:1px dashed #dfe2ee;border-radius:8px;padding:8px 10px;font-size:12.5px;line-height:1.6;resize:vertical;min-height:48px;font-family:inherit;">${esc(think)}</textarea></div></div>`; 
+  }).join(''); 
 
+  return `<div class="card" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:0;"><div class="row-between" style="margin-bottom:10px;"><div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;">🌍 ${esc(meta.src)}</div><button class="link-btn" data-act="refreshNews" style="color:#fff;opacity:.92;font-size:12.5px;">🔄 换一批</button></div>${meta.date?`<div style="font-size:19px;font-weight:750;">${esc(meta.date)}</div>`:''}${meta.tip?`<div style="font-size:12.5px;opacity:.9;line-height:1.7;margin-top:6px;">💬 ${esc(meta.tip)}</div>`:''}</div><div class="card"><div class="row-between" style="margin-bottom:8px;"><span class="src-tag" style="margin-bottom:0;">📰 今日要闻</span><span style="font-size:10.5px;color:var(--sub);">${state.newsResults.length} 条</span></div>${rows}</div>`; 
+}
+async function fetchQuoteOfDay(){
+  // ① zenquotes：稳定英文格言接口，配 mymemory 翻译
+  try {
+    const d = await raceTimeout(fetchJson('https://zenquotes.io/api/random', 6000), 7000);
+    if (Array.isArray(d) && d[0] && d[0].q && d[0].a){
+      let cn = '';
+      try { cn = await translateToChinese(d[0].q); } catch(e){}
+      if (cn) return { text: d[0].q, author: d[0].a, cn: cn };
+    }
+  } catch(e){}
+  // ② 内置金句库兜底（按天轮换，翻译内置）
+  const q = QUOTE_BANK[DAY % QUOTE_BANK.length];
+  return { text: q.text, author: q.author, cn: q.cn };
+}
+async function fetchStoryOfDay(){
+  // 内置经典英文短文库：按天轮换，标题/正文/翻译齐备，保证每天必有内容
+  const s = STORY_BANK[DAY % STORY_BANK.length];
+  return { title: s.title, text: s.text, cn: s.cn };
+}
+async function expressSection(){ 
+  const passageDone = LS.get('passage-done:'+DAY, false); 
+  const quoteDone = LS.get('quote-done:'+DAY, false); 
+  const storyDone = LS.get('story-done:'+DAY, false); 
+  const yiyanDone = LS.get('yiyan-done:'+DAY, false); 
+
+  // 1. 今日诗词
+  if (!state.passageData && !state.passageLoading) { 
+    state.passageLoading = true; 
+    fetchJson('https://v1.jinrishici.com/all.json', 6000).then(d => {
+      state.passageData = { title: d.origin || d.author || '今日诗词', text: d.content };
+      state.passageLoading = false; render({ keepScroll: true });
+    }).catch(e => { 
+      state.passageData = { title: '获取失败', text: '请检查网络' }; 
+      state.passageLoading = false; render({ keepScroll: true }); 
+    }); 
+  } 
+  const todayPassage = state.passageData || { title: '加载中...', text: '正在获取...' }; 
+
+  // 2. 中文金句
+  if (!state.yiyanData && !state.yiyanLoading){ 
+    const cached = CacheStore.load('yiyan'); 
+    if (cached && !CacheStore.shouldRefresh('yiyan')){ 
+      state.yiyanData = cached; 
+    } else { 
+      state.yiyanLoading = true; 
+      fetchJson('https://v1.hitokoto.cn/', 5000).then(d => {
+        state.yiyanData = { text: d.hitokoto, from: d.from || d.from_who || '' };
+        state.yiyanLoading = false; CacheStore.save('yiyan', state.yiyanData); render({keepScroll:true});
+      }).catch(e => { state.yiyanData = { error: friendlyErr(e) }; state.yiyanLoading = false; render({keepScroll:true}); }); 
+    } 
+  } 
+  const yiyanBlock = state.yiyanLoading || !state.yiyanData ? `<div class="loading-card" style="padding:18px;"><div style="font-size:24px;animation:pulse 1.2s ease-in-out infinite;">💬</div></div>` : (state.yiyanData.error ? `<div class="card" style="text-align:center;padding:20px;color:var(--sub);">金句获取失败</div>` : `<div class="card" style="background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fbbf24;"><div style="font-size:14.5px;line-height:1.75;color:#b45309;font-weight:600;">${esc(state.yiyanData.text)}</div>${state.yiyanData.from?`<div style="font-size:12px;color:#92400e;text-align:right;margin-top:8px;">—— ${esc(state.yiyanData.from)}</div>`:''}<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;"><button class="btn ghost" style="background:#b45309;color:#fff;" data-act="speak" data-text="${esc(state.yiyanData.text)}" data-lang="zh-CN">🔊 朗读</button><button class="btn ghost" data-act="refreshYiyan">🔄 换一条</button>${!yiyanDone?`<button class="btn ghost" data-act="markYiyanDone">✓ 已读</button>`:'<span style="align-self:center;font-size:11.5px;color:#92400e;font-weight:650;">✓ 今日已读</span>'}</div></div>`); 
+
+  // 3. 英文名言（zenquotes 在线接口 → 内置金句库兜底，附翻译与朗读）
+  if (!state.quoteResults.length && !state.quoteLoading && !state.quoteFailed){ 
+    const cached = CacheStore.load('quote-results-v6'); 
+    if (cached && cached.length && !CacheStore.shouldRefresh('quote-results-v6')){ 
+      state.quoteResults = cached; 
+    } else { 
+      state.quoteLoading = true; 
+      fetchQuoteOfDay().then(data => { 
+        state.quoteResults = [{ ok: true, data: data }]; 
+        CacheStore.save('quote-results-v6', state.quoteResults); 
+        state.quoteLoading = false; 
+        render({keepScroll:true}); 
+      }).catch(() => { state.quoteLoading = false; state.quoteFailed = true; render({keepScroll:true}); }); 
+    } 
+  } 
+  const quoteOkCount = state.quoteResults.filter(r => r.ok).length; 
+  const quoteHtml = state.quoteLoading ? `<div class="loading-card" style="padding:18px;">💬</div>` : (state.quoteResults.filter(r => r.ok).map(r => { 
+    const q = r.data; 
+    return `<div class="card" style="padding:14px;"><div style="font-size:14px;line-height:1.75;color:#3b0764;font-weight:600;font-style:italic;margin-top:4px;">"${esc(q.text)}"</div><div style="font-size:12px;line-height:1.65;color:#6b21a8;margin-top:8px;padding-top:8px;border-top:1px dashed #f0abfc;">${esc(q.cn||'（暂无翻译）')}</div><div style="font-size:12px;color:#6b21a8;margin-top:8px;text-align:right;">—— ${esc(q.author||'Unknown')}</div><div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;"><button class="btn ghost" data-act="speak" data-text="${esc(q.text)}" data-lang="en-US">🔊 朗读</button>${!quoteDone?`<button class="btn ghost" data-act="markQuoteDone">✓ 已读</button>`:'<span style="align-self:center;font-size:11.5px;color:#6b21a8;font-weight:650;">✓ 今日已读</span>'}</div></div>`; 
+  }).join('') || (state.quoteFailed ? '<div class="card" style="text-align:center;padding:20px;color:var(--sub);">获取失败</div><button class="btn ghost wide" data-act="refreshQuote">🔄 重试</button>' : '<div class="loading-card" style="padding:18px;">💬</div>')); 
+
+  // 4. 英文短文（内置经典短文库按天轮换，自带翻译与朗读，绝不空白）
+  if (!state.storyResults.length && !state.storyLoading && !state.storyFailed){ 
+    const cached = CacheStore.load('story-results-v6'); 
+    if (cached && cached.length && !CacheStore.shouldRefresh('story-results-v6')){ 
+      state.storyResults = cached; 
+    } else { 
+      state.storyLoading = true; 
+      fetchStoryOfDay().then(data => { 
+        state.storyResults = [{ ok: true, data: data }]; 
+        CacheStore.save('story-results-v6', state.storyResults); 
+        state.storyLoading = false; 
+        render({keepScroll:true}); 
+      }).catch(() => { state.storyLoading = false; state.storyFailed = true; render({keepScroll:true}); }); 
+    } 
+  } 
+  const storyOkCount = state.storyResults.filter(r => r.ok).length; 
+  const storyHtml = state.storyLoading ? `<div class="loading-card" style="padding:18px;">📚</div>` : (state.storyResults.filter(r => r.ok).map(r => { 
+    const s = r.data; 
+    return `<div class="card" style="padding:14px;"><div style="font-size:14px;font-weight:750;color:#065f46;line-height:1.5;margin-top:4px;">${esc(s.title)}</div><div style="font-size:14px;line-height:1.7;color:#064e3b;margin-top:8px;">${esc(s.text)}</div><div style="font-size:12.5px;line-height:1.65;color:#047857;margin-top:8px;padding-top:8px;border-top:1px dashed #a7f3d0;">${esc(s.cn||'')}</div><div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;"><button class="btn ghost" data-act="speak" data-text="${esc(s.text)}" data-lang="en-US">🔊 朗读</button>${!storyDone?`<button class="btn ghost" data-act="markStoryDone">✓ 已读</button>`:'<span style="align-self:center;font-size:11.5px;color:#047857;font-weight:650;">✓ 今日已读</span>'}</div></div>`; 
+  }).join('') || (state.storyFailed ? '<div class="card" style="text-align:center;padding:20px;color:var(--sub);">获取失败</div><button class="btn ghost wide" data-act="refreshStory">🔄 重试</button>' : '<div class="loading-card" style="padding:18px;">📚</div>')); 
+
+  return `<div class="card" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:0;"><div style="font-size:11px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">📖 今日诗词</div><div style="font-size:19px;font-weight:750;margin-bottom:8px;">${esc(todayPassage.title)}</div><div style="font-size:15px;line-height:2;opacity:.95;white-space:pre-wrap;${state.passageHidden?'filter:blur(8px);user-select:none;':''}">${esc(todayPassage.text)}</div><div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;"><button class="btn" style="background:rgba(255,255,255,.9);color:var(--brand);" data-act="speak" data-text="${esc(todayPassage.text)}" data-lang="zh-CN">🔊 朗读一遍</button><button class="btn" style="background:rgba(255,255,255,.18);color:#fff;" data-act="togglePassage">${state.passageHidden?'👁 显示原文':'🎤 开始复述'}</button>${!passageDone?`<button class="btn" style="background:rgba(255,255,255,.18);color:#fff;" data-act="markPassageDone">✓ 读完了</button>`:'<span style="align-self:center;font-size:12px;opacity:.7;">✓ 今日已读</span>'}</div></div><div class="sec-title">中文金句</div>${yiyanBlock}<div class="sec-title">英文名言 <span class="muted">成功 ${quoteOkCount}/1</span></div>${quoteHtml}<div class="sec-title">英文短文 <span class="muted">成功 ${storyOkCount}/1</span></div>${storyHtml}`; 
+}
+function renderGradeCard(g){ if (!g) return ''; if (g.error) return `<div class="score-card" style="background:#fef3c7;"><div style="font-size:13px;color:#92400e;">⚠️ ${esc(g.error)}</div></div>`; const score = g.score || 0; const level = g.level || (score>=85?'优秀':score>=70?'良好':score>=55?'合格':'待提升'); return `<div class="score-card"><div class="score-head"><div class="score-num">${score}<span style="font-size:14px;opacity:.55;font-weight:600;">/100</span></div><div class="score-label">${esc(level)} · AI 评分</div></div>${g.strengths&&g.strengths.length?`<div class="score-row"><div class="score-row-title" style="color:var(--ok)">✅ 优点</div><ul class="score-list">${g.strengths.map(s => `<li>${esc(s)}</li>`).join('')}</ul></div>`:''}${g.issues&&g.issues.length?`<div class="score-row"><div class="score-row-title" style="color:var(--warn)">⚠️ 改进</div><ul class="score-list">${g.issues.map(s => `<li>${esc(s)}</li>`).join('')}</ul></div>`:''}${g.improved?`<div class="score-row"><div class="score-row-title">✍️ 修改后</div><div class="score-extra">${esc(g.improved)}</div></div>`:''}</div>`; }
+async function fetchBaikeItem(word){
+  const d = await fetchJson('https://60s.viki.moe/v2/baike?word=' + encodeURIComponent(word), 8000);
+  if (!d || d.code !== 200 || !d.data || !d.data.title) throw new Error('无内容');
+  const b = d.data;
+  return { name: b.title || word, desc: b.description || '', why: (b.abstract || b.description || '').slice(0, 320), cover: b.cover || '', url: b.link || '' };
+}
+async function fetchDoubanWeekly(ep){
+  const d = await raceTimeout(fetchJson('https://60s.viki.moe/v2/douban/weekly/' + ep, 9000), 10000);
+  if (!d || d.code !== 200 || !Array.isArray(d.data) || !d.data.length) throw new Error('无内容');
+  return d.data.slice(0, 10).map(x => ({ title: x.title || '', rating: x.rating || 0, sub: x.card_subtitle || '', desc: x.description || '', cover: x.cover || '', id: x.id || '' }));
+}
+function doubanItemRow(m, i, total){
+  return `<div style="display:flex;gap:12px;padding:12px 0;${i < total-1 ? 'border-bottom:1px dashed #eceef4;' : ''}">${m.cover ? `<img src="${esc(m.cover)}" style="width:64px;height:90px;object-fit:cover;border-radius:8px;flex-shrink:0;" alt="" referrerpolicy="no-referrer">` : `<div style="width:64px;height:90px;border-radius:8px;background:#f3f4fa;display:grid;place-items:center;font-size:24px;flex-shrink:0;">🎬</div>`}<div style="flex:1;min-width:0;"><div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:11px;color:var(--sub);font-weight:700;flex-shrink:0;">#${i+1}</span><span style="font-size:14.5px;font-weight:750;line-height:1.4;">${esc(m.title)}</span>${m.rating ? `<span style="font-size:11.5px;color:#f59e0b;font-weight:700;margin-left:auto;flex-shrink:0;">★ ${Number(m.rating).toFixed(1)}</span>` : ''}</div>${m.sub ? `<div style="font-size:11.5px;color:var(--sub);margin-top:4px;">${esc(m.sub)}</div>` : ''}${m.desc ? `<div style="font-size:12.5px;line-height:1.7;color:#4b5265;margin-top:6px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">${esc(m.desc)}</div>` : ''}${m.id ? `<button class="link-btn" style="padding:0;font-size:11.5px;margin-top:6px;" data-act="openNews" data-url="${esc('https://movie.douban.com/subject/' + m.id + '/')}">查看豆瓣 →</button>` : ''}</div></div>`;
+}
+async function fetchPodcasts(term, limit){
+  // 双源链：iTunes 播客目录 → 网易云播客搜索（fetch 失败会自动走原生桥，两源至少一个可达）
+  try {
+    const d = await raceTimeout(fetchJson('https://itunes.apple.com/search?term=' + encodeURIComponent(term) + '&media=podcast&country=cn&limit=' + limit, 9000), 11000);
+    const list = d && Array.isArray(d.results) ? d.results : [];
+    if (list.length) return list.map(r => ({ 
+      name: r.collectionName || r.trackName || '', 
+      author: r.artistName || '', 
+      category: r.primaryGenreName || '', 
+      count: r.trackCount || 0, 
+      cover: (r.artworkUrl100 || '').replace('http://', 'https://')
+    }));
+  } catch(e){ console.warn('iTunes 播客源失败', e); }
+  const d2 = await raceTimeout(fetchJson('https://music.163.com/api/search/get?s=' + encodeURIComponent(term) + '&type=1009&limit=' + limit, 9000), 11000);
+  const list2 = d2 && d2.result && Array.isArray(d2.result.djRadios) ? d2.result.djRadios : [];
+  if (!list2.length) throw new Error('无内容');
+  return list2.map(r => ({ 
+    name: r.name || '', 
+    author: (r.dj && r.dj.nickname) || '', 
+    category: r.category || '', 
+    count: r.programCount || 0, 
+    cover: (r.picUrl || '').replace('http://', 'https://')
+  }));
+}
+function podcastRow(p, i, total){
+  // 收听链接走网易云播客搜索页（安卓直接可用）
+  const listenUrl = 'https://music.163.com/#/search/m/?s=' + encodeURIComponent(p.name) + '&type=1009';
+  return `<div style="display:flex;gap:12px;padding:11px 0;${i < total-1 ? 'border-bottom:1px dashed #eceef4;' : ''}">${p.cover ? `<img src="${esc(p.cover)}" style="width:56px;height:56px;border-radius:12px;object-fit:cover;flex-shrink:0;" alt="">` : `<div style="width:56px;height:56px;border-radius:12px;background:#f3f4fa;display:grid;place-items:center;font-size:24px;flex-shrink:0;">🎙️</div>`}<div style="flex:1;min-width:0;"><div style="display:flex;align-items:baseline;gap:8px;"><span style="font-size:11px;color:var(--sub);font-weight:700;flex-shrink:0;">#${i+1}</span><span style="font-size:14px;font-weight:750;line-height:1.4;">${esc(p.name)}</span></div>${p.author ? `<div style="font-size:12px;color:var(--sub);margin-top:3px;">主播：${esc(p.author)}</div>` : ''}<div style="font-size:11.5px;color:var(--sub);margin-top:2px;">${esc(p.category || '')}${p.count ? (p.category ? ' · ' : '') + p.count + ' 集' : ''}</div><button class="link-btn" style="padding:0;font-size:11.5px;margin-top:4px;" data-act="openNews" data-url="${esc(listenUrl)}">去网易云收听 →</button></div></div>`;
+}
+async function fetchAppArticles(limit, page){
+  const d = await raceTimeout(fetchJson('https://sspai.com/api/v1/article/tag/page/get?tag=' + encodeURIComponent('应用') + '&limit=' + limit + '&offset=' + (page * limit), 9000), 10000);
+  const list = d && d.error === 0 && Array.isArray(d.data) ? d.data : [];
+  if (!list.length) throw new Error('无内容');
+  return list.map(a => ({ 
+    title: a.title || '', 
+    summary: a.summary || '', 
+    author: (a.author && a.author.nickname) || '', 
+    time: a.released_time ? new Date((a.released_time + 8 * 3600) * 1000).toISOString().slice(0, 10) : '', 
+    cover: a.banner ? ('https://cdn.sspai.com/' + a.banner) : '', 
+    url: a.id ? 'https://sspai.com/post/' + a.id : '' 
+  }));
+}
+function appRow(a, i, total){
+  return `<div style="display:flex;gap:12px;padding:11px 0;${i < total-1 ? 'border-bottom:1px dashed #eceef4;' : ''}">${a.cover ? `<img src="${esc(a.cover)}" style="width:72px;height:48px;border-radius:8px;object-fit:cover;flex-shrink:0;" alt="">` : `<div style="width:72px;height:48px;border-radius:8px;background:#f3f4fa;display:grid;place-items:center;font-size:22px;flex-shrink:0;">📱</div>`}<div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:750;line-height:1.4;">${esc(a.title)}</div>${(a.author || a.time) ? `<div style="font-size:11.5px;color:var(--sub);margin-top:3px;">${esc(a.author || '')}${a.time ? (a.author ? ' · ' : '') + a.time : ''}</div>` : ''}${a.summary ? `<div style="font-size:12.5px;line-height:1.65;color:#4b5265;margin-top:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(a.summary)}</div>` : ''}${a.url ? `<button class="link-btn" style="padding:0;font-size:11.5px;margin-top:4px;" data-act="openNews" data-url="${esc(a.url)}">阅读原文 →</button>` : ''}</div></div>`;
+}
+function recErrorCard(msg, act){
+  return `<div class="card" style="text-align:center;padding:32px 20px;"><div style="font-size:32px;margin-bottom:10px;">📡</div><div style="font-size:14px;color:var(--sub);margin-bottom:14px;">${esc(msg)}</div><button class="btn ghost" data-act="${act}" style="margin-top:10px;">🔄 重试</button></div>`;
+}
+async function recommendSection(){ 
+  const catList = ['科学','历史','人物','文化','电影','电视','播客','APP']; 
+  const catEmoji = { '科学':'🔬','历史':'🏛️','人物':'👤','文化':'🏮','电影':'🎬','电视':'📺','播客':'🎙️','APP':'📱' }; 
+  const todayCat = catList.includes(state.recommendCat) ? state.recommendCat : catList[DAY % catList.length]; 
+  const offset = state.recOffset || 0; 
+  const chips = `<div class="chips" style="flex-wrap:wrap;">${catList.map(c => `<button class="chip ${c===todayCat?'on':''}" data-act="recCat" data-cat="${esc(c)}">${catEmoji[c]||'📌'} ${esc(c)}</button>`).join('')}</div>`; 
+  
+  // ① 电影 / 电视：豆瓣每周口碑榜（API 抓取；串行+间隔+自动二轮重试，避开接口限流）
+  if (todayCat === '电影' || todayCat === '电视'){ 
+    const eps = todayCat === '电影' ? [['movie','本周口碑电影榜']] : [['tv_chinese','本周华语剧集榜'],['tv_global','本周全球剧集榜']]; 
+    const cacheKey = 'rec-db-' + todayCat + '-' + DAY; 
+    let groups = CacheStore.load(cacheKey); 
+    if (!groups){ 
+      const tryFetch = async () => { 
+        const rs = []; 
+        for (const ep of eps){ 
+          try { rs.push({ label: ep[1], list: await fetchDoubanWeekly(ep[0]) }); } catch(e){ console.warn('榜单接口失败：' + ep[0], e); } 
+          if (eps.length > 1) await new Promise(r => setTimeout(r, 1200)); 
+        } 
+        return rs; 
+      }; 
+      groups = await tryFetch(); 
+      if (!groups.length){ 
+        await new Promise(r => setTimeout(r, 3000)); 
+        groups = await tryFetch(); 
+      } 
+      if (groups.length) CacheStore.save(cacheKey, groups); 
+    } 
+    if (!groups || !groups.length){ 
+      return chips + recErrorCard('获取榜单失败，请检查网络后重试', 'refreshRecList'); 
+    } 
+    return chips + groups.map(g => `<div class="card"><div class="row-between" style="margin-bottom:4px;"><span class="src-tag" style="margin-bottom:0;">${catEmoji[todayCat]} ${esc(g.label)}</span><button class="link-btn" data-act="refreshRecList" style="padding:0;font-size:12px;">🔄 刷新</button></div>${g.list.map((m, i) => doubanItemRow(m, i, g.list.length)).join('')}</div>`).join(''); 
+  } 
+  
+  // ② 播客：iTunes 播客目录（支持跨域，WebView 可用）+ 网易云收听链接（安卓可用）
+  if (todayCat === '播客'){ 
+    const term = PODCAST_TERMS[(DAY + offset) % PODCAST_TERMS.length]; 
+    const cacheKey = 'rec-pc-' + term + '-' + DAY + '-' + offset; 
+    let list = CacheStore.load(cacheKey); 
+    if (!list){ 
+      try { list = await fetchPodcasts(term, 8); CacheStore.save(cacheKey, list); } 
+      catch(e){ console.warn('播客接口失败', e); } 
+    } 
+    if (!list || !list.length){ 
+      return chips + recErrorCard('获取播客失败，请检查网络后重试', 'refreshRec'); 
+    } 
+    return chips + `<div class="card"><div class="row-between" style="margin-bottom:4px;"><span class="src-tag" style="margin-bottom:0;">🎙️ 网易云播客 ·「${esc(term)}」主题</span><button class="link-btn" data-act="refreshRec" style="padding:0;font-size:12px;">🔄 换一批</button></div>${list.map((p, i) => podcastRow(p, i, list.length)).join('')}</div>`; 
+  } 
+  
+  // ③ APP：少数派「应用」栏目（API 抓取，安卓/iOS 通用应用推荐）
+  if (todayCat === 'APP'){ 
+    const page = offset % 3; 
+    const cacheKey = 'rec-app-sspai-' + DAY + '-' + page; 
+    let list = CacheStore.load(cacheKey); 
+    if (!list){ 
+      try { list = await fetchAppArticles(10, page); CacheStore.save(cacheKey, list); } 
+      catch(e){ console.warn('应用推荐接口失败', e); } 
+    } 
+    if (!list || !list.length){ 
+      return chips + recErrorCard('获取应用推荐失败，请检查网络后重试', 'refreshRec'); 
+    } 
+    return chips + `<div class="card"><div class="row-between" style="margin-bottom:4px;"><span class="src-tag" style="margin-bottom:0;">📱 应用推荐 · 少数派</span><button class="link-btn" data-act="refreshRec" style="padding:0;font-size:12px;">🔄 换一批</button></div>${list.map((a, i) => appRow(a, i, list.length)).join('')}</div>`; 
+  } 
+  
+  // ④ 科学 / 历史 / 人物 / 文化：60s 百科接口（失败自动换词条重试，带间隔避开限流）
+  const topics = DISCOVER_TOPICS[todayCat] || []; 
+  const startIdx = topics.length ? (DAY + offset) % topics.length : 0; 
+  const cacheKey = 'rec-v4-' + todayCat + '-' + DAY + '-' + startIdx; 
+  let item = CacheStore.load(cacheKey); 
+  if (!item){ 
+    for (let t = 0; t < Math.min(4, topics.length) && !item; t++){ 
+      if (t > 0) await new Promise(r => setTimeout(r, 1500)); 
+      const topic = topics[(startIdx + t) % topics.length]; 
+      try { 
+        item = await raceTimeout(fetchBaikeItem(topic), 9000); 
+        if (item) CacheStore.save(cacheKey, item); 
+      } catch(e){ console.warn('百科接口失败：' + topic, e); } 
+    } 
+  } 
+  if (!item){ 
+    return chips + recErrorCard('获取失败，请检查网络后重试', 'refreshRec'); 
+  } 
+  return chips + `<div class="card"><div class="row-between" style="margin-bottom:12px;"><span class="src-tag" style="margin-bottom:0;">${catEmoji[todayCat]} ${esc(todayCat)} · 今日百科</span><button class="link-btn" data-act="refreshRec" style="padding:0;font-size:12px;">换一个</button></div><div style="display:flex;align-items:flex-start;gap:12px;">${item.cover ? `<img src="${esc(item.cover)}" style="width:70px;height:100px;object-fit:cover;border-radius:8px;flex-shrink:0;" alt="" referrerpolicy="no-referrer">` : `<div style="font-size:34px;line-height:1;flex-shrink:0;">${catEmoji[todayCat]||'📌'}</div>`}<div style="flex:1;min-width:0;"><div style="font-size:17px;font-weight:750;line-height:1.4;">${esc(item.name)}</div>${item.desc ? `<div style="font-size:12.5px;color:var(--sub);margin-top:4px;">${esc(item.desc)}</div>` : ''}</div></div><div style="font-size:13.5px;line-height:1.78;color:#3f4658;margin-top:13px;padding-top:13px;border-top:1px dashed #eceef4;">${esc(item.why||'')}</div><div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;"><button class="btn ghost" data-act="speak" data-text="${esc((item.name||'') + '。' + (item.why||''))}" data-lang="zh-CN">🔊 朗读</button>${item.url ? `<button class="btn primary" data-act="openNews" data-url="${esc(item.url)}">查看百科 →</button>` : ''}</div></div>`; 
+}
 function meView(){ const stats = LearnStore.stats(); const streak = LearnStore.getStreak(); const hSessions = getSportSessions(); return `<div class="hero"><div class="hero-k">我的</div><h1>数据管理</h1>${streak.count>0?`<div style="margin-top:12px"><span class="streak-badge" style="font-size:13px;padding:5px 12px;">🔥 已连续学习 ${streak.count} 天</span></div>`:''}</div><div class="card"><div class="sec-title" style="margin:0 0 12px;">📊 累计数据</div><div style="display:flex;align-items:baseline;gap:8px;padding:10px 4px;border-bottom:1px solid #f0f1f6;"><span style="font-size:22px;font-weight:850;color:var(--brand);min-width:52px;">${stats.learnedEver}</span><span style="font-size:13px;color:#4b5265;font-weight:600;">个单词已学过</span></div><div style="display:flex;align-items:baseline;gap:8px;padding:10px 4px;border-bottom:1px solid #f0f1f6;"><span style="font-size:22px;font-weight:850;color:var(--brand);min-width:52px;">${stats.knowDoneEver}</span><span style="font-size:13px;color:#4b5265;font-weight:600;">条知识已掌握</span></div><div style="display:flex;align-items:baseline;gap:8px;padding:10px 4px;border-bottom:1px solid #f0f1f6;"><span style="font-size:22px;font-weight:850;color:var(--accent);min-width:52px;">${Object.keys(hSessions).length}</span><span style="font-size:13px;color:#4b5265;font-weight:600;">天运动打卡</span></div><div style="display:flex;align-items:baseline;gap:8px;padding:10px 4px;border-bottom:1px solid #f0f1f6;"><span style="font-size:22px;font-weight:850;color:var(--hot);min-width:52px;">${transactions.length}</span><span style="font-size:13px;color:#4b5265;font-weight:600;">笔记账记录</span></div><div style="display:flex;align-items:baseline;gap:8px;padding:10px 4px;"><span style="font-size:22px;font-weight:850;color:#dc2626;min-width:52px;">${stats.wrongCount}</span><span style="font-size:13px;color:#4b5265;font-weight:600;">道错题待复习</span></div></div><div class="card"><div class="sec-title" style="margin:0 0 12px;">🤖 AI 助手配置</div><select id="aiProvider" style="margin-bottom:10px;"><option value="none" ${AI.provider==='none'?'selected':''}>不启用</option><option value="deepseek" ${AI.provider==='deepseek'?'selected':''}>DeepSeek</option><option value="qwen" ${AI.provider==='qwen'?'selected':''}>通义千问</option><option value="zhipu" ${AI.provider==='zhipu'?'selected':''}>智谱 GLM</option></select><input type="password" id="aiKey" placeholder="sk-..." value="${esc(AI.apiKey)}"><button class="btn primary wide" style="margin-top:14px" data-act="saveAI">保存配置</button><p class="tip" style="margin-top:10px;font-size:11.5px;">配置后可使用 AI 生成护肤推荐、AI 评分等功能。</p></div><div class="card"><div class="sec-title" style="margin:0 0 12px;">数据备份</div><button class="btn primary wide" data-act="exportData">📤 导出（JSON）</button><button class="btn wide" style="background:#f1f2f9;color:#4b5265;margin-top:8px;" data-act="importData">📥 导入（JSON）</button><button class="btn wide" style="background:#f1f2f9;color:#4b5265;margin-top:8px;" data-act="openDownloadFolder">📂 打开系统"下载"文件夹</button><p class="tip" style="margin-top:10px;font-size:11.5px;">导出时会弹窗显示文件名，文件会保存到系统「下载」文件夹，可点上面按钮跳转查看。</p></div>
-<div class="card"><div class="sec-title" style="margin:0 0 12px;">🔑 接口 Key（可选）</div><input type="text" id="keyTianapi" placeholder="天聚 API Key（留空=用内置默认）" value="${esc((LS.get('api-keys', {}) || {}).tianapi || '')}"><button class="btn primary wide" style="margin-top:12px" data-act="saveApiKeys">保存</button><p class="tip" style="margin-top:10px;font-size:11.5px;">内置 Key 有被滥用的风险。填入自己的 Key，新闻/金句/笑话接口会用你的 Key 调用。</p></div>
+
 <div class="card" style="border:1px solid #fee2e2;"><div class="sec-title" style="margin:0 0 6px;color:#dc2626;">危险操作</div><button class="btn danger wide" data-act="clearData">🗑 清空本设备数据</button></div><div class="foot-note">数据保存在本设备 · 请定期备份</div>`; }
 
-const VIEWS = { home:homeView, study:studyView, life:lifeView, discover:discoverView, me:meView };
-const SKELETON = { home:'<div class="sk" style="height:140px"></div>', study:'<div class="sk" style="height:140px"></div>', life:'<div class="sk" style="height:140px"></div>', discover:'<div class="sk" style="height:140px"></div>', me:'<div class="sk" style="height:180px"></div>' };
+const VIEWS = { home:homeView, study:studyView, life:lifeView, me:meView };
+const SKELETON = { home:'<div class="sk" style="height:140px"></div>', study:'<div class="sk" style="height:140px"></div>', life:'<div class="sk" style="height:140px"></div>', me:'<div class="sk" style="height:180px"></div>' };
 let renderToken = 0;
 async function render(options){ 
   options = options || {}; 
@@ -1237,6 +1854,26 @@ view.addEventListener('input', e => { const el = e.target; if (!el) return; if (
 document.addEventListener('click', async e => {
   const t = e.target.closest('[data-act]'); if (!t) return; const act = t.dataset.act;
   if (act === 'speak'){ e.stopPropagation(); toggleSpeak(t.dataset.text, t.dataset.lang||'en-US', t); return; }
+  if (act === 'aiExExplain') {
+    e.stopPropagation();
+    const name = t.dataset.name;
+    const detail = t.dataset.detail;
+    if (!AI.enabled()) { toast('请先在「我的」配置 AI'); return; }
+    
+    openSheet(`<div class="sheet-head"><div class="sheet-emoji">🤖</div><div style="flex:1;min-width:0;"><h2>${esc(name)} · AI 解析</h2><div class="muted">专业教练深度解析</div></div></div>
+    <div id="aiExResult" style="margin-top:14px;font-size:14px;line-height:1.75;color:#3f4658;white-space:pre-wrap;">⏳ 正在请求 AI 教练解析…</div>`);
+    
+    try {
+      const prompt = `请以专业健身教练的口吻，帮我详细解析这个动作：“${name}”。\n动作基础说明：${detail}\n\n请重点说明：\n1. 动作核心发力感怎么找？\n2. 我需要注意的细节和易错点。\n3. 如果做不标准，有什么退阶/替代做法？\n请分点作答，尽量口语化、好理解，300字以内。`;
+      const answer = await AI.assistant(prompt, 'health');
+      const resEl = document.getElementById('aiExResult');
+      if (resEl) resEl.innerHTML = esc(answer || '（AI 没有返回内容）');
+    } catch(err) {
+      const resEl = document.getElementById('aiExResult');
+      if (resEl) resEl.innerHTML = `<span style="color:var(--hot)">调用失败：${esc(err.message)}</span>`;
+    }
+    return;
+  }
 if (act === 'fetchExample'){
   e.stopPropagation();
   const word = t.dataset.word;
@@ -1304,7 +1941,7 @@ if (act === 'clearExample'){
   if (act === 'englishDeck'){ state.englishDeck = t.dataset.deck; LS.set('english-deck', state.englishDeck); state.englishPage = 1; render(); return; }
   if (act === 'englishLoadMore'){ state.englishPage += 1; render(); return; }
   if (act === 'valveLoadMore'){ state.valvePage += 1; render(); return; }
-  if (act === 'taskJump'){ const key = t.dataset.key; if (key === 'words'){ state.studySub = 'english'; state.englishSub = 'today'; } else if (key === 'valve') state.studySub = 'valve'; else if (key === 'logic') state.studySub = 'logic'; else if (key === 'general') state.studySub = 'general'; else if (['passage','expr','yiyan','quote','story'].includes(key)){ state.studySub = 'express'; } else if (key === 'news'){ state.tab = 'discover'; state.discoverSub = 'news'; } render(); return; }
+  if (act === 'taskJump'){ const key = t.dataset.key; if (key === 'words'){ state.studySub = 'english'; state.englishSub = 'today'; } else if (key === 'valve') state.studySub = 'valve'; else if (key === 'logic') state.studySub = 'logic'; else if (key === 'general') state.studySub = 'general'; else if (['passage','expr','yiyan','quote','story'].includes(key)){ state.studySub = 'express'; } else if (key === 'news'){ state.studySub = 'news'; } render(); return; }
   if (act === 'learnWord'){ 
     e.stopPropagation();
     const card = t.closest('[data-word]'); 
@@ -1346,12 +1983,13 @@ if (act === 'clearExample'){
   if (act === 'markStoryDone'){ LS.set('story-done:'+DAY, true); syncToNativeWidget(); toast('已记录'); render({ keepScroll: true }); return; }
   if (act === 'markPassageDone'){ LS.set('passage-done:'+DAY, true); syncToNativeWidget(); toast('已记录'); render({ keepScroll: true }); return; }
   if (act === 'refreshYiyan'){ state.yiyanData = null; state.yiyanLoading = false; CacheStore.save('yiyan', null); render({ keepScroll: true }); return; }
-  if (act === 'refreshJoke'){ state.jokeResults = []; CacheStore.save('joke-results', null); render({ keepScroll: true }); return; }
-  if (act === 'refreshNews'){ state.newsResults = []; CacheStore.save('news-all', null); render({ keepScroll: true }); return; }
+  if (act === 'refreshQuote'){ state.quoteResults = []; state.quoteFailed = false; CacheStore.save('quote-results-v6', null); render({ keepScroll: true }); return; }
+  if (act === 'refreshStory'){ state.storyResults = []; state.storyFailed = false; CacheStore.save('story-results-v6', null); render({ keepScroll: true }); return; }
+  if (act === 'recCat'){ state.recommendCat = t.dataset.cat; render({ keepScroll: true }); return; }
+  if (act === 'refreshRec'){ state.recOffset = (state.recOffset || 0) + 1; render({ keepScroll: true }); return; }
+  if (act === 'refreshRecList'){ CacheStore.save('rec-db-' + (state.recommendCat || '电影') + '-' + DAY, null); state.recData = null; render({ keepScroll: true }); return; }
+  if (act === 'refreshNews'){ state.newsResults = []; state.newsFailed = false; state.newsMeta = null; CacheStore.save('news-v3', null); render({ keepScroll: true }); return; }
   if (act === 'togglePassage'){ state.passageHidden = !state.passageHidden; render({ keepScroll: true }); return; }
-  if (act === 'recCat'){ state.recommendCat = t.dataset.cat; CacheStore.save('rec-' + t.dataset.cat + '-' + DAY, null); render({ keepScroll: true }); return; }
-  if (act === 'refreshRec'){ const c = state.recommendCat || '书'; CacheStore.save('rec-' + c + '-' + DAY, null); render({ keepScroll: true }); return; }
-  if (act === 'discoverSub'){ state.discoverSub = t.dataset.sub; render(); return; }
   if (act === 'startWeeklyTest'){ startWeeklyTest(); return; }
   if (act === 'startAllTest'){ startAllTest(); return; }
   if (act === 'startReview'){ e.stopPropagation(); const type = t.dataset.type; if (type === 'english'){ toast('加载中…'); try { await DeckLoader.ensureForReview(); } catch(err){} const keys = LearnStore.getReviewList('english', REVIEW_TARGET); const list = keys.map(k => DeckLoader.findWord(k)).filter(Boolean); if (!list.length){ toast('还没有学过的单词'); return; } startReview(type, list); } else { const keys = LearnStore.getReviewList('work', REVIEW_TARGET); const list = keys.map(k => SEED.VALVE_ALL.find(v => v.q === k)).filter(Boolean); if (!list.length){ toast('还没有学过的知识'); return; } startReview(type, list); } return; }
@@ -1775,44 +2413,86 @@ function playNetworkAudio(text, langStr, seq, btn) {
 function copyText(text){ return new Promise(resolve => { if (navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(()=>resolve(true)).catch(()=>resolve(false)); return; } try { const ta = document.createElement('textarea'); ta.value = text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); document.body.removeChild(ta); resolve(ok); }catch(e){ resolve(false); } }); }
 function openExternal(url){ if (!url){ toast('无链接'); return; } const u = String(url).trim(); if (!/^https?:\/\//i.test(u)){ toast('链接不安全'); return; } try { const a = document.createElement('a'); a.href = u; a.target='_blank'; a.rel='noopener noreferrer'; a.style.display='none'; document.body.appendChild(a); a.click(); setTimeout(()=>a.remove(),150); }catch(e){ toast('打开失败'); } }
 
-const KnowledgeSource = { async fetchAll(){ return await Promise.all([ this.fetchWiki().catch(e => ({ source:'wiki', error: friendlyErr(e) })), this.fetchOioweb().catch(e => ({ source:'oioweb', error: friendlyErr(e) })), this.fetchShowAPI().catch(e => ({ source:'showapi', error: friendlyErr(e) })), this.fetchTianapiWhy().catch(e => ({ source:'why', error: friendlyErr(e) })) ]); }, async fetchWiki(){ const d = await raceTimeout(fetchJson('https://zh.wikipedia.org/api/rest_v1/page/random/summary', 6000), 7000); if (!d.extract || d.extract.length < 40) throw new Error('内容太短'); return { source:'wiki', q: d.title, a: d.extract, key: '维基百科 · ' + (d.description || '') }; }, async fetchOioweb(){ const url = `https://cn.apihz.cn/api/zici/changshi.php?id=${APP_DEFAULTS.oioweb.id}&key=${APP_DEFAULTS.oioweb.key}`; const d = await raceTimeout(fetchJson(url, 6000), 7000); if (d.code !== 200) throw new Error('code='+d.code); return { source:'oioweb', q: d.p, a: d.a, key: '接口盒子' }; }, async fetchShowAPI(){ const kw = ['地球','太阳','月亮','星星','火','水','风'][Math.floor(Math.random()*7)]; const url = `https://route.showapi.com/1706-1?showapi_appid=${APP_DEFAULTS.showapi.appid}&showapi_sign=${APP_DEFAULTS.showapi.sign}&keyword=${encodeURIComponent(kw)}`; const d = await raceTimeout(fetchJson(url, 6000), 7000); if (d.showapi_res_code !== 0) throw new Error('code='+d.showapi_res_code); const list = (d.showapi_res_body && d.showapi_res_body.contentlist) || []; if (!list.length) throw new Error('无内容'); const p = list[Math.floor(Math.random()*list.length)]; return { source:'showapi', q: p.title || kw, a: p.content || p.intro || '', key: 'ShowAPI' }; }, async fetchTianapiWhy(){ 
-  const urls = [
-    `https://apis.tianapi.com/qwhy/index?key=${TIANAPI}&num=10`,
-    `https://apis.tianapi.com/why/index?key=${TIANAPI}&num=10`
-  ]; 
-  for (const url of urls){ 
-    try { 
-      const d = await tianapiFetch(url, 6000); 
-      
-      // 👇 新增调试日志：把真实的返回结果打印到控制台
-      console.log('[TianapiWhy] 真实返回数据:', d); 
-      
-      if (d.code !== 200 || !d.result) throw new Error('code=' + d.code); 
-      const list = extractList(d.result); 
-      if (!list.length) throw new Error('无内容'); 
-      
-      // 兼容多种返回字段格式
-      const p = list[Math.floor(Math.random()*list.length)]; 
-      const q = p.title || p.question || p.q || p.name || ''; 
-      const a = p.content || p.answer || p.a || p.des || ''; 
-      
-      if (!q || !a) {
-        console.warn('[TianapiWhy] 字段缺失，解析失败:', p);
-        throw new Error('无内容'); 
+const KnowledgeSource = {
+  async fetchAll(){
+    return await Promise.all([
+      this.fetchWiki().catch(e => ({ source:'wiki', error: friendlyErr(e) })),
+      this.fetchOioweb().catch(e => ({ source:'oioweb', error: friendlyErr(e) })),
+      this.fetchWhy().catch(e => ({ source:'why', error: friendlyErr(e) })),
+      this.fetchTenWhy().catch(e => ({ source:'tenwhy', error: friendlyErr(e) }))
+    ]);
+  },
+  async fetchWiki(){
+    const d = await raceTimeout(fetchJson('https://zh.wikipedia.org/api/rest_v1/page/random/summary', 6000), 7000);
+    if (!d.extract || d.extract.length < 40) throw new Error('内容太短');
+    return { source:'wiki', q: d.title, a: d.extract, key: '维基百科 · ' + (d.description || '') };
+  },
+  async fetchOioweb(){
+    const url = `https://cn.apihz.cn/api/zici/changshi.php?id=${APP_DEFAULTS.oioweb.id}&key=${APP_DEFAULTS.oioweb.key}`;
+    const d = await raceTimeout(fetchJson(url, 6000), 7000);
+    if (d.code !== 200) throw new Error('code='+d.code);
+    return { source:'oioweb', q: d.p, a: d.a, key: '接口盒子' };
+  },
+  async fetchWhy(){
+    // 采用目前国内极其稳定的 vvhan 的每日一问
+    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('超时')), 5000));
+    const d = await Promise.race([fetchJson('https://api.vvhan.com/api/ask', 5000), timeout]);
+    if (d && d.success && d.data && d.data.title) {
+      return { source:'why', q: d.data.title, a: d.data.answer, key: '每日一问 · 十万个为什么' };
+    }
+    throw new Error('无内容');
+  },
+  async fetchTenWhy(){
+    // ① 天聚数行《十万个为什么》专属接口（会员免费 100 次/天；在「我的」里配置有效 key 即可用）
+    try {
+      const d = await tianapiFetch(`https://apis.tianapi.com/tenwhy/index?key=${TIANAPI}&num=1`, 6000);
+      if (d && d.code === 200 && d.result && Array.isArray(d.result.list) && d.result.list.length){
+        const it = d.result.list[0];
+        return { source:'tenwhy', q: it.title, a: it.content, key: '十万个为什么 · ' + (WHY_TYPE_MAP[it.typeid] || '科普问答') };
       }
-      return { source:'why', q, a, key: '天聚 · 十万为什么' }; 
-    } catch(e){
-      // 👇 新增调试日志：把报错打印出来
-      console.warn('[TianapiWhy] 抓取失败:', e.message, e);
-    } 
-  } 
-  throw new Error('接口不可用'); 
-}
+    } catch(e){}
+    // ② 韩小韩每日一问兜底
+    try {
+      const d = await raceTimeout(fetchJson('https://api.vvhan.com/api/ask', 5000), 6000);
+      if (d && d.success && d.data && d.data.title){
+        return { source:'tenwhy', q: d.data.title, a: d.data.answer, key: '十万个为什么 · 每日一问' };
+      }
+    } catch(e){}
+    // ③ 内置题库兜底：按天轮换，保证每天必有内容
+    const item = WHY_BANK[DAY % WHY_BANK.length];
+    return { source:'tenwhy', q: item.q, a: item.a, key: '十万个为什么 · 精选' };
+  }
+};
 const QuoteSource = { async fetchOne(id){ if (id === 'quotable') return await this.fetchQuotable(); if (id === 'ensentence') return await this.fetchEnsentence(); if (id === 'enmaxim') return await this.fetchEnmaxim(); return null; }, async fetchAll(){ return await Promise.all(QUOTE_SOURCES.map(async (src) => { try { const d = await raceTimeout(this.fetchOne(src.id), 12000); if (!d || !d.text) throw new Error('无内容'); return { ok:true, id:src.id, label:src.label, icon:src.icon, data:d }; }catch(e){ return { ok:false, id:src.id, label:src.label, icon:src.icon, error: friendlyErr(e) }; } })); }, async fetchQuotable(){ const d = await fetchJson('https://api.quotable.io/random', 6000); let cn = d.zh || ''; if (!cn){ try { cn = await translateToChinese(d.content); } catch(e){} } return { text: d.content, author: d.author || 'Unknown', cn, source:'quotable' }; }, async fetchEnsentence(){ const d = await tianapiFetch(`https://apis.tianapi.com/ensentence/index?key=${TIANAPI}`, 6000); if (d.code !== 200 || !d.result || !d.result.en) throw new Error('code='+(d.code||'?')); let cn = d.result.zh || ''; if (!cn){ try { cn = await translateToChinese(d.result.en); } catch(e){} } return { text: d.result.en, author: '天聚 · 英语一句话', cn, source:'tianapi' }; }, async fetchEnmaxim(){ const d = await tianapiFetch(`https://apis.tianapi.com/enmaxim/index?key=${TIANAPI}`, 6000); if (d.code !== 200 || !d.result) throw new Error('code='+(d.code||'?')); let cn = d.result.zh || ''; if (!cn){ try { cn = await translateToChinese(d.result.en || ''); } catch(e){} } return { text: d.result.en || '', author: '天聚 · 英语格言', cn, source:'tianapi' }; } };
 const StorySource = { async fetchOne(id){ if (id === 'gutendex') return await this.fetchGutendex(); if (id === 'ensentence') return await this.fetchEnsentence(); if (id === 'enmaxim') return await this.fetchEnmaxim(); return null; }, async fetchAll(){ return await Promise.all(STORY_SOURCES.map(async (src) => { try { const d = await raceTimeout(this.fetchOne(src.id), 12000); if (!d || !d.preview) throw new Error('无内容'); return { ok:true, id:src.id, label:src.label, icon:src.icon, data:d }; }catch(e){ return { ok:false, id:src.id, label:src.label, icon:src.icon, error: friendlyErr(e) }; } })); }, async fetchGutendex(){ const d = await fetchJson('https://gutendex.com/books?languages=en&sort=popular&page=1', 6000); const list = d.results || []; if (!list.length) throw new Error('无数据'); const book = list[Math.floor(Math.random()*Math.min(list.length, 8))]; const fmts = book.formats || {}; const txtUrl = fmts['text/plain; charset=utf-8'] || fmts['text/plain']; if (!txtUrl) throw new Error('无文本'); const full = await fetchText(txtUrl, 6000); let start = full.indexOf('*** START OF'); if (start > 0) start = full.indexOf('\n', start)+1; else start = 0; const preview = full.slice(start, start+600).trim(); let cn = ''; try { cn = await translateToChinese(preview.slice(0,200)); } catch(e){} return { title: book.title, author:(book.authors||[]).map(a=>a.name).join(', '), preview: preview.slice(0,500), cn, url: txtUrl, source:'gutendex' }; }, async fetchEnsentence(){ const d = await tianapiFetch(`https://apis.tianapi.com/ensentence/index?key=${TIANAPI}`, 6000); if (d.code !== 200 || !d.result) throw new Error('code='+(d.code||'?')); let cn = d.result.zh || ''; if (!cn){ try { cn = await translateToChinese(d.result.en||''); } catch(e){} } return { title: '英语一句话', author: '天聚数行', preview: d.result.en, cn, url: null, source:'tianapi' }; }, async fetchEnmaxim(){ const d = await tianapiFetch(`https://apis.tianapi.com/enmaxim/index?key=${TIANAPI}`, 6000); if (d.code !== 200 || !d.result) throw new Error('code='+(d.code||'?')); let cn = d.result.zh || ''; if (!cn){ try { cn = await translateToChinese(d.result.en||''); } catch(e){} } return { title: '英语格言', author: '天聚数行', preview: d.result.en, cn, url: null, source:'tianapi' }; } };
 const YiyanSource = { async fetch(){ const d = await fetchJson('https://v1.hitokoto.cn/', 5000); if (!d.hitokoto) throw new Error('无数据'); return { text: d.hitokoto, from: d.from || d.from_who || '' }; } };
+
+// 👇 新增：一言的诗词接口
+const PoetrySource = {
+  async fetch() {
+    const d = await fetchJson('https://v1.hitokoto.cn/?c=i', 5000);
+    if (!d.hitokoto) throw new Error('无数据');
+    return { 
+      title: d.from || d.from_who || '一言诗词', 
+      text: d.hitokoto 
+    };
+  }
+};
 const NewsSource = { async fetchAll(){ return { results: await Promise.all(NEWS_SOURCES.map(async (src) => { try { const list = await raceTimeout(this.fetchOne(src.id), 15000); return { ok:true, id: src.id, label: src.label, icon: src.icon, list: (list || []).slice(0, src.max) }; }catch(e){ return { ok:false, id: src.id, label: src.label, icon: src.icon, error: friendlyErr(e) }; } })), total: NEWS_SOURCES.length }; }, async fetchOne(id){ const map = { generalnews:'generalnews', caijing:'caijing', bulletin:'bulletin', woman:'woman', networkhot:'networkhot' }; const d = await tianapiFetch(`https://apis.tianapi.com/${map[id]}/index?key=${TIANAPI}&num=10`, 8000); if (d.code !== 200) throw new Error('code='+d.code); const list = extractList(d.result); if (!list.length) throw new Error('无内容'); return list.map((n, i) => ({ t: n.title || '', d: n.description || n.digest || '', url: n.url || '', time: n.ctime || '', rank: i+1 })); } };
-const JokeSource = { async fetchAll(){ try { const d = await raceTimeout(this.fetchOne(), 12000); return [{ ok:true, id:'tianapi-leiren', label:'天聚 · 雷人笑话', icon:'😂', data:d }]; } catch(e){ return [{ ok:false, id:'tianapi-leiren', label:'天聚 · 雷人笑话', icon:'😂', error: friendlyErr(e) }]; } }, async fetchOne(){ const d = await tianapiFetch(`https://apis.tianapi.com/joke/index?key=${TIANAPI}&num=10`, 6000); if (d.code !== 200) throw new Error('code='+d.code); const list = extractList(d.result); if (!list.length) throw new Error('无内容'); const p = list[Math.floor(Math.random()*list.length)]; return { text: (p.content || p.text || '').trim(), source:'tianapi' }; } };
+const JokeSource = {
+  async fetchAll(){
+    try {
+      // 换成绝对稳定的一言笑话分类
+      const d = await raceTimeout(fetchJson('https://v1.hitokoto.cn/?c=j', 6000), 7000);
+      if (d && d.hitokoto) {
+        return [{ ok:true, id:'hitokoto-joke', label:'开心一刻', icon:'😂', data:{ text: d.hitokoto } }];
+      }
+      throw new Error('无数据');
+    } catch(e) {
+      return [{ ok:false, id:'hitokoto-joke', label:'开心一刻', icon:'😂', error:'网络异常，请重试' }];
+    }
+  }
+};
 async function fetchRecommendMovie(){ const url = `https://api.themoviedb.org/3/trending/movie/day?api_key=${APP_DEFAULTS.tmdb.key}&language=zh-CN`; const d = await fetchJson(url, 8000); const list = d.results || []; if (!list.length) throw new Error('无数据'); const m = list[Math.floor(Math.random() * Math.min(10, list.length))]; return { name: m.title || m.original_title, author: (m.release_date || '').slice(0,4), rating: m.vote_average ? m.vote_average.toFixed(1) : '', cover: m.poster_path ? `https://image.tmdb.org/t/p/w200${m.poster_path}` : '', why: m.overview || '（暂无简介）', url: m.id ? `https://www.themoviedb.org/movie/${m.id}?language=zh-CN` : '' }; }
 async function fetchRecommendBook(){ const seed = DAY % 1000; const url = `https://openlibrary.org/search.json?q=the&sort=random&limit=20&page=${seed % 10 + 1}`; const d = await fetchJson(url, 8000); const list = d.docs || []; if (!list.length) throw new Error('无数据'); const b = list[Math.floor(Math.random() * list.length)]; return { name: b.title || '未知书名', author: (b.author_name || []).slice(0, 2).join(', ') || '', cover: b.cover_i ? `https://covers.openlibrary.org/b/id/${b.cover_i}-M.jpg` : '', why: `首次出版：${b.first_publish_year || '未知'}。${b.subject ? '主题：' + b.subject.slice(0,3).join('、') : ''}`, url: b.key ? `https://openlibrary.org${b.key}` : '' }; }
 async function fetchRecommendPodcast(){ const terms = ['technology', 'business', 'health', 'science', 'culture']; const term = terms[DAY % terms.length]; const url = `https://itunes.apple.com/search?media=podcast&term=${term}&limit=20&country=us`; const d = await fetchJson(url, 8000); const list = d.results || []; if (!list.length) throw new Error('无数据'); const p = list[Math.floor(Math.random() * list.length)]; return { name: p.collectionName || p.trackName || '未知播客', author: p.artistName || '', cover: p.artworkUrl100 || '', why: `题材：${(p.primaryGenreName || '综合')}。${p.trackCount ? '共 ' + p.trackCount + ' 集' : ''}`, url: p.collectionViewUrl || '' }; }

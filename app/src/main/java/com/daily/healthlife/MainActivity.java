@@ -64,6 +64,7 @@ public class MainActivity extends AppCompatActivity {
         webView.addJavascriptInterface(jsBridge, "AndroidTTS");
         webView.addJavascriptInterface(jsBridge, "AndroidNotify");
         webView.addJavascriptInterface(jsBridge, "AndroidSpeech");
+        webView.addJavascriptInterface(jsBridge, "AndroidHttp");
 
         webView.setWebViewClient(new WebViewClient() {
             @Override

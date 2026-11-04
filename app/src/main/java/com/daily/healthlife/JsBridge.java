@@ -257,6 +257,43 @@ public class JsBridge {
         } catch (Exception ignored) {}
     }
 
+    /** 原生 HTTP GET 桥：WebView 内 fetch 被网络环境拦截时，由原生代码发请求，结果通过 window.__nativeHttpCb 回传 */
+    @JavascriptInterface
+    public void httpGet(String url, String cbId) {
+        new Thread(() -> {
+            String result;
+            try {
+                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
+                conn.setConnectTimeout(10000);
+                conn.setReadTimeout(12000);
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36");
+                conn.setRequestProperty("Accept", "application/json,text/plain,*/*");
+                int code = conn.getResponseCode();
+                java.io.InputStream is = code >= 400 ? conn.getErrorStream() : conn.getInputStream();
+                java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+                byte[] buf = new byte[8192];
+                int n;
+                if (is != null) { while ((n = is.read(buf)) > 0) bos.write(buf, 0, n); is.close(); }
+                try { conn.disconnect(); } catch (Exception ignored) {}
+                org.json.JSONObject o = new org.json.JSONObject();
+                o.put("ok", code >= 200 && code < 300);
+                o.put("status", code);
+                o.put("body", new String(bos.toByteArray(), StandardCharsets.UTF_8));
+                result = o.toString();
+            } catch (Exception e) {
+                try {
+                    org.json.JSONObject o = new org.json.JSONObject();
+                    o.put("ok", false);
+                    o.put("error", e.getMessage() == null ? "请求失败" : e.getMessage());
+                    result = o.toString();
+                } catch (Exception e2) { result = "{\"ok\":false,\"error\":\"request failed\"}"; }
+            }
+            final String r = result;
+            act.runOnUiThread(() -> webView.evaluateJavascript(
+                    "window.__nativeHttpCb && window.__nativeHttpCb(" + org.json.JSONObject.quote(cbId) + "," + r + ")", null));
+        }).start();
+    }
+
     public void destroy() {
         tts.destroy();
         recorder.destroy();
