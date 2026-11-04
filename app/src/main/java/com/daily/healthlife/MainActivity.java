@@ -27,6 +27,25 @@ public class MainActivity extends AppCompatActivity {
     private ValueCallback<Uri[]> mUploadMessage;
     private final static int FILE_CHOOSER_RESULT_CODE = 10000;
 
+    /** 供 WalkAlarmReceiver 判断 App 是否在前台、以及直接调用页面里的方法 */
+    private static volatile boolean sForeground = false;
+    private static java.lang.ref.WeakReference<MainActivity> sInstance =
+            new java.lang.ref.WeakReference<>(null);
+
+    public static boolean isAppForeground() {
+        return sForeground;
+    }
+
+    /** 在页面里执行一段 JS，返回是否成功派发 */
+    public static boolean runJs(String script) {
+        MainActivity a = sInstance.get();
+        if (a == null || a.webView == null) return false;
+        a.runOnUiThread(() -> {
+            try { a.webView.evaluateJavascript(script, null); } catch (Exception ignored) {}
+        });
+        return true;
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         
         webView = findViewById(R.id.webview);
+        sInstance = new java.lang.ref.WeakReference<>(this);
         setupWebView();
         checkPermissions();
         handleJumpIntent(getIntent());
@@ -159,11 +179,20 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        sForeground = true;
+        // 回到前台时校正一次闹钟（设备重启、改过系统时间、切过时区都能修正）
+        try { WalkAlarmReceiver.scheduleNext(getApplicationContext()); } catch (Exception ignored) {}
         // 每次回到前台，同步一次小组件打卡状态
         if (webView != null) {
             webView.postDelayed(() -> webView.evaluateJavascript(
                     "window.mergeNativeWidgetCheckins && window.mergeNativeWidgetCheckins()", null), 180);
         }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        sForeground = false;
     }
 
     @Override

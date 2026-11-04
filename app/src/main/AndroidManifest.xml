@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:label="日常 · 健康生活"
@@ -43,5 +45,23 @@
         </receiver>
         
         <service android:name=".WalkTimerService" android:exported="false" android:foregroundServiceType="dataSync" />
+
+        <!-- 站立提醒的系统级调度：App 关闭/重启后依然能准点触发 -->
+        <receiver android:name=".WalkAlarmReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="com.daily.healthlife.WALK_ALARM" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 晚间小结提醒：每天固定时刻温和提醒一次，点通知直达时间线 -->
+        <receiver android:name=".EveningReminderReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="com.daily.healthlife.EVENING_ALARM" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

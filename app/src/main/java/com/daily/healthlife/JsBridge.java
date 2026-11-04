@@ -244,9 +244,191 @@ public class JsBridge {
         } catch (Exception e) {}
     }
 
+    // ==================== 站立提醒：把调度交给系统 ====================
+
+    /**
+     * 页面把提醒设置同步过来，原生用 AlarmManager 排下一次。
+     * enabled: 1 开 / 0 关；startMin/endMin 为当天的分钟数；freq 为间隔分钟。
+     */
     @JavascriptInterface
-    public void vibrate(int ms) {
+    public void syncWalkSettings(int enabled, int startMin, int endMin, int freq) {
         try {
+            Context ctx = act.getApplicationContext();
+            SharedPreferences sp = ctx.getSharedPreferences(WalkAlarmReceiver.PREFS, Context.MODE_PRIVATE);
+            sp.edit()
+                    .putBoolean("enabled", enabled == 1)
+                    .putInt("startMin", startMin)
+                    .putInt("endMin", endMin)
+                    .putInt("freq", Math.max(15, freq))
+                    .apply();
+            if (enabled == 1) {
+                WalkAlarmReceiver.scheduleNext(ctx);
+            } else {
+                WalkAlarmReceiver.cancel(ctx);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** 查询系统里下一次提醒的时间（毫秒时间戳，0 表示未排） */
+    @JavascriptInterface
+    public String getWalkAlarmInfo() {
+        try {
+            Context ctx = act.getApplicationContext();
+            SharedPreferences sp = ctx.getSharedPreferences(WalkAlarmReceiver.PREFS, Context.MODE_PRIVATE);
+            android.app.AlarmManager am = (android.app.AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+            android.app.PendingIntent pi = android.app.PendingIntent.getBroadcast(ctx, 4301,
+                    new Intent(ctx, WalkAlarmReceiver.class).setAction(WalkAlarmReceiver.ACTION_FIRE),
+                    android.app.PendingIntent.FLAG_NO_CREATE | android.app.PendingIntent.FLAG_IMMUTABLE);
+            boolean pending = pi != null;
+            boolean enabled = sp.getBoolean("enabled", true);
+            boolean exact = true;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && am != null) {
+                exact = am.canScheduleExactAlarms();
+            }
+            org.json.JSONObject o = new org.json.JSONObject();
+            o.put("enabled", enabled);
+            o.put("scheduled", pending);
+            o.put("exact", exact);
+            return o.toString();
+        } catch (Exception e) {
+            return "{}";
+        }
+    }
+
+    // ==================== 晚间小结提醒 ====================
+
+    /** 页面把晚间提醒设置同步过来；enabled: 1 开 / 0 关，minute 为当天的分钟数（如 20:30 = 1230） */
+    @JavascriptInterface
+    public void syncEveningSettings(int enabled, int minute) {
+        try {
+            Context ctx = act.getApplicationContext();
+            SharedPreferences sp = ctx.getSharedPreferences(EveningReminderReceiver.PREFS, Context.MODE_PRIVATE);
+            sp.edit()
+                    .putBoolean("enabled", enabled == 1)
+                    .putInt("minute", Math.max(0, Math.min(23 * 60 + 59, minute)))
+                    .apply();
+            if (enabled == 1) {
+                EveningReminderReceiver.scheduleNext(ctx);
+            } else {
+                EveningReminderReceiver.cancel(ctx);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** 页面把「今日未完成摘要」写过来（如「今天还有 2 件待办没完成 · 星光还没领哦」），晚间通知直接用它做文案 */
+    @JavascriptInterface
+    public void saveEveningBrief(String dateYmd, String text) {
+        try {
+            Context ctx = act.getApplicationContext();
+            SharedPreferences sp = ctx.getSharedPreferences(EveningReminderReceiver.PREFS, Context.MODE_PRIVATE);
+            sp.edit()
+                    .putString("briefDate", dateYmd == null ? "" : dateYmd)
+                    .putString("briefText", text == null ? "" : text)
+                    .apply();
+        } catch (Exception ignored) {
+        }
+    }
+
+    // ==================== 备份落地到文件 ====================
+
+    private File backupDir() {
+        File dir = new File(act.getExternalFilesDir(null), "backups");
+        if (!dir.exists()) dir.mkdirs();
+        return dir;
+    }
+
+    /** 写一份备份文件，返回绝对路径（失败返回空串） */
+    @JavascriptInterface
+    public String saveBackupFile(String json, String filename) {
+        try {
+            if (json == null) return "";
+            String name = (filename == null ? "" : filename).replaceAll("[^0-9A-Za-z._-]", "");
+            if (name.length() == 0) name = "backup-" + System.currentTimeMillis() + ".json";
+            if (!name.endsWith(".json")) name = name + ".json";
+            File dir = backupDir();
+            File f = new File(dir, name);
+            FileOutputStream fos = new FileOutputStream(f);
+            fos.write(json.getBytes(StandardCharsets.UTF_8));
+            fos.close();
+            pruneBackups(dir, 6);
+            return f.getAbsolutePath();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /** 列出备份文件，按时间倒序：[{name,size,t}] */
+    @JavascriptInterface
+    public String listBackupFiles() {
+        try {
+            File[] fs = backupDir().listFiles();
+            if (fs == null) return "[]";
+            java.util.List<File> list = new java.util.ArrayList<>();
+            for (File f : fs) {
+                if (f.isFile() && f.getName().endsWith(".json")) list.add(f);
+            }
+            list.sort((a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+            org.json.JSONArray arr = new org.json.JSONArray();
+            for (File f : list) {
+                org.json.JSONObject o = new org.json.JSONObject();
+                o.put("name", f.getName());
+                o.put("size", f.length());
+                o.put("t", f.lastModified());
+                arr.put(o);
+            }
+            return arr.toString();
+        } catch (Exception e) {
+            return "[]";
+        }
+    }
+
+    /** 读回一份备份内容 */
+    @JavascriptInterface
+    public String readBackupFile(String name) {
+        try {
+            String n = (name == null ? "" : name).replaceAll("[^0-9A-Za-z._-]", "");
+            File f = new File(backupDir(), n);
+            if (!f.exists() || !f.isFile()) return "";
+            FileInputStream fis = new FileInputStream(f);
+            byte[] bytes = new byte[(int) f.length()];
+            int read = fis.read(bytes);
+            fis.close();
+            return new String(bytes, 0, Math.max(read, 0), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    @JavascriptInterface
+    public boolean deleteBackupFile(String name) {
+        try {
+            String n = (name == null ? "" : name).replaceAll("[^0-9A-Za-z._-]", "");
+            File f = new File(backupDir(), n);
+            return f.exists() && f.delete();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void pruneBackups(File dir, int keep) {
+        try {
+            File[] fs = dir.listFiles();
+            if (fs == null) return;
+            java.util.List<File> list = new java.util.ArrayList<>();
+            for (File f : fs) {
+                if (f.isFile() && f.getName().endsWith(".json")) list.add(f);
+            }
+            if (list.size() <= keep) return;
+            list.sort((a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+            for (int i = keep; i < list.size(); i++) list.get(i).delete();
+        } catch (Exception ignored) {
+        }
+    }
+
+    @JavascriptInterface
+    public void vibrate(int ms) {        try {
             Vibrator v = (Vibrator) act.getSystemService(Context.VIBRATOR_SERVICE);
             if (v == null) return;
             if (Build.VERSION.SDK_INT >= 26) {
