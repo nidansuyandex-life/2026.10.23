@@ -4730,7 +4730,17 @@ fab.addEventListener('click', () => {
 function requestNotifPermission(){ try { if (window.AndroidNotify && AndroidNotify.requestPermission) AndroidNotify.requestPermission(); if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission(); } catch(e){} }
 function sendNotification(title, body){ try { if (window.AndroidNotify && AndroidNotify.notify){ AndroidNotify.notify(title, body); return; } if (typeof Notification !== 'undefined' && Notification.permission === 'granted') new Notification(title, { body }); } catch(e){} }
 function vibratePattern(p){ try { if (navigator.vibrate) navigator.vibrate(p); } catch(e){} }
-function finishWalkTimer(){ const el = document.getElementById('centerTimer'); if (el) el.classList.remove('show'); if (_walkCountdownHandle){ clearInterval(_walkCountdownHandle); _walkCountdownHandle = null; } _walkEndTs = 0; if (window.AndroidBridge && typeof AndroidBridge.stopNativeWalkTimer === 'function') { AndroidBridge.stopNativeWalkTimer(); } playBeep(); setTimeout(() => playBeep(), 420); vibratePattern([300, 150, 300]); setTimeout(() => speakText('时间到，回到座位继续吧'), 600); sendNotification('活动结束', '可以回到座位继续工作了'); }
+function finishWalkTimer(){
+  const el = document.getElementById('centerTimer'); if (el) el.classList.remove('show');
+  if (_walkCountdownHandle){ try { clearInterval(_walkCountdownHandle); } catch(e){} _walkCountdownHandle = null; }
+  _walkEndTs = 0;
+  // 所有原生/媒体调用逐一兜底：微信抢音频焦点、通知权限被回收时最容易抛
+  try { if (window.AndroidBridge && typeof AndroidBridge.stopNativeWalkTimer === 'function') AndroidBridge.stopNativeWalkTimer(); } catch(e){}
+  try { playBeep(); setTimeout(() => { try { playBeep(); } catch(e){} }, 420); } catch(e){}
+  try { vibratePattern([300, 150, 300]); } catch(e){}
+  try { setTimeout(() => { try { speakText('时间到，回到座位继续吧'); } catch(e){} }, 600); } catch(e){}
+  try { sendNotification('活动结束', '可以回到座位继续工作了'); } catch(e){}
+}
 let _walkEndTs = 0, _walkCountdownHandle = null, _walkTimerHandle = null;
 
 
@@ -4739,26 +4749,48 @@ function startWalkTimer(sec){
   const num = document.getElementById('centerTimerNum'); 
   if (!el || !num) return; 
   const duration = Math.max(1, parseInt(sec, 10) || 200); 
+  const wasRunning = !!_walkCountdownHandle;
   _walkEndTs = Date.now() + duration * 1000; 
   num.textContent = duration; 
   el.classList.add('show'); 
   
-  // 同步给原生服务（在后台运行）
-  if (window.AndroidBridge && typeof AndroidBridge.startNativeWalkTimer === 'function') { 
-    AndroidBridge.startNativeWalkTimer(duration); 
-  } 
+  // ★ 只在「页面可见」且「尚未启动过原生服务」时同步给原生前台服务。
+  //   微信弹消息把 App 挤到后台后，Android 12+ 禁止后台启动前台服务，
+  //   JavaBridge 线程抛出的异常会直接杀掉整个进程（闪退）。
+  //   后台时由原生闹钟的通知负责提醒，不在这里起服务。
+  if (!wasRunning && document.visibilityState === 'visible') {
+    try { if (window.AndroidBridge && typeof AndroidBridge.startNativeWalkTimer === 'function') AndroidBridge.startNativeWalkTimer(duration); } catch(e){ console.warn('[Walk] 原生服务启动失败', e); }
+  }
   
-  if (_walkCountdownHandle) clearInterval(_walkCountdownHandle); 
+  if (_walkCountdownHandle) { try { clearInterval(_walkCountdownHandle); } catch(e){} }
   _walkCountdownHandle = setInterval(() => { 
-    const left = Math.max(0, Math.ceil((_walkEndTs - Date.now()) / 1000)); 
-    num.textContent = left; 
-    if (left <= 0) finishWalkTimer(); 
+    let left = 0;
+    try { left = Math.max(0, Math.ceil((_walkEndTs - Date.now()) / 1000)); num.textContent = left; } catch(e){}
+    if (left <= 0) { try { finishWalkTimer(); } catch(e){} }
   }, 250); 
 
-  // 无论是前台还是后台，立刻触发一次系统通知（防挂起）
-  speakText('该站起来走动了，活动两到三分钟'); 
-  vibratePattern([150, 100, 150]); 
-  sendNotification('该站起来走动了', '起身活动 2–3 分钟，下巴轻收 5 次'); 
+  // 语音 / 震动 / 通知全部包 try-catch（微信来消息时音频焦点与通知权限都可能变化）
+  try { speakText('该站起来走动了，活动两到三分钟'); } catch(e){}
+  try { vibratePattern([150, 100, 150]); } catch(e){}
+  try { sendNotification('该站起来走动了', '起身活动 2–3 分钟，下巴轻收 5 次'); } catch(e){}
+}
+
+/** 从后台回到前台时校准倒计时：后台 WebView 可能被系统冻结，定时器不准 */
+function resumeWalkTimerAfterForeground(){
+  const el = document.getElementById('centerTimer');
+  if (!el || !el.classList.contains('show')) return;
+  if (!_walkEndTs || _walkEndTs <= 0) return;
+  const left = Math.max(0, Math.ceil((_walkEndTs - Date.now()) / 1000));
+  const num = document.getElementById('centerTimerNum'); if (num) num.textContent = left;
+  if (!_walkCountdownHandle){
+    _walkCountdownHandle = setInterval(() => {
+      const n = document.getElementById('centerTimerNum');
+      const l = Math.max(0, Math.ceil((_walkEndTs - Date.now()) / 1000));
+      if (n) n.textContent = l;
+      if (l <= 0) { try { finishWalkTimer(); } catch(e){} }
+    }, 250);
+  }
+  if (left <= 0) { try { finishWalkTimer(); } catch(e){} }
 }
 
 
@@ -5609,6 +5641,9 @@ function isWalkHalfHourMoment() {
 
 function checkWalkHalfHourTrigger() {
   try {
+    // ★ 页面不可见（切到微信、锁屏、下拉通知）时绝不触发，
+    //   否则会在后台调用原生 startForegroundService 导致 Android 12+ 抛异常杀进程
+    if (document.visibilityState !== 'visible') return;
     if (!isWalkHalfHourMoment()) return;
     const now = new Date();
     const hh = String(now.getHours()).padStart(2, '0');
@@ -5638,6 +5673,7 @@ function syncWalkToNative(){
 /* 原生闹钟在 App 前台时直接调这里，弹 200 秒倒计时 */
 window.onNativeWalkAlarm = function(){
   try {
+    if (document.visibilityState !== 'visible') return;   // 后台不弹、不起服务
     const now = new Date();
     const slotKey = `app_h_walkSlot_${todayStr()}_${pad(now.getHours())}${pad(now.getMinutes())}`;
     if (LS.get(slotKey, false)) return;
@@ -5767,7 +5803,10 @@ function _checkDayRollover(){
 }
 setInterval(_checkDayRollover, 60 * 1000);
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') _checkDayRollover();
+  if (document.visibilityState === 'visible') {
+    try { _checkDayRollover(); } catch(e){}
+    try { resumeWalkTimerAfterForeground(); } catch(e){ console.warn('[Walk] 回前台校准失败', e); }
+  }
 });
 
 
