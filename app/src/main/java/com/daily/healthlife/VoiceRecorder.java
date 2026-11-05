@@ -155,7 +155,14 @@ public class VoiceRecorder {
             if (callback != null) callback.onError("麦克风初始化失败");
             hardStop(); return;
         }
-        audioRecord.startRecording();
+        // 微信语音/通话会占用麦克风，此时 startRecording 会抛 IllegalStateException
+        try {
+            audioRecord.startRecording();
+        } catch (Throwable t) {
+            if (callback != null) callback.onError("麦克风被占用，请稍后再试");
+            hardStop();
+            return;
+        }
         final WebSocket socket = ws;
         recordThread = new Thread(() -> {
             byte[] buffer = new byte[1280];

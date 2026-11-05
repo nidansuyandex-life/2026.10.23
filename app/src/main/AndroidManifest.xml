@@ -13,6 +13,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
+        android:name=".App"
         android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:label="日常 · 健康生活"
         android:roundIcon="@mipmap/ic_launcher" android:supportsRtl="true" android:usesCleartextTraffic="true"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">
@@ -22,7 +23,7 @@
             android:exported="true" 
             android:launchMode="singleTask" 
             android:windowSoftInputMode="adjustResize" 
-            android:configChanges="orientation|screenSize|keyboardHidden">
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|navigation|uiMode|density|fontScale|locale|layoutDirection|mcc|mnc|touchscreen">
             
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

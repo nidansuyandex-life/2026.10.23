@@ -65,12 +65,15 @@ public class HealthWidgetProvider extends AppWidgetProvider {
     }
 
     private void updateWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
-        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_health_card);
-        
+        // 小组件由系统进程回调，任何未捕获异常都会记到 App 进程头上，逐段兜底
+        RemoteViews views;
+        try { views = new RemoteViews(context.getPackageName(), R.layout.widget_health_card); }
+        catch (Throwable t) { t.printStackTrace(); return; }
+
         try {
             Intent openAppIntent = new Intent(context, MainActivity.class).setAction(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
             views.setOnClickPendingIntent(R.id.widget_btn_open_app, PendingIntent.getActivity(context, 4, openAppIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
-        } catch (Exception ignored) {}
+        } catch (Throwable ignored) {}
 
         try {
             SharedPreferences sp = context.getSharedPreferences("HealthWidgetData", Context.MODE_PRIVATE);
@@ -159,7 +162,8 @@ public class HealthWidgetProvider extends AppWidgetProvider {
                 }
             }
         } catch (Throwable t) { t.printStackTrace(); }
-        appWidgetManager.updateAppWidget(appWidgetId, views);
+        try { appWidgetManager.updateAppWidget(appWidgetId, views); }
+        catch (Throwable t) { t.printStackTrace(); }
     }
 
     private String getRouteFromKey(String key) {

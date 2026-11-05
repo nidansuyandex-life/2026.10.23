@@ -60,29 +60,69 @@ public class JsBridge {
 
     @JavascriptInterface
     public void requestPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(act, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(act, new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 2002);
+        try {
+            if (act.isFinishing() || act.isDestroyed()) return;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (ContextCompat.checkSelfPermission(act, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(act, new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 2002);
+                }
             }
-        }
+        } catch (Throwable ignored) {}
     }
 
+    /**
+     * 启动 200 秒倒计时服务。
+     * ★ 关键修复：Android 12+ 禁止「后台」启动前台服务，会抛
+     *   ForegroundServiceStartNotAllowedException；这个异常发生在 WebView 的
+     *   JavaBridge 线程，未捕获会直接杀掉整个进程（用户看到的「闪退」）。
+     *   微信来消息把 App 挤到后台时，页面的 15 秒轮询仍可能调到这里。
+     *   因此：后台一律不启服务（改发普通通知），且全程 try-catch(Throwable)。
+     */
     @JavascriptInterface
     public void startNativeWalkTimer(int seconds) {
-        Context context = act.getApplicationContext();
-        Intent intent = new Intent(context, WalkTimerService.class);
-        intent.putExtra("duration", seconds);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(intent);
-        } else {
-            context.startService(intent);
-        }
+        try {
+            Context context = act.getApplicationContext();
+            // 倒计时已在跑时不要重复启动，避免多次 startForegroundService 触发系统限制
+            if (WalkTimerService.sRunning) return;
+
+            if (!MainActivity.isAppForeground()) {
+                // 后台：只发一条普通通知，绝不 startForegroundService
+                notifySafe("该站起来走动了", "起身活动 2–3 分钟");
+                return;
+            }
+
+            Intent intent = new Intent(context, WalkTimerService.class);
+            intent.putExtra("duration", Math.max(1, seconds));
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent);
+                } else {
+                    context.startService(intent);
+                }
+            } catch (Throwable t) {
+                // 后台启动被拒 / 权限异常：降级为普通通知，不让异常冒泡
+                android.util.Log.w("JsBridge", "startForegroundService denied, fallback to notification", t);
+                notifySafe("该站起来走动了", "起身活动 2–3 分钟");
+            }
+        } catch (Throwable ignored) {}
     }
 
     @JavascriptInterface
     public void stopNativeWalkTimer() {
-        Context context = act.getApplicationContext();
-        context.stopService(new Intent(context, WalkTimerService.class));
+        try {
+            act.getApplicationContext().stopService(new Intent(act.getApplicationContext(), WalkTimerService.class));
+        } catch (Throwable ignored) {}
+    }
+
+    /** 通知的安全封装：检查权限、Activity 状态，吞掉所有异常 */
+    private void notifySafe(String title, String body) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (ContextCompat.checkSelfPermission(act, android.Manifest.permission.POST_NOTIFICATIONS)
+                        != android.content.pm.PackageManager.PERMISSION_GRANTED) return;
+            }
+            notify(title, body);
+        } catch (Throwable ignored) {}
     }
 
     @JavascriptInterface
@@ -115,18 +155,25 @@ public class JsBridge {
 
     @JavascriptInterface
     public void startRecognize(int durationSec) {
-        act.runOnUiThread(() -> recorder.start(durationSec, new VoiceRecorder.Callback() {
-            @Override
-            public void onResult(String text) {
-                final String s = text == null ? "" : text;
-                act.runOnUiThread(() -> webView.evaluateJavascript("window.onVoiceResult && window.onVoiceResult(" + jsString(s) + ")", null));
-            }
+        try {
+            act.runOnUiThread(() -> {
+                try {
+                    recorder.start(durationSec, new VoiceRecorder.Callback() {
+                        @Override
+                        public void onResult(String text) {
+                            final String s = text == null ? "" : text;
+                            // 回调可能发生在 Activity/WebView 已销毁之后（切微信时尤其常见）
+                            MainActivity.runJs("window.onVoiceResult && window.onVoiceResult(" + jsString(s) + ")");
+                        }
 
-            @Override
-            public void onError(String err) {
-                act.runOnUiThread(() -> webView.evaluateJavascript("window.onVoiceError && window.onVoiceError(" + jsString(err) + ")", null));
-            }
-        }));
+                        @Override
+                        public void onError(String err) {
+                            MainActivity.runJs("window.onVoiceError && window.onVoiceError(" + jsString(err) + ")");
+                        }
+                    });
+                } catch (Throwable ignored) {}
+            });
+        } catch (Throwable ignored) {}
     }
 
     @JavascriptInterface
@@ -210,11 +257,17 @@ public class JsBridge {
                 fos.write(content.getBytes(StandardCharsets.UTF_8));
                 fos.close();
             }
-            act.runOnUiThread(() -> new AlertDialog.Builder(act)
-                    .setTitle("✓ 已保存")
-                    .setMessage("文件名：\n" + filename)
-                    .setPositiveButton("知道了", null)
-                    .show());
+            act.runOnUiThread(() -> {
+                // Activity 已结束时弹 Dialog 会抛 BadTokenException，且外层 catch 抓不到 UI 线程异常
+                try {
+                    if (act.isFinishing() || act.isDestroyed()) return;
+                    new AlertDialog.Builder(act)
+                            .setTitle("✓ 已保存")
+                            .setMessage("文件名：\n" + filename)
+                            .setPositiveButton("知道了", null)
+                            .show();
+                } catch (Throwable ignored) {}
+            });
         } catch (Exception e) {}
     }
 
@@ -230,7 +283,13 @@ public class JsBridge {
     @JavascriptInterface
     public void notify(String title, String body) {
         try {
+            // Android 13+ 未授权时 nm.notify 会抛 SecurityException
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (ContextCompat.checkSelfPermission(act, android.Manifest.permission.POST_NOTIFICATIONS)
+                        != android.content.pm.PackageManager.PERMISSION_GRANTED) return;
+            }
             NotificationManager nm = (NotificationManager) act.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm == null) return;
             if (Build.VERSION.SDK_INT >= 26) {
                 nm.createNotificationChannel(new NotificationChannel("healthlife", "健康生活提醒", NotificationManager.IMPORTANCE_HIGH));
             }
@@ -241,7 +300,7 @@ public class JsBridge {
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
                     .setAutoCancel(true)
                     .build());
-        } catch (Exception e) {}
+        } catch (Throwable ignored) {}
     }
 
     // ==================== 站立提醒：把调度交给系统 ====================
@@ -473,8 +532,8 @@ public class JsBridge {
                 } catch (Exception e2) { result = "{\"ok\":false,\"error\":\"request failed\"}"; }
             }
             final String r = result;
-            act.runOnUiThread(() -> webView.evaluateJavascript(
-                    "window.__nativeHttpCb && window.__nativeHttpCb(" + org.json.JSONObject.quote(cbId) + "," + r + ")", null));
+            // 网络回调可能晚于 Activity 销毁（切微信、内存回收），统一走安全通道
+            MainActivity.runJs("window.__nativeHttpCb && window.__nativeHttpCb(" + org.json.JSONObject.quote(cbId) + "," + r + ")");
         }).start();
     }
 
@@ -530,8 +589,8 @@ public class JsBridge {
                 if (conn != null) { try { conn.disconnect(); } catch (Exception ignored) {} }
             }
             final String r = result;
-            act.runOnUiThread(() -> webView.evaluateJavascript(
-                    "window.__nativeHttpCb && window.__nativeHttpCb(" + org.json.JSONObject.quote(cbId) + "," + r + ")", null));
+            // 网络回调可能晚于 Activity 销毁（切微信、内存回收），统一走安全通道
+            MainActivity.runJs("window.__nativeHttpCb && window.__nativeHttpCb(" + org.json.JSONObject.quote(cbId) + "," + r + ")");
         }).start();
     }
 
@@ -545,7 +604,7 @@ public class JsBridge {
     }
 
     public void destroy() {
-        tts.destroy();
-        recorder.destroy();
+        try { tts.destroy(); } catch (Throwable ignored) {}
+        try { recorder.destroy(); } catch (Throwable ignored) {}
     }
 }
