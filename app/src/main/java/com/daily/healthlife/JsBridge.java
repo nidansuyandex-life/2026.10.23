@@ -446,10 +446,12 @@ public class JsBridge {
             String result;
             try {
                 java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
-                conn.setConnectTimeout(10000);
+                conn.setConnectTimeout(8000);
                 conn.setReadTimeout(12000);
+                conn.setInstanceFollowRedirects(true);
                 conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36");
                 conn.setRequestProperty("Accept", "application/json,text/plain,*/*");
+                conn.setRequestProperty("Accept-Encoding", "identity");
                 int code = conn.getResponseCode();
                 java.io.InputStream is = code >= 400 ? conn.getErrorStream() : conn.getInputStream();
                 java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
@@ -474,6 +476,72 @@ public class JsBridge {
             act.runOnUiThread(() -> webView.evaluateJavascript(
                     "window.__nativeHttpCb && window.__nativeHttpCb(" + org.json.JSONObject.quote(cbId) + "," + r + ")", null));
         }).start();
+    }
+
+
+    /** 原生 HTTP POST JSON 桥：AI 对话 / 拍照识别在 file:// WebView 里会被 CORS 拦，
+        由原生代码发请求绕过跨域；headersJson 为 {"Authorization":"Bearer ..."} 形式 */
+    @JavascriptInterface
+    public void httpPostJson(String url, String json, String headersJson, String cbId) {
+        new Thread(() -> {
+            String result;
+            java.net.HttpURLConnection conn = null;
+            try {
+                conn = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
+                conn.setConnectTimeout(12000);
+                conn.setReadTimeout(32000);
+                conn.setRequestMethod("POST");
+                conn.setDoOutput(true);
+                conn.setInstanceFollowRedirects(true);
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setRequestProperty("Accept", "application/json");
+                conn.setRequestProperty("Accept-Encoding", "identity");
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36");
+                if (headersJson != null && !headersJson.isEmpty()) {
+                    org.json.JSONObject h = new org.json.JSONObject(headersJson);
+                    java.util.Iterator<String> it = h.keys();
+                    while (it.hasNext()) {
+                        String k = it.next();
+                        conn.setRequestProperty(k, h.optString(k, ""));
+                    }
+                }
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write((json == null ? "" : json).getBytes(StandardCharsets.UTF_8));
+                }
+                int code = conn.getResponseCode();
+                java.io.InputStream is = code >= 400 ? conn.getErrorStream() : conn.getInputStream();
+                java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+                byte[] buf = new byte[8192];
+                int n;
+                if (is != null) { while ((n = is.read(buf)) > 0) bos.write(buf, 0, n); is.close(); }
+                org.json.JSONObject o = new org.json.JSONObject();
+                o.put("ok", code >= 200 && code < 300);
+                o.put("status", code);
+                o.put("body", new String(bos.toByteArray(), StandardCharsets.UTF_8));
+                result = o.toString();
+            } catch (Exception e) {
+                try {
+                    org.json.JSONObject o = new org.json.JSONObject();
+                    o.put("ok", false);
+                    o.put("error", e.getMessage() == null ? "请求失败" : e.getMessage());
+                    result = o.toString();
+                } catch (Exception e2) { result = "{\"ok\":false,\"error\":\"request failed\"}"; }
+            } finally {
+                if (conn != null) { try { conn.disconnect(); } catch (Exception ignored) {} }
+            }
+            final String r = result;
+            act.runOnUiThread(() -> webView.evaluateJavascript(
+                    "window.__nativeHttpCb && window.__nativeHttpCb(" + org.json.JSONObject.quote(cbId) + "," + r + ")", null));
+        }).start();
+    }
+
+    /** 设置页「发一条测试」：立即发一条通知，验证通知权限与渠道是否正常 */
+    @JavascriptInterface
+    public void testEveningNotification() {
+        try {
+            Context ctx = act.getApplicationContext();
+            EveningReminderReceiver.sendTestNotification(ctx);
+        } catch (Exception ignored) {}
     }
 
     public void destroy() {

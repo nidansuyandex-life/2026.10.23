@@ -48,7 +48,7 @@ public class EveningReminderReceiver extends BroadcastReceiver {
         }
 
         SharedPreferences sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        if (!sp.getBoolean("enabled", false)) return;
+        if (!sp.getBoolean("enabled", true)) return;
 
         // 时间复核：闹钟被系统严重延迟（超过设定时刻 45 分钟以上）就跳过，明天再来
         int set = sp.getInt("minute", 20 * 60 + 30);
@@ -67,13 +67,11 @@ public class EveningReminderReceiver extends BroadcastReceiver {
         }
         sp.edit().putString("lastDay", today).apply();
 
-        boolean handledByPage = false;
         if (MainActivity.isAppForeground()) {
-            handledByPage = MainActivity.runJs("window.onNativeEveningReminder && window.onNativeEveningReminder()");
+            MainActivity.runJs("window.onNativeEveningReminder && window.onNativeEveningReminder()");
         }
-        if (!handledByPage) {
-            showNotification(context, sp);
-        }
+        // 无论前后台都发通知：只在前台弹页面提示时用户常常「感觉没收到」
+        showNotification(context, sp);
 
         scheduleNext(context);
     }
@@ -86,7 +84,7 @@ public class EveningReminderReceiver extends BroadcastReceiver {
             PendingIntent pi = pending(ctx);
             SharedPreferences sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
 
-            if (!sp.getBoolean("enabled", false)) {
+            if (!sp.getBoolean("enabled", true)) {
                 am.cancel(pi);
                 return;
             }
@@ -99,7 +97,10 @@ public class EveningReminderReceiver extends BroadcastReceiver {
                 exact = false;
             }
             try {
-                if (exact) {
+                if (exact && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    // setAlarmClock 优先级最高，国产 ROM 的省电策略一般不会推迟
+                    am.setAlarmClock(new AlarmManager.AlarmClockInfo(at, showIntent(ctx)), pi);
+                } else if (exact) {
                     am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
                 } else {
                     am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
@@ -117,6 +118,13 @@ public class EveningReminderReceiver extends BroadcastReceiver {
             if (am != null) am.cancel(pending(ctx));
         } catch (Exception ignored) {
         }
+    }
+
+    private static PendingIntent showIntent(Context ctx) {
+        Intent i = new Intent(ctx, MainActivity.class);
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) flags |= PendingIntent.FLAG_IMMUTABLE;
+        return PendingIntent.getActivity(ctx, 4410, i, flags);
     }
 
     private static PendingIntent pending(Context ctx) {
@@ -148,20 +156,31 @@ public class EveningReminderReceiver extends BroadcastReceiver {
                 c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1, c.get(Calendar.DAY_OF_MONTH));
     }
 
-    private void showNotification(Context ctx, SharedPreferences sp) {
+    private static void showNotification(Context ctx, SharedPreferences sp) {
+        showNotification(ctx, sp, false);
+    }
+
+    /** 供设置页「发一条测试」调用 */
+    public static void sendTestNotification(Context ctx) {
+        try { showNotification(ctx, ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE), true); }
+        catch (Exception ignored) {}
+    }
+
+    private static void showNotification(Context ctx, SharedPreferences sp, boolean test) {
         try {
             NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm == null) return;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                NotificationChannel ch = new NotificationChannel(CHANNEL, "晚间小结提醒", NotificationManager.IMPORTANCE_DEFAULT);
+                NotificationChannel ch = new NotificationChannel(CHANNEL, "晚间小结提醒", NotificationManager.IMPORTANCE_HIGH);
                 ch.setDescription("睡前提醒收今天的星光");
+                ch.enableVibration(true);
                 nm.createNotificationChannel(ch);
             }
 
             // 优先用页面同步来的「今日摘要」，过期或没有就用默认文案
-            String text = "今天还有没完成的事吗？来收今天的星光 ✦";
+            String text = test ? "通知权限正常，今晚到点会准时提醒你 ✦" : "今天还有没完成的事吗？来收今天的星光 ✦";
             try {
-                if (todayKey().equals(sp.getString("briefDate", ""))) {
+                if (!test && todayKey().equals(sp.getString("briefDate", ""))) {
                     String brief = sp.getString("briefText", "");
                     if (brief != null && !brief.trim().isEmpty()) text = brief;
                 }
@@ -177,12 +196,13 @@ public class EveningReminderReceiver extends BroadcastReceiver {
 
             NotificationCompat.Builder b = new NotificationCompat.Builder(ctx, CHANNEL)
                     .setSmallIcon(android.R.drawable.ic_dialog_info)
-                    .setContentTitle("晚间小结")
+                    .setContentTitle(test ? "测试 · 晚间小结" : "晚间小结")
                     .setContentText(text)
                     .setStyle(new NotificationCompat.BigTextStyle().bigText(text))
-                    .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
                     .setCategory(NotificationCompat.CATEGORY_REMINDER)
                     .setAutoCancel(true)
+                    .setVibrate(new long[]{0, 180, 120, 180})
                     .setContentIntent(content);
             nm.notify(REQ_NOTIFY, b.build());
         } catch (Exception ignored) {

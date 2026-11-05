@@ -56,6 +56,8 @@ public class MainActivity extends AppCompatActivity {
         sInstance = new java.lang.ref.WeakReference<>(this);
         setupWebView();
         checkPermissions();
+        // 装机后第一次打开就排上晚间提醒（页面 JS 未必进过设置页）
+        try { EveningReminderReceiver.scheduleNext(getApplicationContext()); } catch (Exception ignored) {}
         handleJumpIntent(getIntent());
     }
 
