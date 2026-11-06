@@ -1485,7 +1485,26 @@ const AI = { get provider(){ return AI_get_provider(); }, get apiKey(){ return A
     if (notOpen) msg = '模型服务未开通：火山方舟要为每个模型单独开通，只填 API Key 不会自动开通。请看下方开通指引。（原始错误：' + errs.join('；').slice(0, 150) + '）';
     const err = new Error(msg);
     err.allFailed = true; err.modelNotOpen = notOpen; throw err;
-  }, async call(system, user, maxTokens, temp){ if (!this.enabled()) throw new Error('AI 未配置'); try { const d = await this.request('chat', model => ({ model, messages: [{ role:'system', content:system }, { role:'user', content:user }], temperature: temp == null ? 0.4 : temp, max_tokens: maxTokens || 1000 }), 30000); return (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || null; } catch(e) { if (e && e.name === 'AbortError') throw new Error('AI 请求超时，请检查网络后重试'); throw e; } }, parseJSON(content){ if (!content) return null; let json = content.trim(); if (json.startsWith('```')) json = json.replace(/^```(?:json)?\s*/, '').replace(/```\s*$/, ''); const i = json.indexOf('{'), j = json.lastIndexOf('}'); if (i>=0 && j>i) json = json.slice(i, j+1); return JSON.parse(json); }, async scoreAnswer(q,a,ref){ if (!this.enabled()) return null; const system = `严格导师。只输出 JSON：{"accuracy":0-100,"correct":[],"missing":[],"supplement":""}`; return this.parseJSON(await this.call(system, `【问题】\n${q}\n\n【参考】\n${ref}\n\n【学员】\n${a}\n\n请评分。`, 1000, 0.2)); }, async judgeWord(w,a,cn){ if (!this.enabled()) return null; const system = `英语单词判卷。只输出 JSON：{"correct":true/false,"score":0-100,"feedback":"20字以内"}`; return this.parseJSON(await this.call(system, `单词：${w}\n参考：${cn}\n学员：${a}`, 200, 0.1)); }, async answerQuestion(q, ctx){ if (!this.enabled()) return null; const system = `专业助手。回答专业准确。1.直接回答 2.给适用边界 3.分点，400字内。`; return await this.call(system, ctx ? `背景：${ctx}\n\n问题：${q}` : q, 1000, 0.4); }, async assistant(q, role){ if (!this.enabled()) throw new Error('AI 未配置'); const cfg = this.roles[role] || this.roles.engineer; return await this.call(cfg.prompt + '\n分点作答，每点短句，400字内。', q, 1000, 0.4); }, async gradeExpression(scene, q, guide, answer){ if (!this.enabled()) return null; const system = `表达训练教练。场景「${scene}」\n题目：${q}\n要求：${guide}\n只输出 JSON：{"score":0-100,"level":"","strengths":[],"issues":[],"improved":"","advice":""}`; return this.parseJSON(await this.call(system, '用户的回答：\n'+answer, 1200, 0.3)); }, async recommendRoutine(skinKey, skinProfile, products){ if (!this.enabled()) return null; const system = `你是专业护肤顾问。根据皮肤状态、肤质档案和用户产品库（已开封未过期），生成今日早间和晚间护肤流程。只输出 JSON：{"morning":[{"step":"步骤名","product":"产品名","note":"注意（可空）"}],"night":[...],"reason":"一句话推荐说明"}。重要规则：1. 只用给定产品，不可虚构，product 必须是产品库中的产品名之一；2. 你要根据产品名和成分，自行判断每个产品属于哪一类（卸妆/洁面/爽肤水/精华/乳液/面霜/防晒/面膜/去角质），并决定它放在护肤流程的哪一步；3. 标准顺序：卸妆 → 洁面 → 爽肤水 → 精华 → 乳液 → 面霜 → 防晒（防晒只白天用）；面膜/去角质放在精华之前或替代精华；4. 早间优先抗氧化（VC、烟酰胺等），晚间优先修复/抗老（A醇、壬二酸、胜肽等）；A醇、酸类、去角质只能晚间用；VC白天需配合防晒；5. 严重期（severe）：只用最温和的洁面、水、修复精华（B5/积雪草/神经酰胺等）、简单保湿霜、物理防晒，避免所有活性成分；6. 痘痘期（acne）：早间温和洁面+控油水+烟酰胺类+保湿乳+防晒，晚间卸妆(如有)+洁面+局部壬二酸/水杨酸+修复+保湿，避开A醇；7. 稳定期（stable）：早间抗氧化精华+保湿+防晒，晚间活性精华（A醇/壬二酸/VC/胜肽等轮换）+修复+保湿；周三周日可安排面膜，周六可安排去角质；8. 关键：让产品库中所有开封产品在一周内都被用到，不要反复只用其中1-2件；同类产品（如多个精华）按日期轮换，不要每天用同一支；9. 如果某产品不适合当前皮肤状态，可以不用它，但要在 reason 里说明。`; const userMsg = `今日：${todayStr()}（星期${'日一二三四五六'[new Date().getDay()]}）\n皮肤状态：${skinKey}\n肤质档案：${JSON.stringify(skinProfile)}\n可用产品（已开封未过期）：\n${products.map(p => `- ${p.name}（大类：${(PRODUCT_CATS[p.majorCat]||{}).label || p.majorCat}${p.ingredients ? '；成分：'+p.ingredients.slice(0,120) : ''}）`).join('\n')}\n\n请安排今天早间和晚间的护肤流程，确保所有产品在一周内轮换使用。`; return this.parseJSON(await this.call(system, userMsg, 2500, 0.3)); } };
+  }, async call(system, user, maxTokens, temp){ if (!this.enabled()) throw new Error('AI 未配置'); try { const d = await this.request('chat', model => ({ model, messages: [{ role:'system', content:system }, { role:'user', content:user }], temperature: temp == null ? 0.4 : temp, max_tokens: maxTokens || 1000 }), 30000); return (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || null; } catch(e) { if (e && e.name === 'AbortError') throw new Error('AI 请求超时，请检查网络后重试'); throw e; } }, parseJSON(content){ if (!content) return null; let json = content.trim(); if (json.startsWith('```')) json = json.replace(/^```(?:json)?\s*/, '').replace(/```\s*$/, ''); const i = json.indexOf('{'), j = json.lastIndexOf('}'); if (i>=0 && j>i) json = json.slice(i, j+1); return JSON.parse(json); }, async scoreAnswer(q,a,ref){ if (!this.enabled()) return null; const system = `严格导师。只输出 JSON：{"accuracy":0-100,"correct":[],"missing":[],"supplement":""}`; return this.parseJSON(await this.call(system, `【问题】\n${q}\n\n【参考】\n${ref}\n\n【学员】\n${a}\n\n请评分。`, 1000, 0.2)); }, async judgeWord(w,a,cn){ if (!this.enabled()) return null; const system = `英语单词判卷。只输出 JSON：{"correct":true/false,"score":0-100,"feedback":"20字以内"}`; return this.parseJSON(await this.call(system, `单词：${w}\n参考：${cn}\n学员：${a}`, 200, 0.1)); }, async answerQuestion(q, ctx){ if (!this.enabled()) return null; const system = `专业助手。回答专业准确。1.直接回答 2.给适用边界 3.分点，400字内。`; return await this.call(system, ctx ? `背景：${ctx}\n\n问题：${q}` : q, 1000, 0.4); }, async assistant(q, role){ if (!this.enabled()) throw new Error('AI 未配置'); const cfg = this.roles[role] || this.roles.engineer; return await this.call(cfg.prompt + '\n分点作答，每点短句，400字内。', q, 1000, 0.4); }, async gradeExpression(scene, q, guide, answer){ if (!this.enabled()) return null; const system = `表达训练教练。场景「${scene}」\n题目：${q}\n要求：${guide}\n只输出 JSON：{"score":0-100,"level":"","strengths":[],"issues":[],"improved":"","advice":""}`; return this.parseJSON(await this.call(system, '用户的回答：\n'+answer, 1200, 0.3)); }, async recommendRoutine(skinKey, skinProfile, products){
+  if (!this.enabled()) return null;
+  const list = products.map(function(p,i){
+    return '#' + (i+1) + ' ' + p.name + '【大类：' + ((PRODUCT_CATS[p.majorCat]||{}).label || p.majorCat) + '】' + (p.ingredients ? ' 成分：' + String(p.ingredients).slice(0,120) : '');
+  }).join('\n');
+  const system = '你是专业护肤顾问。根据皮肤状态、肤质档案和用户「已开封未过期」的产品清单，生成今日早间和晚间护肤流程。\n' +
+    '只输出 JSON：{"morning":[{"step":"步骤名","product":"产品编号或产品全名","note":"注意（可空）"}],"night":[...],"reason":"一句话说明"}。\n' +
+    '【必须严格遵守】\n' +
+    '1. product 只能填清单里的 #编号（如 "#3"）或一字不改的产品全名，禁止虚构、改写、翻译，禁止出现清单外的产品；\n' +
+    '2. step 名称必须和该产品标注的【大类】完全一致：大类「面霜」只能写「面霜 / 保湿霜」，「精华」只能写「精华」，「洁面」只能写「洁面」，「爽肤水/化妆水」只能写「爽肤水 / 化妆水」，「乳液」只能写「乳液」，「防晒」只能写「防晒」，「卸妆」只能写「卸妆」，「面膜」写「面膜」，「去角质/清洁泥膜」写「去角质」。绝对不允许把面霜塞进「洁面」或「乳液」步骤，也不允许把精华塞进「爽肤水」步骤；\n' +
+    '3. 清单里没有对应大类的产品，就不要写这个步骤（例如没有洁面产品，就不要凭空写「洁面」）。不要为了凑齐标准顺序而错配产品；\n' +
+    '4. 步骤顺序：卸妆 → 洁面 → 爽肤水 →（面膜/去角质，可放在精华前或替代精华）→ 精华 → 乳液 → 面霜 → 防晒；\n' +
+    '5. 防晒只能出现在 morning；A醇/视黄醇、水杨酸/果酸/壬二酸、去角质、清洁泥膜只能出现在 night；卸妆只出现在 night；\n' +
+    '6. 早间优先抗氧化（VC、烟酰胺），晚间优先修复/抗老（A醇、胜肽、B5、神经酰胺）；严重期(severe)只用温和洁面+水+修复精华+简单保湿霜+物理防晒，完全避开活性成分；痘痘期(acne)避开A醇；稳定期(stable)同类多件按日期轮换，尽量让清单里每件产品一周内都被用到；\n' +
+    '7. 同一件产品在同一个流程里最多出现一次；某产品不适合当前皮肤状态可以不用，但要在 reason 里说明原因。';
+  const userMsg = '今日：' + todayStr() + '（星期' + '日一二三四五六'[new Date().getDay()] + '）\n' +
+    '皮肤状态：' + skinKey + '\n肤质档案：' + JSON.stringify(skinProfile) + '\n' +
+    '可用产品清单（已开封未过期，只能从这里选）：\n' + list + '\n\n' +
+    '请安排今天的早间和晚间流程。再次强调：product 必须是上面的 #编号或原样产品名，step 必须和该产品的【大类】一致，没有对应品类就跳过该步骤。';
+  return this.parseJSON(await this.call(system, userMsg, 2500, 0.3)); } };
 
 const CACHE_KEY_KNOWLEDGE = 'knowledge-v12';
 // 自动清理旧版本缓存
@@ -1518,7 +1537,8 @@ const state = {
   calMonth: HealthStore.load('calMonth', new Date().getMonth()), setsDone: HealthStore.load('setsDone', {}), 
   restTimers: {}, exportRange: HealthStore.load('exportRange', 'month'), pendingTx: null, calendarData: {}, 
   profileDraft: { ...profile }, _pendingImport: null, showPastTodos: false, todoDraft: null, aiContext: null,
-  passageData: null, passageLoading: false, clothImage: null, recShowAll: false, settingsSec: null
+  passageData: null, passageLoading: false, clothImage: null, recShowAll: false, settingsSec: null,
+  prodLibFilter: LS.get('app-prod-lib-filter', 'all') || 'all'
 };
 const view = document.getElementById('view'); const tabbar = document.getElementById('tabbar'); const sheet = document.getElementById('sheet'); const fab = document.getElementById('fab');
 
@@ -2024,7 +2044,26 @@ async function startAllTest(){ const words = LearnStore.getAllLearnedEver(); con
 /* ===== 经期记录与预测 ===== */
 const PERIOD_LOG_KEY = 'app_h_periodLog';
 const PERIOD_CYCLE_KEY = 'app_h_periodCycle';
-function getPeriodLog(){ try { return JSON.parse(LS.get(PERIOD_LOG_KEY, '[]')) || []; } catch(e){ return []; } }
+const PERIOD_DRAFT_KEY = 'app_h_periodDraft';
+/* 日期输入草稿：切到别的页面再回来，填写的日期不会变回今天 */
+function getPeriodDraft(){ try { const d = LS.get(PERIOD_DRAFT_KEY, null); return (d && typeof d === 'object') ? d : {}; } catch(e){ return {}; } }
+function setPeriodDraft(patch){ const d = getPeriodDraft(); Object.keys(patch).forEach(k => { d[k] = patch[k]; }); LS.set(PERIOD_DRAFT_KEY, d); return d; }
+function savePeriodRecord(start, end, editingId){
+  const log = getPeriodLog();
+  let target = editingId ? log.find(x => String(x.id) === String(editingId)) : null;
+  let mode = 'update';
+  if (target){ target.start = start; target.end = end || null; }
+  else {
+    const same = log.find(x => x.start === start);
+    if (same){ same.end = end || null; target = same; }
+    else { log.push({ id:Date.now(), start:start, end:end || null }); mode = 'add'; }
+  }
+  log.sort(function(a,b){ return a.start < b.start ? -1 : 1; });
+  savePeriodLog(log);
+  return mode;
+}
+/* LS.get 内部已经 JSON.parse，这里再做一次会抛错并永远返回 []（经期记录一直存不进去的根因） */
+function getPeriodLog(){ try { const v = LS.get(PERIOD_LOG_KEY, []); return Array.isArray(v) ? v : []; } catch(e){ return []; } }
 function savePeriodLog(arr){ LS.set(PERIOD_LOG_KEY, arr); }
 function getPeriodCycle(){ const d = HealthStore.load(PERIOD_CYCLE_KEY, null) || {}; return { cycle: Number(d.cycle) || 28, period: Number(d.period) || 5 }; }
 function savePeriodCycle(o){ HealthStore.save(PERIOD_CYCLE_KEY, { cycle: Number(o.cycle) || 28, period: Number(o.period) || 5 }); }
@@ -2060,7 +2099,13 @@ function fmtMD(d){ if (!d) return '—'; return (d.getMonth()+1) + '月' + d.get
 function periodSection(){
   const f = computePeriodForecast();
   const cyc = getPeriodCycle();
+  const draft = getPeriodDraft();
   const today = todayStr();
+  const editing = draft.editingId ? f.log.find(x => String(x.id) === String(draft.editingId)) : null;
+  const startVal = draft.start || (f.last ? f.last.start : today);
+  const endVal = draft.end || '';
+  const cycleVal = draft.cycle ? draft.cycle : cyc.cycle;
+  const pdVal = draft.period ? draft.period : cyc.period;
   const html = [];
   html.push('<div class="card hero-card" style="background:linear-gradient(135deg,#ff7eb3,#ff5e8a);color:#fff;">');
   html.push('<div style="font-size:12px;letter-spacing:1.5px;font-weight:750;opacity:.85;margin-bottom:6px;">经期日历 · 预测</div>');
@@ -2070,14 +2115,27 @@ function periodSection(){
   html.push((f.ovulation ? '预计排卵日：<b>' + fmtMD(f.ovulation) + '</b>' : '预计排卵日：—') + ' · 易孕窗 ' + (f.fertileStart? fmtMD(f.fertileStart):'—') + ' ~ ' + (f.fertileEnd? fmtMD(f.fertileEnd):'—') + '</div>');
   if (!f.inPeriod) html.push('<div style="font-size:11.5px;opacity:.85;margin-top:8px;">预测基于你记录的历史周期，可能偏差，以实际为准。</div>');
   html.push('</div>');
-  html.push('<div class="card" style="padding:12px;"><div style="font-size:13.5px;font-weight:700;margin-bottom:8px;">快速记录</div><button class="btn" style="background:#ff5e8a;color:#fff;width:100%;" data-act="periodQuickStart">🌸 今天就是经期第一天</button><div style="font-size:11.5px;color:var(--sub);margin-top:8px;">点一次即可。结束后可在下方历史里补填结束日，或直接删除该条。</div></div>');
-  html.push('<div class="card" style="padding:12px;"><div style="font-size:13.5px;font-weight:700;margin-bottom:8px;">手动记录 / 修正</div><div style="display:flex;gap:10px;flex-wrap:wrap;"><label style="flex:1;min-width:120px;font-size:12.5px;color:var(--sub);">开始日<br><input type="date" id="pStart" value="' + today + '" style="width:100%;margin-top:4px;padding:8px;border:1px solid #e6e8f0;border-radius:9px;font-size:13px;"></label><label style="flex:1;min-width:120px;font-size:12.5px;color:var(--sub);">结束日（可空）<br><input type="date" id="pEnd" style="width:100%;margin-top:4px;padding:8px;border:1px solid #e6e8f0;border-radius:9px;font-size:13px;"></label></div><button class="btn" style="margin-top:10px;background:var(--brand);color:#fff;" data-act="periodSave">保存这条记录</button></div>');
-  html.push('<div class="card" style="padding:12px;"><div style="font-size:13.5px;font-weight:700;margin-bottom:4px;">周期设置（校准准确性）</div><div style="font-size:11.5px;color:var(--sub);margin-bottom:8px;">记录越多越准。你的周期若不固定，可调此值让预测更贴近你。</div><div style="display:flex;gap:10px;flex-wrap:wrap;"><label style="flex:1;min-width:120px;font-size:12.5px;color:var(--sub);">平均周期（天）<br><input type="number" id="pCycle" min="20" max="45" value="' + cyc.cycle + '" style="width:100%;margin-top:4px;padding:8px;border:1px solid #e6e8f0;border-radius:9px;font-size:13px;"></label><label style="flex:1;min-width:120px;font-size:12.5px;color:var(--sub);">平均经期（天）<br><input type="number" id="pPd" min="2" max="12" value="' + cyc.period + '" style="width:100%;margin-top:4px;padding:8px;border:1px solid #e6e8f0;border-radius:9px;font-size:13px;"></label></div><button class="btn" style="margin-top:10px;background:var(--brand);color:#fff;" data-act="periodSaveCycle">保存设置</button></div>');
+  html.push('<div class="card" style="padding:12px;"><div style="font-size:13.5px;font-weight:700;margin-bottom:8px;">快速记录</div><button class="btn" style="background:#ff5e8a;color:#fff;width:100%;" data-act="periodQuickStart">🌸 今天就是经期第一天</button><div style="font-size:11.5px;color:var(--sub);margin-top:8px;">点一次即可。结束后可在下方历史里点「✎ 修改」补填结束日，或直接删除该条。</div></div>');
+  html.push('<div class="card" id="periodFormCard" style="padding:12px;border:1.5px solid ' + (editing ? '#ffb3cd' : '#e9ecf4') + ';">');
+  html.push('<div class="row-between" style="margin-bottom:6px;"><div style="font-size:13.5px;font-weight:700;">手动记录 / 修正</div><span style="font-size:11.5px;color:' + (editing ? '#c2185b' : 'var(--sub)') + ';font-weight:650;">' + (editing ? '✎ 正在修改历史记录' : '新记录') + '</span></div>');
+  html.push('<div style="font-size:11.5px;color:var(--sub);line-height:1.6;margin-bottom:9px;background:#FFF6FA;border-radius:8px;padding:7px 9px;">📌 选好的日期会<b>自动暂存</b>，切到别的页面再回来不会跳回今天；点下面的「保存」才写进历史记录。默认显示你上一次的日期，要记今天点「改成今天」。</div>');
+  html.push('<div style="display:flex;gap:10px;flex-wrap:wrap;"><label style="flex:1;min-width:120px;font-size:12.5px;color:var(--sub);">开始日<br><input type="date" id="pStart" value="' + esc(startVal) + '" style="width:100%;margin-top:4px;padding:8px;border:1.5px solid #ffc2d8;border-radius:9px;font-size:13px;"></label><label style="flex:1;min-width:120px;font-size:12.5px;color:var(--sub);">结束日（可空）<br><input type="date" id="pEnd" value="' + esc(endVal) + '" style="width:100%;margin-top:4px;padding:8px;border:1px solid #e6e8f0;border-radius:9px;font-size:13px;"></label></div>');
+  html.push('<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;"><button class="btn" data-act="periodSave" style="background:var(--brand);color:#fff;">' + (editing ? '✓ 保存修改' : '＋ 保存这条记录') + '</button><button class="btn" data-act="periodToday" style="background:#FFF0F5;color:#c2185b;">改成今天</button>' + (editing ? '<button class="btn" data-act="periodCancelEdit" style="background:#F1F2F9;color:#4b5265;">取消修改</button>' : '') + '</div>');
+  if (draft.start && !editing) html.push('<div style="font-size:11.5px;color:#c2185b;margin-top:9px;">当前暂存的开始日：<b>' + esc(draft.start) + '</b>' + (draft.end ? ' · 结束日 ' + esc(draft.end) : '') + '（还没点保存的话，这只是草稿）</div>');
+  html.push('</div>');
+  html.push('<div class="card" style="padding:12px;"><div style="font-size:13.5px;font-weight:700;margin-bottom:4px;">周期设置（校准准确性）</div><div style="font-size:11.5px;color:var(--sub);margin-bottom:8px;">记录越多越准。你的周期若不固定，可调此值让预测更贴近你。</div><div style="display:flex;gap:10px;flex-wrap:wrap;"><label style="flex:1;min-width:120px;font-size:12.5px;color:var(--sub);">平均周期（天）<br><input type="number" id="pCycle" min="20" max="45" value="' + esc(cycleVal) + '" style="width:100%;margin-top:4px;padding:8px;border:1px solid #e6e8f0;border-radius:9px;font-size:13px;"></label><label style="flex:1;min-width:120px;font-size:12.5px;color:var(--sub);">平均经期（天）<br><input type="number" id="pPd" min="2" max="12" value="' + esc(pdVal) + '" style="width:100%;margin-top:4px;padding:8px;border:1px solid #e6e8f0;border-radius:9px;font-size:13px;"></label></div><button class="btn" style="margin-top:10px;background:var(--brand);color:#fff;" data-act="periodSaveCycle">保存设置</button></div>');
   html.push('<div class="sec-title" style="margin:10px 4px 6px;">历史记录（' + f.log.length + '）</div>');
   if (!f.log.length){ html.push('<div class="tip-card">还没有记录。点上方按钮记下最近一次经期开始日，预测就能跑起来。</div>'); }
-  else { html.push(f.log.slice().reverse().map(function(x){ return '<div class="h-task"><div class="body"><div class="h-t-name">' + esc(x.start) + (x.end ? ' ~ ' + esc(x.end) : ' ~ （进行中/未填结束）') + '</div></div><button class="del-tx" data-act="periodDel" data-id="' + x.id + '">✕</button></div>'; }).join('')); }
+  else {
+    html.push(f.log.slice().reverse().map(function(x){
+      return '<div class="h-task"><div class="body"><div class="h-t-name">' + esc(x.start) + (x.end ? ' ~ ' + esc(x.end) : ' ~ （进行中/未填结束）') + '</div>' +
+        (x.end ? '' : '<div style="font-size:11.5px;color:var(--sub);margin-top:2px;">还没填结束日，点右边「✎ 修改」补上</div>') +
+        '</div><button class="link-btn" data-act="periodEdit" data-id="' + x.id + '" style="flex-shrink:0;font-size:12px;color:#c2185b;padding:4px 8px;">✎ 修改</button><button class="del-tx" data-act="periodDel" data-id="' + x.id + '">✕</button></div>';
+    }).join(''));
+  }
   return html.join('');
 }
+
 async function lifeView(){ const sub = state.lifeSub || 'calendar'; const mainTabs = [{ id:'calendar', label:'日历' },{ id:'money', label:'记账' },{ id:'sport', label:'运动' },{ id:'closet', label:'衣橱' },{ id:'care', label:'护肤' },{ id:'period', label:'经期' }]; const titles = { calendar:'日历行程', money:'AI 语音记账', sport:'运动打卡', closet:'私人衣橱', care:'美丽修行', period:'经期记录' }; let content = ''; try { if (sub === 'calendar') content = calendarSection(); else if (sub === 'money') content = moneySection(); else if (sub === 'sport') content = sportSection(); else if (sub === 'closet') content = closetSection(); else if (sub === 'care') content = careSection(); else if (sub === 'period') content = periodSection(); } catch(e){ console.error(e); content = `<div class="tip-card">加载失败：${esc(e.message)}</div>`; } return `<div class="hero-sm"><h1>${titles[sub]}</h1></div><div class="subtabs">${mainTabs.map(t => `<button class="subtab ${t.id===sub?'on':''}" data-act="lifeSub" data-sub="${t.id}">${t.label}</button>`).join('')}</div><div>${content}</div>`; }
 function getAllTodoItems(){ const items = []; Object.entries(state.calendarData || {}).forEach(([date, list]) => { (list || []).forEach(it => items.push({ date, time: it.time || '', title: it.title || '', desc: it.desc || '', done: !!it.done, manual: !!it.manual })); }); return items; }
 function todoRowHTML(it, today){ const payload = encodeURIComponent(JSON.stringify({ date: it.date, time: it.time, title: it.title })); const showDate = it.date === today ? '今天' : it.date; return `<div class="h-task" data-toggle-todo="${payload}"><span class="check ${it.done ? 'done' : ''}" data-toggle-todo="${payload}"></span><div class="body" data-toggle-todo="${payload}"><div class="h-t-name" style="${it.done ? 'text-decoration:line-through;color:var(--sub)' : ''}">${esc(it.title)}</div><div class="muted" style="font-size:12.5px;color:var(--sub)">${showDate} ${it.time} · ${esc(it.desc || '')}</div></div>${it.manual ? `<button class="del-tx" data-del-todo="${payload}">✕</button>` : ''}</div>`; }
@@ -2798,6 +2856,7 @@ function careProductLibPane(){
   const opened = lib.filter(function(p){ return !!p.openedDate; });
   const unopened = lib.filter(function(p){ return !p.openedDate; });
   const expiredCount = lib.filter(isProductExpired).length;
+  const filter = ['all','opened','unopened'].indexOf(state.prodLibFilter) >= 0 ? state.prodLibFilter : 'all';
   const majorOptions = Object.entries(PRODUCT_CATS).map(([key, cat]) => `<option value="${key}">${cat.icon} ${cat.label}</option>`).join('');
   const catOrder = k => { const c = PRODUCT_CATS[k]; return (c && c.order !== undefined) ? c.order : 99; };
   const group = (title, icon, arr, isOpened, tip) => {
@@ -2811,13 +2870,21 @@ function careProductLibPane(){
       ${sorted.length ? sorted.map(p => renderProductCard(p) + (isOpened ? '' : `<div style="text-align:right;margin:-6px 2px 12px;"><button class="link-btn" data-act="markProductOpened" data-id="${esc(p.id)}" style="font-size:12px;color:var(--pink);">✓ 今天开封了</button></div>`)).join('') : '<p class="tip" style="color:#8A90A2;text-align:center;padding:12px 0;background:#FAFBFE;border-radius:10px;">这一组还没有产品</p>'}
     </div>`;
   };
+  const chip = (key, label, icon, count) => {
+    const on = filter === key;
+    return `<button type="button" data-act="setProdLibFilter" data-filter="${key}" style="flex:1;cursor:pointer;text-align:left;font-family:inherit;border:2px solid ${on?'#fff':'rgba(255,255,255,.32)'};background:${on?'rgba(255,255,255,.36)':'rgba(255,255,255,.18)'};color:#fff;border-radius:12px;padding:9px 11px;-webkit-tap-highlight-color:transparent;"><div style="font-size:11.5px;opacity:.95;font-weight:650;">${icon} ${label}${on?' ✓':''}</div><div style="font-size:23px;font-weight:800;line-height:1.3;">${count}</div><div style="font-size:10.5px;opacity:.9;">${on?'再点一次 → 显示全部':'点我只显示'+label}</div></button>`;
+  };
+  const showOpened = filter !== 'unopened';
+  const showUnopened = filter !== 'opened';
+  const shownCount = filter === 'opened' ? opened.length : (filter === 'unopened' ? unopened.length : lib.length);
+  const listTitle = filter === 'opened' ? '已开封产品' : (filter === 'unopened' ? '未开封产品' : '产品列表（按开封状态分组）');
   return `<div class="card" style="background:linear-gradient(135deg,var(--pink),var(--pink2));color:#fff;border:0;">
-      <div style="font-size:12px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">📦 我的产品库</div>
+      <div style="font-size:12px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">📦 我的产品库 <span style="font-weight:600;letter-spacing:0;opacity:.85;">· 点下面的数字筛选</span></div>
       <div style="display:flex;gap:10px;margin-bottom:8px;">
-        <div style="flex:1;background:rgba(255,255,255,.18);border-radius:12px;padding:9px 11px;"><div style="font-size:11.5px;opacity:.9;">🧴 已开封</div><div style="font-size:23px;font-weight:800;line-height:1.3;">${opened.length}</div></div>
-        <div style="flex:1;background:rgba(255,255,255,.18);border-radius:12px;padding:9px 11px;"><div style="font-size:11.5px;opacity:.9;">📦 未开封</div><div style="font-size:23px;font-weight:800;line-height:1.3;">${unopened.length}</div></div>
+        ${chip('opened','已开封','🧴',opened.length)}
+        ${chip('unopened','未开封','📦',unopened.length)}
       </div>
-      <div style="font-size:12.5px;opacity:.94;line-height:1.7;">共 ${lib.length} 件${expiredCount > 0 ? ' · ⚠️ '+expiredCount+' 件已过期，建议清理' : ' · 状态正常'}</div>
+      <div style="font-size:12.5px;opacity:.94;line-height:1.7;">共 ${lib.length} 件${expiredCount > 0 ? ' · ⚠️ '+expiredCount+' 件已过期，建议清理' : ' · 状态正常'}${filter !== 'all' ? ' · 当前只显示'+(filter==='opened'?'已开封':'未开封') : ''}</div>
     </div>
     <div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;">添加产品</div>
       <div style="display:flex;gap:8px;margin-bottom:10px;"><button class="btn primary" id="prodPhotoBtn" data-act="prodPhotoPick" style="flex:1;">🖼 从相册选图识别</button><button class="btn" id="prodCameraBtn" data-act="prodCameraPick" style="flex:1;background:#f1f2f9;color:#4b5265;">📷 拍照识别</button><input type="file" id="prodPhoto" accept="image/*" style="display:none"><input type="file" id="prodCamera" accept="image/*" capture="environment" style="display:none"></div>
@@ -2825,15 +2892,97 @@ function careProductLibPane(){
       <div id="prodPhotoPreviewWrap" style="display:none;margin-bottom:10px;text-align:center;"><img id="prodPhotoPreview" alt="已选中的照片" style="max-width:100%;max-height:190px;border-radius:12px;border:1px solid #E3E6EF;"><div style="font-size:11px;color:var(--sub);margin-top:4px;">↑ 已选中的照片</div></div>
       <p class="tip" style="font-size:11.5px;color:var(--sub);margin:0 0 10px;line-height:1.6;">拍瓶身正面用「📷 拍照识别」，已有照片用「🖼 从相册选图识别」；AI 会填好名称、大类、<b>成分</b>和开封后可用月数。成分按「照片成分表 → <b>联网检索该产品的公开成分表</b> → 实在查不到才按产品名推断」的顺序获取，来源标在成分框下方。想最准就拍瓶身背面的成分表特写。联网检索约多花 10–40 秒：智谱 / 通义千问直接可用，豆包需先在方舟控制台开通「豆包搜索 Custom 版」，DeepSeek 不支持联网。</p>
       <div class="dim-row"><span class="lb">名称</span><input type="text" id="prodName" placeholder="如 OLAY 大红瓶" style="width:200px;text-align:left"></div><div class="dim-row"><span class="lb">大类</span><select id="prodMajorCat" style="width:200px;text-align:left;font-weight:600;">${majorOptions}</select></div><div class="dim-row"><span class="lb">开封时间</span><input type="date" id="prodOpened" style="width:200px"></div><div class="dim-row"><span class="lb">开封后可用月数</span><input type="number" id="prodShelfLife" placeholder="如 6" min="1" max="60" style="width:100px"><span class="unit">个月</span></div><div class="dim-row"><span class="lb">未开封到期日</span><input type="date" id="prodExpiry" style="width:200px"></div><div class="dim-row" style="align-items:flex-start;padding-top:10px;"><span class="lb" style="margin-top:8px;">成分</span><textarea id="prodIngredients" placeholder="粘贴成分表（可选，AI 会参考它判断产品用途）" style="flex:1;border:1.5px solid #E3E6EF;border-radius:10px;padding:8px 10px;font-family:inherit;font-size:13px;min-height:60px;resize:vertical;"></textarea></div><div id="prodIngredientsFrom" style="display:none;margin:6px 0 0 70px;font-size:11.5px;line-height:1.55;padding:7px 9px;border-radius:8px;background:#EFF6FF;color:#1E40AF;"></div><p class="tip" style="margin-top:8px;font-size:12.5px;color:var(--sub);">填写「开封时间 + 开封后可用月数」会自动倒计时；未开封可只填到期日。具体放在护肤流程哪一步，由 AI 根据产品名和成分判断。</p><button class="btn-primary" data-act="addProduct" style="margin-top:12px;background:linear-gradient(135deg,var(--pink),var(--pink2))">＋ 添加到产品库</button></div>
-    <div class="card"><div class="row-between" style="margin-bottom:12px;"><div style="font-size:13px;font-weight:700;">产品列表（按开封状态分组）</div><span class="muted" style="color:var(--sub);font-size:12.5px">${lib.length} 件</span></div>
-      ${group('已开封', '🧴', opened, true, '已填开封时间，按「开封后可用月数」倒计时。' + (expiredCount ? '⚠️ 有 '+expiredCount+' 件已过期。' : ''))}
-      <div style="height:1px;background:#F0F1F6;margin:4px 0 14px;"></div>
-      ${group('未开封', '📦', unopened, false, '还没开封，按瓶身有效期管理。开封后点每张卡下面的「✓ 今天开封了」，就会移到「已开封」。')}
+    <div class="card" id="prodListCard"><div class="row-between" style="margin-bottom:12px;"><div style="font-size:13px;font-weight:700;">${listTitle} <span class="muted" style="color:var(--sub);font-size:12.5px">${shownCount} 件</span></div>${filter !== 'all' ? '<button class="link-btn" data-act="setProdLibFilter" data-filter="all" style="font-size:12px;color:var(--pink);">显示全部</button>' : ''}</div>
+      ${showOpened ? group('已开封', '🧴', opened, true, '已填开封时间，按「开封后可用月数」倒计时。' + (expiredCount ? '⚠️ 有 '+expiredCount+' 件已过期。' : '')) : ''}
+      ${showOpened && showUnopened ? '<div style="height:1px;background:#F0F1F6;margin:4px 0 14px;"></div>' : ''}
+      ${showUnopened ? group('未开封', '📦', unopened, false, '还没开封，按瓶身有效期管理。开封后点每张卡下面的「✓ 今天开封了」，就会移到「已开封」。') : ''}
     </div>`;
 }
+
 function renderRoutineStep(r, idx){ const p = r.product; const productName = p ? p.name : (r.productName || r.product || '—'); const major = p ? (PRODUCT_CATS[p.majorCat]||{}).label || '' : ''; const daysLeft = p ? productDaysLeft(p) : null; let daysCls = '', daysText = ''; if (daysLeft !== null){ if (daysLeft < 0){ daysCls = 'danger'; daysText = '已过期'; } else if (daysLeft <= 7){ daysCls = 'danger'; daysText = '剩 ' + daysLeft + ' 天'; } else if (daysLeft <= 30){ daysCls = 'warn'; daysText = '剩 ' + daysLeft + ' 天'; } else { daysCls = ''; daysText = '剩 ' + daysLeft + ' 天'; } } return `<div class="routine-step"><span class="rs-num">${idx+1}</span><div class="rs-body"><div class="rs-title">${esc(r.step)}</div><div class="rs-prod">🧴 ${esc(productName)}${major ? ' <span style="font-size:11.5px;opacity:.7;">· '+esc(major)+'</span>' : ''}</div>${r.note ? `<div class="rs-note">💡 ${esc(r.note)}</div>` : ''}</div>${daysText ? `<span class="rs-days ${daysCls}">${daysText}</span>` : ''}</div>`; }
 function resolveAIProduct(name){ if (!name) return null; const lib = getProductLibrary(); return lib.find(p => p.name === name) || lib.find(p => p.name && p.name.indexOf(name) >= 0) || lib.find(p => name.indexOf(p.name) >= 0) || null; }
-function buildRoutineFromAI(aiRoutine){ const morning = (aiRoutine.morning || []).map(r => { const p = resolveAIProduct(r.product || ''); return { step: r.step || '', product: p, productName: r.product || '', note: r.note || '' }; }); const night = (aiRoutine.night || []).map(r => { const p = resolveAIProduct(r.product || ''); return { step: r.step || '', product: p, productName: r.product || '', note: r.note || '' }; }); return { morning, night, empty: false }; }
+/* ===== P36：AI 流程结果按「产品库真实大类」强制校正 =====
+   AI 常把产品塞进不对应的步骤（面霜写成洁面、精华写成爽肤水、面霜写成乳液）。
+   这里丢弃虚构/不可用产品，重建步骤名与顺序，保证「步骤名 = 产品真实品类」。 */
+const ROUTINE_STEP_LABEL = {
+  makeupRemover:'卸妆', cleanser:'洁面', toner:'爽肤水', serum:'精华',
+  lotion:'乳液', cream:'面霜', sunscreen:'防晒', mask:'面膜',
+  exfoliant:'去角质', other:'其他护理'
+};
+const ROUTINE_SORT = { makeupRemover:0, cleanser:1, toner:2, mask:3, exfoliant:4, serum:5, lotion:6, cream:7, sunscreen:8, other:9 };
+function usableSkinProducts(){ return getProductLibrary().filter(p => p.openedDate && !isProductExpired(p)); }
+function resolveAIProductStrict(name, usable){
+  if (!name) return null;
+  const raw = String(name).trim();
+  const num = /^#(\d+)$/.exec(raw);
+  if (num) return usable[Number(num[1]) - 1] || null;
+  const norm = x => String(x == null ? '' : x).replace(/\s+/g, '').toLowerCase();
+  let hit = usable.find(p => String(p.id) === raw) || usable.find(p => norm(p.name) === norm(raw));
+  if (hit) return hit;
+  /* 只接受「AI 文本完整包含某产品全名」这一种安全匹配，避免短词误配到别的产品 */
+  const nraw = norm(raw);
+  hit = usable.filter(p => norm(p.name).length >= 5 && nraw.indexOf(norm(p.name)) >= 0)
+              .sort((a,b) => String(b.name).length - String(a.name).length)[0];
+  return hit || null;
+}
+function sanitizeAIRoutine(aiRoutine){
+  const usable = usableSkinProducts();
+  const stat = { dropped:0, corrected:0, added:0, valid:0, unused:[], total:usable.length };
+  const seen = {};
+  const build = (arr, part) => {
+    const out = [];
+    (Array.isArray(arr) ? arr : []).forEach(r => {
+      r = r || {};
+      const p = resolveAIProductStrict(r.product || r.productName || '', usable);
+      if (!p){ stat.dropped++; return; }
+      const major = p.majorCat || 'other';
+      if (part === 'am' && (major === 'makeupRemover' || major === 'exfoliant')){ stat.dropped++; return; }
+      if (part === 'pm' && major === 'sunscreen'){ stat.dropped++; return; }
+      const key = String(p.id) + '|' + part;
+      if (seen[key]) return;
+      const label = ROUTINE_STEP_LABEL[major] || ROUTINE_STEP_LABEL.other;
+      const wrongStep = !!(r.step && String(r.step).indexOf(label) < 0);
+      if (wrongStep) stat.corrected++;
+      seen[key] = true;
+      stat.valid++;
+      /* AI 连品类都判断错时，它给的用法提示同样不可信（例如把面霜写成「加水乳化清洗」），直接不留 */
+      out.push({ step:label, product:p, productName:p.name, note:wrongStep ? '' : (r.note || '') });
+    });
+    const order = k => (ROUTINE_SORT[k] === undefined ? 9 : ROUTINE_SORT[k]);
+    out.sort((a,b) => order(a.product.majorCat || 'other') - order(b.product.majorCat || 'other'));
+    return out;
+  };
+  const morning = build(aiRoutine && aiRoutine.morning, 'am');
+  const night = build(aiRoutine && aiRoutine.night, 'pm');
+  /* AI 常漏掉基础步骤（尤其把防晒放到晚间被剔除后，白天就完全没有防晒了）。
+     只补洁面 / 防晒 / 卸妆这三类不会互相冲突的基础品类，其他品类交给 AI 轮换。 */
+  const ensureBasic = (arr, major, atEnd) => {
+    if (arr.some(x => (x.product.majorCat || 'other') === major)) return false;
+    const cand = usable.find(p => (p.majorCat || 'other') === major);
+    if (!cand) return false;
+    const item = { step:ROUTINE_STEP_LABEL[major], product:cand, productName:cand.name, note:'' };
+    if (atEnd) arr.push(item); else arr.unshift(item);
+    return true;
+  };
+  if (ensureBasic(morning, 'cleanser', false)) stat.added++;
+  if (ensureBasic(morning, 'sunscreen', true)) stat.added++;
+  if (ensureBasic(night, 'cleanser', false)) stat.added++;
+  if (ensureBasic(night, 'makeupRemover', false)) stat.added++;
+  const usedIds = {};
+  morning.concat(night).forEach(r => { usedIds[r.product.id] = true; });
+  stat.unused = usable.filter(p => !usedIds[p.id]).map(p => p.name);
+  return { morning:morning, night:night, empty:(!morning.length && !night.length), stat:stat };
+}
+function buildRoutineFromAI(aiRoutine){
+  const r = sanitizeAIRoutine(aiRoutine);
+  /* AI 一条有效产品都没给（全是虚构名）时，直接用本地算法，不要只靠补齐的 2 个基础步骤凑数 */
+  if (r.stat.valid === 0 || r.empty){
+    const local = generateRoutine(todayStr(), skinState);
+    local.stat = r.stat; local.fallback = true;
+    return local;
+  }
+  return r;
+}
 function aiRoutineStatusHTML(){
   const m = state.aiRoutineMsg;
   if (!m) return '';
@@ -2849,7 +2998,7 @@ function careSkinPane(){
   const lib = getProductLibrary(); 
   const openedCount = lib.filter(p => p.openedDate && !isProductExpired(p)).length; 
   
-  const routineBlock = routine.empty ? `<div class="empty-state"><div class="es-icon">🧴</div><div class="es-title">还没有开封的产品</div><div class="es-desc">去产品库添加产品并填写开封时间，<br>AI 会自动为你安排每日护肤流程。</div><button class="btn-primary" data-act="careSub" data-sub="productLib" style="margin-top:16px;background:linear-gradient(135deg,var(--pink),var(--pink2))">📦 去添加产品</button></div>` : `<div class="card" style="border:2px solid var(--pink);background:#FFFBFC;"><div class="row-between" style="margin-bottom:10px;"><div style="font-size:14px;font-weight:800;color:var(--pink);">✨ 今日推荐流程</div><button class="mini-add" data-act="aiRecommendRoutine" style="background:var(--purple-soft);color:var(--purple);" ${state.aiSkincareLoading?'disabled':''}>${state.aiSkincareLoading?'⏳ AI 生成中':'🤖 AI 重新安排'}</button></div><div style="font-size:12.5px;color:var(--sub);margin-bottom:10px;">${dayNames[day-1]} · 皮肤${s.label} · 可用产品 ${openedCount} 件${aiResult ? ' · 🤖 AI 生成' : ' · 本地算法'}${aiResult ? `<button class="link-btn" data-act="clearAIRoutine" style="padding:0 4px;font-size:12px;">用本地算法</button>` : ''}</div><div style="background:#fff;border-radius:12px;padding:10px 14px;margin-bottom:10px;"><div style="font-size:13px;font-weight:750;color:#2b3244;margin-bottom:6px;">☀️ 早间流程</div>${routine.morning.length ? routine.morning.map((r,i) => renderRoutineStep(r, i)).join('') : '<p class="tip" style="color:#8A90A2;text-align:center;padding:8px 0">暂无可用产品</p>'}</div><div style="background:#fff;border-radius:12px;padding:10px 14px;"><div style="font-size:13px;font-weight:750;color:#2b3244;margin-bottom:6px;">🌙 晚间流程</div>${routine.night.length ? routine.night.map((r,i) => renderRoutineStep(r, i)).join('') : '<p class="tip" style="color:#8A90A2;text-align:center;padding:8px 0">暂无可用产品</p>'}</div>${aiResult && aiResult.reason ? `<div style="margin-top:10px;padding:10px 12px;background:#F1EEFF;border-radius:10px;font-size:12px;line-height:1.65;color:#4C1D95;">💡 ${esc(aiResult.reason)}</div>` : ''}<button class="btn-ghost-h" data-act="careSub" data-sub="productLib" style="margin-top:12px;background:var(--pink-soft);color:var(--pink);">📦 去产品库管理 / 补货</button></div>`; 
+  const routineBlock = routine.empty ? `<div class="empty-state"><div class="es-icon">🧴</div><div class="es-title">还没有开封的产品</div><div class="es-desc">去产品库添加产品并填写开封时间，<br>AI 会自动为你安排每日护肤流程。</div><button class="btn-primary" data-act="careSub" data-sub="productLib" style="margin-top:16px;background:linear-gradient(135deg,var(--pink),var(--pink2))">📦 去添加产品</button></div>` : `<div class="card" style="border:2px solid var(--pink);background:#FFFBFC;"><div class="row-between" style="margin-bottom:10px;"><div style="font-size:14px;font-weight:800;color:var(--pink);">✨ 今日推荐流程</div><button class="mini-add" data-act="aiRecommendRoutine" style="background:var(--purple-soft);color:var(--purple);" ${state.aiSkincareLoading?'disabled':''}>${state.aiSkincareLoading?'⏳ AI 生成中':'🤖 AI 重新安排'}</button></div><div style="font-size:12.5px;color:var(--sub);margin-bottom:10px;">${dayNames[day-1]} · 皮肤${s.label} · 可用产品 ${openedCount} 件${aiResult ? (routine.fallback ? ' · 本地算法（AI 无效）' : ' · 🤖 AI 生成 · 已校验品类') : ' · 本地算法'}${aiResult ? `<button class="link-btn" data-act="clearAIRoutine" style="padding:0 4px;font-size:12px;">用本地算法</button>` : ''}</div><div style="background:#fff;border-radius:12px;padding:10px 14px;margin-bottom:10px;"><div style="font-size:13px;font-weight:750;color:#2b3244;margin-bottom:6px;">☀️ 早间流程</div>${routine.morning.length ? routine.morning.map((r,i) => renderRoutineStep(r, i)).join('') : '<p class="tip" style="color:#8A90A2;text-align:center;padding:8px 0">暂无可用产品</p>'}</div><div style="background:#fff;border-radius:12px;padding:10px 14px;"><div style="font-size:13px;font-weight:750;color:#2b3244;margin-bottom:6px;">🌙 晚间流程</div>${routine.night.length ? routine.night.map((r,i) => renderRoutineStep(r, i)).join('') : '<p class="tip" style="color:#8A90A2;text-align:center;padding:8px 0">暂无可用产品</p>'}</div>${aiResult && aiResult.reason ? `<div style="margin-top:10px;padding:10px 12px;background:#F1EEFF;border-radius:10px;font-size:12px;line-height:1.65;color:#4C1D95;">💡 ${esc(aiResult.reason)}</div>` : ''}<button class="btn-ghost-h" data-act="careSub" data-sub="productLib" style="margin-top:12px;background:var(--pink-soft);color:var(--pink);">📦 去产品库管理 / 补货</button></div>`; 
 
   const statusBlock = `
     <div class="card" style="padding:8px 10px 9px;margin-bottom:8px;">
@@ -2883,7 +3032,18 @@ function careSkinPane(){
     </div>
   `;
   
-  return statusBlock + profileBlock + aiRoutineStatusHTML() + routineBlock; 
+  let routineNotice = '';
+  if (aiResult && routine.stat){
+    const st = routine.stat;
+    const bits = [];
+    if (st.corrected) bits.push('已按产品库真实品类校正 ' + st.corrected + ' 处步骤名，并清掉与品类不符的用法提示（不会再有「面霜写成洁面 / 精华写成爽肤水」这类错配）');
+    if (st.added) bits.push('已补齐 ' + st.added + ' 个被 AI 漏掉的基础步骤（洁面 / 防晒 / 卸妆）');
+    if (st.dropped) bits.push('已忽略 ' + st.dropped + ' 条清单外或早晚不适用的安排');
+    if (routine.fallback) bits.push('AI 结果全部无效，已自动改用本地算法');
+    if (st.unused && st.unused.length) bits.push('本次未安排 ' + st.unused.length + ' 件：' + st.unused.slice(0,3).join('、') + (st.unused.length > 3 ? '…' : '') + '（可在「AI 重新安排」里换一批）');
+    if (bits.length) routineNotice = '<div style="margin-bottom:10px;padding:9px 11px;border-radius:9px;font-size:12px;line-height:1.7;background:#F0FDF4;color:#166534;">✓ ' + bits.map(x => esc(x)).join('<br>✓ ') + '</div>';
+  }
+  return statusBlock + profileBlock + aiRoutineStatusHTML() + routineNotice + routineBlock; 
 }
 function careSuppPane(){ const todaySupps = getTodaySupps(); const suppHtml = todaySupps.length ? todaySupps.map(s => { let stockWarn = ''; const libItem = suppLib.find(x => x.name === s.name); if (libItem && libItem.stock !== null && libItem.stock !== undefined && Number(libItem.stock) <= 7) { stockWarn = `<span style="font-size:11px;color:var(--hot);background:#FFEDEA;padding:2px 6px;border-radius:4px;margin-left:6px;">仅剩 ${libItem.stock} 件</span>`; } return `<div class="supp" data-today-supp="${s._uid}"><span class="check" data-act="takeSupp" data-uid="${s._uid}"></span><div class="e">💊</div><div class="body"><div class="n">${esc(s.name)}${stockWarn}</div><div class="s">${esc(s.dose||'')} · ${esc(s.time||'')}</div></div></div>`; }).join('') : '<p class="tip" style="color:#8A90A2;padding:8px 0;text-align:center">🎉 今日补剂都吃完了！<br>去「补剂库」添加/编辑清单</p>'; return `<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;">今日补剂 <span class="muted" style="color:var(--sub);font-weight:500;font-size:12.5px">${todaySupps.length} 项 · 勾选即消除</span></div><p style="font-size:12.5px;color:var(--sub);margin:0 0 10px;line-height:1.6;">每天早上会自动从「补剂库」复制一份清单。勾选已服用的补剂，就会从今天列表里删除。</p>${suppHtml}</div><div class="card" style="background:#F7F8FC;"><button class="btn-ghost-h" data-act="careSub" data-sub="suppLib" style="background:var(--pink-soft);color:var(--pink)">📚 去补剂库管理</button></div>`; }
 function careSuppLibPane(){ const list = suppLib.map(s => { let stockHtml = ''; if (s.stock !== undefined && s.stock !== null && s.stock !== "") { stockHtml = `<span style="font-size:12px;color:var(--sub);margin-left:8px;">库存: ${s.stock}</span>`; } else { stockHtml = `<span style="font-size:12px;color:var(--sub);margin-left:8px;">库存未设置</span>`; } return `<div class="supp"><div class="e">💊</div><div class="body"><div class="n">${esc(s.name)}${stockHtml}</div><div class="s">${esc(s.dose||'')} · ${esc(s.time||'')}</div></div><div style="display:flex;gap:5px;align-items:center;"><input type="number" min="0" step="1" value="${s.stock == null ? '' : Number(s.stock)}" placeholder="库存" data-stock-id="${s.id}" style="width:64px;padding:6px;border:1px solid var(--line);border-radius:8px;font-size:12px;"><button class="del" data-act="saveSuppStock" data-id="${s.id}" title="保存库存">✓</button><button class="del" data-act="delSuppLib" data-id="${s.id}">✕</button></div></div>`; }).join('') || '<p class="tip" style="color:#8A90A2;padding:8px 0">补剂库为空</p>'; return `<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;">补剂库 <span class="muted" style="color:var(--sub);font-weight:500;font-size:12.5px">${suppLib.length} 项</span></div><p style="font-size:12.5px;color:var(--sub);margin:0 0 10px;line-height:1.6;">这里是你所有的补剂清单，每天会自动把它们复制到「补剂」页作为今日待办。打卡会自动扣除库存。</p>${list}</div><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;">添加补剂到库</div><div class="dim-row"><span class="lb">名称</span><input type="text" id="suppLibName" placeholder="如 复合维生素B" style="width:160px;text-align:left"></div><div class="dim-row"><span class="lb">剂量</span><input type="text" id="suppLibDose" placeholder="如 1 粒" style="width:160px;text-align:left"></div><div class="dim-row"><span class="lb">服用时间</span><input type="text" id="suppLibTime" placeholder="如 早餐后" style="width:160px;text-align:left"></div><div class="dim-row"><span class="lb">当前库存</span><input type="number" min="0" step="1" id="suppLibStock" placeholder="实际数量" style="width:160px;text-align:left"></div><button class="btn-primary" data-act="addSuppLib" style="margin-top:12px;background:linear-gradient(135deg,var(--pink),var(--pink2))">＋ 添加到补剂库</button></div>`; }
@@ -4747,7 +4907,7 @@ async function handleV3Action(act, t, e){
   if (act === 'markProductOpened'){
     const id = t.dataset.id, lib = getProductLibrary();
     const p = lib.find(x => x.id === id);
-    if (p){ p.openedDate = todayStr(); if (!p.shelfLifeMonths) p.shelfLifeMonths = 6; saveProductLibrary(lib); toast('✓ 已标记今天开封（默认开封后 6 个月）'); render({ keepScroll:true }); }
+    if (p){ p.openedDate = todayStr(); if (!p.shelfLifeMonths) p.shelfLifeMonths = 6; saveProductLibrary(lib); state.prodLibFilter = 'opened'; LS.set('app-prod-lib-filter','opened'); toast('✓ 已开封，已自动切到「已开封」列表'); render({ keepScroll:true }); }
     return true;
   }
   if (act === 'clearAISettings'){
@@ -4866,12 +5026,20 @@ document.addEventListener('input', e => {
   const el = e.target;
   if (!el || !el.id) return;
   if (el.id === 'unitInput') updateUnitResult();
+  if (el.id === 'pStart') setPeriodDraft({ start: el.value });
+  if (el.id === 'pEnd') setPeriodDraft({ end: el.value });
+  if (el.id === 'pCycle') setPeriodDraft({ cycle: el.value });
+  if (el.id === 'pPd') setPeriodDraft({ period: el.value });
   if (el.id === 'globalSearch') runGlobalSearch(el.value);
   if (el.id === 'noteSearch'){ const q = (el.value||'').toLowerCase(); document.querySelectorAll('.note-card').forEach(c => { const hay = (c.dataset.hay||'').toLowerCase(); c.style.display = (!q || hay.includes(q)) ? '' : 'none'; }); }
 });
 document.addEventListener('change', e => {
   const el = e.target;
   if (el && el.id === 'unitFrom') updateUnitResult();
+  if (el && el.id === 'pStart') setPeriodDraft({ start: el.value });
+  if (el && el.id === 'pEnd') setPeriodDraft({ end: el.value });
+  if (el && el.id === 'pCycle') setPeriodDraft({ cycle: el.value });
+  if (el && el.id === 'pPd') setPeriodDraft({ period: el.value });
 });
 setTimeout(() => { try { applySettings(); updateUnitResult(); } catch(e){} }, 300);
 
@@ -5138,11 +5306,40 @@ if (act === 'clearExample'){
     saveManualTodos(saved); closeSheet(); buildCalendarFromPlans(); syncToNativeWidget(); toast('已添加待办'); render({ keepScroll: true }); return; 
   }
   if (act === 'togglePastTodos'){ state.showPastTodos = !state.showPastTodos; render({ keepScroll: true }); return; }
+  if (act === 'setProdLibFilter'){
+    const key = t.dataset.filter || 'all';
+    state.prodLibFilter = (key === 'all' || state.prodLibFilter === key) ? 'all' : key;
+    LS.set('app-prod-lib-filter', state.prodLibFilter);
+    render({ keepScroll: true });
+    setTimeout(() => { const el = document.getElementById('prodListCard'); if (el) el.scrollIntoView({ block:'start', behavior:'smooth' }); }, 90);
+    return;
+  }
   if (act === 'setOverride'){ const mode = t.dataset.mode; const today = new Date(); today.setHours(0,0,0,0); setOverride(today, mode === 'original' ? null : mode); buildCalendarFromPlans(); syncToNativeWidget(); render({ keepScroll: true }); toast(mode === 'original' ? '已恢复为正常状态' : '已切换身体状态'); return; }
-  if (act === 'periodQuickStart'){ addPeriod(new Date(), null); toast('已记录：今天为经期第一天'); render({ keepScroll: true }); return; }
-  if (act === 'periodSave'){ const ps = document.getElementById('pStart'); const pe = document.getElementById('pEnd'); if (!ps || !ps.value){ toast('请选择开始日'); return; } addPeriod(new Date(ps.value), (pe && pe.value) ? new Date(pe.value) : null); toast('已保存这条记录'); render({ keepScroll: true }); return; }
-  if (act === 'periodDel'){ if (!confirm('删除这条经期记录？')) return; delPeriod(t.dataset.id); render({ keepScroll: true }); return; }
-  if (act === 'periodSaveCycle'){ const pc = document.getElementById('pCycle'); const pp = document.getElementById('pPd'); const cv = pc ? parseInt(pc.value,10) : 28; const pv = pp ? parseInt(pp.value,10) : 5; savePeriodCycle({ cycle:(cv>=20&&cv<=45?cv:28), period:(pv>=2&&pv<=12?pv:5) }); toast('已保存周期设置'); render({ keepScroll: true }); return; }
+  if (act === 'periodQuickStart'){ addPeriod(new Date(), null); setPeriodDraft({ start:todayStr(), end:'', editingId:null }); toast('已记录：今天为经期第一天'); render({ keepScroll: true }); return; }
+  if (act === 'periodToday'){ setPeriodDraft({ start:todayStr(), end:'', editingId:null }); render({ keepScroll: true }); toast('开始日已改成今天'); return; }
+  if (act === 'periodEdit'){
+    const rec = getPeriodLog().find(x => String(x.id) === String(t.dataset.id));
+    if (!rec){ toast('这条记录已不存在'); return; }
+    setPeriodDraft({ start:rec.start, end:rec.end || '', editingId:rec.id });
+    render({ keepScroll: true });
+    setTimeout(() => { const el = document.getElementById('periodFormCard'); if (el) el.scrollIntoView({ block:'center', behavior:'smooth' }); }, 90);
+    toast('已载入这条记录，改完点「保存修改」');
+    return;
+  }
+  if (act === 'periodCancelEdit'){ setPeriodDraft({ start:todayStr(), end:'', editingId:null }); render({ keepScroll: true }); return; }
+  if (act === 'periodSave'){
+    const ps = document.getElementById('pStart'); const pe = document.getElementById('pEnd');
+    if (!ps || !ps.value){ toast('请选择开始日'); return; }
+    const sv = ps.value, ev = (pe && pe.value) ? pe.value : '';
+    if (ev && ev < sv){ toast('结束日不能早于开始日'); return; }
+    const d = getPeriodDraft();
+    const mode = savePeriodRecord(sv, ev, d.editingId || null);
+    setPeriodDraft({ start:sv, end:ev, editingId:null });
+    toast(mode === 'add' ? '✓ 已保存这条记录' : '✓ 已更新这条记录（日期不会再跳回今天）');
+    render({ keepScroll: true }); return;
+  }
+  if (act === 'periodDel'){ if (!confirm('删除这条经期记录？')) return; const pd = getPeriodDraft(); if (String(pd.editingId || '') === String(t.dataset.id)) setPeriodDraft({ editingId:null }); delPeriod(t.dataset.id); render({ keepScroll: true }); return; }
+  if (act === 'periodSaveCycle'){ const pc = document.getElementById('pCycle'); const pp = document.getElementById('pPd'); const cv = pc ? parseInt(pc.value,10) : 28; const pv = pp ? parseInt(pp.value,10) : 5; savePeriodCycle({ cycle:(cv>=20&&cv<=45?cv:28), period:(pv>=2&&pv<=12?pv:5) }); setPeriodDraft({ cycle:'', period:'' }); toast('已保存周期设置'); render({ keepScroll: true }); return; }
   if (act === 'periodSetNormal'){ setOverride(new Date(), null); buildCalendarFromPlans(); syncToNativeWidget(); render({ keepScroll: true }); toast('已恢复正常状态'); return; }
   if (act === 'periodGoLog'){ state.tab = 'life'; state.lifeSub = 'period'; render(); return; }
   if (act === 'studySub'){ state.studySub = t.dataset.sub; render(); return; }
