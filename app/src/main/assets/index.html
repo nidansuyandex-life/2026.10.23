@@ -104,7 +104,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans 
 .subtab{border:0;background:#fff;padding:9px 16px;border-radius:99px;font-size:15px;font-weight:600;color:var(--ink2);cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:inherit;transition:background .15s,color .15s;box-shadow:0 1px 3px rgba(25,27,34,.06);}
 .subtab.on{background:var(--pri);color:#fff;font-weight:700;box-shadow:0 8px 18px -8px rgba(37,99,235,.55);}
 /* --- 二级分段：下划线 --- */
-.subtabs-secondary{display:flex;gap:16px;margin:6px 4px 14px;border-bottom:1px solid var(--line);padding-bottom:0;background:transparent;border-radius:0;border-top:none;border-left:none;border-right:none;overflow-x:auto;}
+.subtabs-secondary{position:sticky;top:var(--sec-top,0px);z-index:7;display:flex;gap:16px;margin:0 -16px 12px;padding:7px 20px 0;border-bottom:1px solid var(--line);background:#F5F6FA;border-radius:0;border-top:none;border-left:none;border-right:none;overflow-x:auto;}
 .subtabs-secondary::-webkit-scrollbar{display:none;}
 .subtabs-secondary .subtab{padding:8px 4px 11px;font-size:14px;color:var(--ink3);font-weight:500;position:relative;background:none;box-shadow:none;}
 .subtabs-secondary .subtab.on{background:transparent;color:var(--pri);font-weight:800;}
@@ -1466,7 +1466,7 @@ const AI = { get provider(){ return AI_get_provider(); }, get apiKey(){ return A
       let lastErr = null;
       for (const m of models){
         try {
-          const d = await aiPostJSON(c.base, bodyFn(m), per, c.key);
+          const d = await aiPostJSON(c.base, bodyFn(m, c), per, c.key);
           AI_set_lastGood(c.id); AI_set_lastUsed(c); AI_setModelPref(c.provider, kind, m);
           return d;
         } catch(e){
@@ -2498,32 +2498,158 @@ function showAIActivationHint(show){
     <span style="color:#B45309;">省事做法：把服务商换成「智谱 GLM」，免费、只需填 Key、无需开通模型。</span></div>
     <a href="https://console.volcengine.com/ark" style="display:block;margin-top:9px;padding:9px 12px;border-radius:9px;background:#F59E0B;color:#fff;text-align:center;font-size:12.5px;font-weight:700;text-decoration:none;">🌐 打开火山方舟控制台</a>`;
 }
-async function recognizeProductPhoto(dataUrl){
+/* 联网检索真实产品资料：各服务商 chat/completions 的搜索开关（官方文档 2026-11） */
+function AI_searchExtras(provider){
+  if (provider === 'zhipu')  return { tools:[{ type:'web_search', web_search:{ enable:true } }] };
+  if (provider === 'qwen')   return { enable_search:true };
+  if (provider === 'doubao') return { web_search_options:{} };
+  return {};
+}
+const AI_SEARCH_TIP = {
+  zhipu:'智谱 GLM 直接支持联网检索',
+  qwen:'通义千问直接支持联网检索',
+  doubao:'豆包需在火山方舟「应用组件库 → 豆包搜索 Custom 版」开通服务',
+  deepseek:'DeepSeek 不支持联网检索，请在设置里换成智谱 / 通义千问'
+};
+function AI_searchSupported(){
+  try { return AI.candidates('chat').some(c => c && ['zhipu','qwen','doubao'].indexOf(c.provider) >= 0); } catch(e){ return false; }
+}
+/* 让 AI 联网检索该产品的公开全成分表，而不是凭模型记忆编 */
+async function AI_searchProductIngredients(name, catLabel){
+  const sys = '你是化妆品成分资料检索助手。必须联网检索该产品的官方或权威公开全成分表（INCI）。只输出一行成分名称，用中文逗号分隔；不要解释、不要编号、不要 Markdown、不要来源链接、不要编造。若联网后确实找不到该产品的成分表，只输出「查无结果」四个字。';
+  const usr = '请检索这个产品在中国市场销售版本的全成分表，按成分表原顺序输出（最多 40 个）：\n产品名：' + name + '\n品类：' + (catLabel || '未知');
+  const d = await AI.request('chat', (m, c) => Object.assign({
+    model:m, temperature:0.1, max_tokens:1200,
+    messages:[{ role:'system', content:sys }, { role:'user', content:usr }]
+  }, AI_searchExtras(c && c.provider)), 40000);
+  const out = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+  if (!out || /查无结果|未找到|没有找到|无法查|not found/i.test(out)) return null;
+  const ing = cleanIngredients(String(out)
+    .replace(/\[\d+\]|【\d+】|\(\s*来源[^)]*\)|https?:\/\/\S+/g, '')
+    .replace(/^\s*(?:根据|经检索|检索结果|全成分|成分表)[^：:\n]*[：:]\s*/m, ''));
+  return ing && ing.length >= 4 ? ing : null;
+}
+function applyProductIngredients(ing, source){
+  const ta = document.getElementById('prodIngredients');
+  if (ta && ing) ta.value = ing;
+  const from = document.getElementById('prodIngredientsFrom');
+  if (!from) return;
+  from.style.display = 'block';
+  if (source === 'web'){
+    from.style.background = '#ECFDF5'; from.style.color = '#065F46';
+    from.textContent = '🌐 成分来自联网检索到的产品公开成分表，仍建议对照包装核对';
+  } else if (source === 'manual'){
+    from.style.background = '#F3F4F6'; from.style.color = '#4B5563';
+    from.textContent = '✍️ 已保留你手动填写的成分，未用检索结果覆盖';
+  } else if (source === 'photo'){
+    from.style.background = '#EFF6FF'; from.style.color = '#1E40AF';
+    from.textContent = '📷 成分抄录自照片上的成分表，建议快速核对一遍';
+  } else if (source === 'ai'){
+    from.style.background = '#FFFBEB'; from.style.color = '#92400E';
+    from.innerHTML = '🧪 成分由 AI 按产品名推断（未取得联网资料），<b>请对照包装成分表核对</b>后再保存';
+  } else {
+    from.style.background = '#FFF7ED'; from.style.color = '#9A3412';
+    from.textContent = '⚠️ 这次没拿到成分：可拍一张瓶身背面的成分表特写重新识别，或直接在上方粘贴';
+  }
+}
+/* 把 AI 返回的成分字段清洗成可直接放进输入框的一行文本 */
+function cleanIngredients(v){
+  if (Array.isArray(v)) v = v.join('，');
+  if (v == null) return '';
+  let s = String(v).trim();
+  if (!s || s === 'null' || s === 'undefined' || s === '无' || s === '未识别') return '';
+  s = s.replace(/^```[a-z]*\s*/i, '').replace(/```\s*$/, '')
+       .replace(/^\s*(全)?成分(表)?\s*[:：]\s*/i, '')
+       .replace(/^\s*ingredients(Guess)?\s*[:：]\s*/i, '')
+       .replace(/^["'「『]|["'」』]$/g, '')
+       .replace(/[\r\n]+/g, '，')
+       .replace(/[；;、|]+/g, '，')
+       .replace(/，{2,}/g, '，')
+       .replace(/^，+|，+$/g, '')
+       .trim();
+  return s.slice(0, 500);
+}
+/* 视觉模型输出过长被截断、JSON 不完整时，尽量把 name / ingredients  salvage 出来 */
+function salvageProductJSON(txt){
+  if (!txt) return null;
+  const out = {};
+  const str = k => {
+    const m = new RegExp('"' + k + '"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"').exec(txt);
+    if (m){ try { return JSON.parse('"' + m[1] + '"'); } catch(e){ return m[1]; } }
+    const cut = new RegExp('"' + k + '"\\s*:\\s*"([^"]*)').exec(txt);  /* 成分表太长被截断，没有闭合引号 */
+    return cut ? cut[1].replace(/[,\s]+$/, '') : '';
+  };
+  out.name = str('name');
+  out.majorCat = str('majorCat');
+  out.ingredients = str('ingredients');
+  out.ingredientsGuess = str('ingredientsGuess');
+  const n = /"shelfLifeMonths"\s*:\s*(\d+)/.exec(txt);
+  if (n) out.shelfLifeMonths = Number(n[1]);
+  return (out.name || out.ingredients || out.ingredientsGuess) ? out : null;
+}
+async function recognizeProductPhoto(dataUrl, onPartial){
   setPhotoStatus('① 正在读取并压缩照片…');
   const url = await shrinkImage(dataUrl, 800, 0.68);
   if (!url) throw new Error('图片读取失败或超时，请换一张照片，或改用「从相册选图」');
   if (!AI.enabled()) throw new Error('请先在「我的 → 设置 → AI 助手」填入 API Key');
-  setPhotoStatus('② 照片已就绪，正在发给 AI 识别（真实照片一般要 10–60 秒，请勿退出页面）…');
-  const prompt = '你是一位化妆品成分顾问。仔细看这张护肤品/化妆品瓶身照片，只输出 JSON（不要解释）：{"name":"完整产品名（品牌+品名）","majorCat":"产品大类","ingredients":"能看清的成分表，用逗号分隔；看不清就留空","shelfLifeMonths":6}。majorCat 只能从这些里选一个：makeupRemover 卸妆 / cleanser 洁面 / toner 爽肤水 / serum 精华 / lotion 乳液 / cream 面霜 / sunscreen 防晒 / mask 面膜 / exfoliant 去角质 / other 其他。shelfLifeMonths 根据瓶身 PAO 标识（如 6M、12M）填写，看不清填 6。';
-  const d = await AI.request('vision', model => ({ model, temperature:0.1, max_tokens:700, messages:[{ role:'user', content:[
+  setPhotoStatus('② 照片已就绪，正在让 AI 同时识别产品名和成分（真实照片一般要 10–60 秒，请勿退出页面）…');
+  const prompt = [
+    '你是化妆品成分顾问。仔细看这张护肤品/化妆品照片（可能是瓶身正面、背面或成分表特写）。只输出一个 JSON 对象，不要解释、不要 Markdown 代码块。',
+    '格式：{"name":"完整产品名（品牌+品名）","majorCat":"产品大类","ingredients":"照片上能看清的成分表原文，按原顺序用逗号分隔；照片上没有成分表就留空字符串","ingredientsGuess":"只在 ingredients 为空时填写：根据品牌+产品名和你掌握的公开配方资料，给出该产品常见的全成分表，用逗号分隔；ingredients 非空时留空字符串","shelfLifeMonths":6}。',
+    '规则：① ingredients 只抄照片里真实可见的文字，绝不凭产品名编造；',
+    '② ingredientsGuess 最多列 30 个你确信的常见成分（如水,甘油,丁二醇,烟酰胺），不要解释、不要编号；',
+    '③ majorCat 只能从这些里选一个：makeupRemover 卸妆 / cleanser 洁面 / toner 爽肤水 / serum 精华 / lotion 乳液 / cream 面霜 / sunscreen 防晒 / mask 面膜 / exfoliant 去角质 / other 其他；',
+    '④ shelfLifeMonths 根据瓶身 PAO 标识（如 6M、12M）填写，看不清填 6。'
+  ].join('');
+  const d = await AI.request('vision', model => ({ model, temperature:0.1, max_tokens:1400, messages:[{ role:'user', content:[
     { type:'text', text:prompt }, { type:'image_url', image_url:{ url } }
   ] }] }), 90000);
-  setPhotoStatus('③ AI 已返回，正在解析结果…');
+  setPhotoStatus('③ AI 已返回，正在解析产品名与成分…');
   const content = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
-  const info = AI.parseJSON(content);
-  if (!info || !info.name) throw new Error('没识别出产品名，请拍清楚瓶身正面再试');
+  let info = null;
+  try { info = AI.parseJSON(content); } catch(e){ info = salvageProductJSON(content); }
+  if (!info) throw new Error('AI 返回内容无法解析，请重试或换一张照片');
+  const photoIng = cleanIngredients(info.ingredients);
+  const guessIng = cleanIngredients(info.ingredientsGuess || info.guessedIngredients || info.ingredientsAI);
+  if (photoIng){ info.ingredients = photoIng; info.ingredientsSource = 'photo'; }
+  else if (guessIng){ info.ingredients = guessIng; info.ingredientsSource = 'ai'; }
+  else { info.ingredients = ''; info.ingredientsSource = 'none'; }
+  info.name = String(info.name || '').trim();
+  if (!info.name && !info.ingredients) throw new Error('没识别出产品名或成分，请把瓶身正面或成分表拍清楚再试');
+  /* 照片上没有成分表 → 先回填已识别内容，再联网检索该产品的真实公开成分表（优先于凭记忆推断） */
+  if (info.name && info.ingredientsSource !== 'photo'){
+    if (onPartial) onPartial(info);
+    if (AI_searchSupported()){
+      setPhotoStatus('④ 已识别「' + info.name + '」，正在联网检索它的公开成分表（约 10–40 秒）…');
+      const ta0 = document.getElementById('prodIngredients');
+      const before = ta0 ? ta0.value : '';
+      try {
+        const webIng = await AI_searchProductIngredients(info.name, (PRODUCT_CATS[info.majorCat] || {}).label || '');
+        if (webIng){ info.ingredients = webIng; info.ingredientsSource = 'web'; }
+        else info.ingredientsNote = '联网未找到该产品的成分表';
+      } catch(e){ info.ingredientsNote = '联网检索失败：' + ((e && e.message) || '未知原因'); }
+      /* 检索期间用户可能已手动粘贴成分，此时不覆盖他的输入 */
+      const ta1 = document.getElementById('prodIngredients');
+      if (ta1 && ta1.value !== before){
+        info.ingredients = ta1.value; info.ingredientsSource = 'manual';
+        info.ingredientsNote = '已保留你手动填写的成分，未用检索结果覆盖';
+      }
+    } else {
+      info.ingredientsNote = '当前服务商不支持联网检索：' + (AI_SEARCH_TIP[AI.provider] || '请换用智谱 / 通义千问');
+    }
+  }
   return info;
 }
-function fillProductFromAI(info){
+function fillProductFromAI(info, silent){
   const set = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined && v !== null && v !== '') el.value = v; };
   set('prodName', info.name);
-  set('prodIngredients', info.ingredients);
   set('prodShelfLife', info.shelfLifeMonths);
+  applyProductIngredients(info.ingredients, info.ingredientsSource);
   const sel = document.getElementById('prodMajorCat');
   if (sel && info.majorCat && PRODUCT_CATS[info.majorCat]) sel.value = info.majorCat;
   const opened = document.getElementById('prodOpened');
   if (opened && !opened.value) opened.value = todayStr();
-  toast('✓ 已识别，请核对后保存');
+  if (!silent) toast('✓ 已识别，请核对后保存');
 }
 
 function closetSection(){ const sub = state.closetSub || 'add'; const subs = [{ id:'add', label:'增加衣服' },{ id:'lib', label:'产品库' },{ id:'free', label:'自由搭配台' }]; let content = ''; if (sub === 'add') content = closetAddPane(); else if (sub === 'lib') content = closetLibPane(); else content = closetFreePane(); return `<div class="subtabs-secondary">${subs.map(s => `<button class="subtab ${s.id===sub?'on':''}" data-act="closetSub" data-sub="${s.id}">${s.label}</button>`).join('')}</div>${content}`; }
@@ -2614,8 +2740,8 @@ function careProductLibPane(){ const lib = getProductLibrary(); const openedCoun
       <div style="display:flex;gap:8px;margin-bottom:10px;"><button class="btn primary" id="prodPhotoBtn" data-act="prodPhotoPick" style="flex:1;">🖼 从相册选图识别</button><button class="btn" id="prodCameraBtn" data-act="prodCameraPick" style="flex:1;background:#f1f2f9;color:#4b5265;">📷 拍照识别</button><input type="file" id="prodPhoto" accept="image/*" style="display:none"><input type="file" id="prodCamera" accept="image/*" capture="environment" style="display:none"></div>
       <div id="prodPhotoStatus" style="display:none;font-size:12px;line-height:1.65;padding:9px 11px;border-radius:9px;margin-bottom:10px;background:#EFF6FF;color:#1E40AF;word-break:break-all;"></div>
       <div id="prodPhotoPreviewWrap" style="display:none;margin-bottom:10px;text-align:center;"><img id="prodPhotoPreview" alt="已选中的照片" style="max-width:100%;max-height:190px;border-radius:12px;border:1px solid #E3E6EF;"><div style="font-size:11px;color:var(--sub);margin-top:4px;">↑ 已选中的照片</div></div>
-      <p class="tip" style="font-size:11.5px;color:var(--sub);margin:0 0 10px;line-height:1.6;">拍瓶身正面用「📷 拍照识别」，已有照片用「🖼 从相册选图识别」；AI 会自动填好名称、大类、成分和开封后可用月数，识别后可手动修改。识别进度与失败原因显示在上方，真实照片一般要 10–60 秒。需在设置里配置智谱 / 通义千问 / 豆包等支持读图的服务商。</p>
-      <div class="dim-row"><span class="lb">名称</span><input type="text" id="prodName" placeholder="如 OLAY 大红瓶" style="width:200px;text-align:left"></div><div class="dim-row"><span class="lb">大类</span><select id="prodMajorCat" style="width:200px;text-align:left;font-weight:600;">${majorOptions}</select></div><div class="dim-row"><span class="lb">开封时间</span><input type="date" id="prodOpened" style="width:200px"></div><div class="dim-row"><span class="lb">开封后可用月数</span><input type="number" id="prodShelfLife" placeholder="如 6" min="1" max="60" style="width:100px"><span class="unit">个月</span></div><div class="dim-row"><span class="lb">未开封到期日</span><input type="date" id="prodExpiry" style="width:200px"></div><div class="dim-row" style="align-items:flex-start;padding-top:10px;"><span class="lb" style="margin-top:8px;">成分</span><textarea id="prodIngredients" placeholder="粘贴成分表（可选，AI 会参考它判断产品用途）" style="flex:1;border:1.5px solid #E3E6EF;border-radius:10px;padding:8px 10px;font-family:inherit;font-size:13px;min-height:60px;resize:vertical;"></textarea></div><p class="tip" style="margin-top:8px;font-size:12.5px;color:var(--sub);">填写「开封时间 + 开封后可用月数」会自动倒计时；未开封可只填到期日。具体放在护肤流程哪一步，由 AI 根据产品名和成分判断。</p><button class="btn-primary" data-act="addProduct" style="margin-top:12px;background:linear-gradient(135deg,var(--pink),var(--pink2))">＋ 添加到产品库</button></div><div class="card"><div class="row-between" style="margin-bottom:10px;"><div style="font-size:13px;font-weight:700;">产品列表（按护肤流程顺序）</div><span class="muted" style="color:var(--sub);font-size:12.5px">${lib.length} 件</span></div>${groupedHtml || '<p class="tip" style="color:#8A90A2;text-align:center;padding:16px 0">还没有添加产品</p>'}</div>`; }
+      <p class="tip" style="font-size:11.5px;color:var(--sub);margin:0 0 10px;line-height:1.6;">拍瓶身正面用「📷 拍照识别」，已有照片用「🖼 从相册选图识别」；AI 会填好名称、大类、<b>成分</b>和开封后可用月数。成分按「照片成分表 → <b>联网检索该产品的公开成分表</b> → 实在查不到才按产品名推断」的顺序获取，来源标在成分框下方。想最准就拍瓶身背面的成分表特写。联网检索约多花 10–40 秒：智谱 / 通义千问直接可用，豆包需先在方舟控制台开通「豆包搜索 Custom 版」，DeepSeek 不支持联网。</p>
+      <div class="dim-row"><span class="lb">名称</span><input type="text" id="prodName" placeholder="如 OLAY 大红瓶" style="width:200px;text-align:left"></div><div class="dim-row"><span class="lb">大类</span><select id="prodMajorCat" style="width:200px;text-align:left;font-weight:600;">${majorOptions}</select></div><div class="dim-row"><span class="lb">开封时间</span><input type="date" id="prodOpened" style="width:200px"></div><div class="dim-row"><span class="lb">开封后可用月数</span><input type="number" id="prodShelfLife" placeholder="如 6" min="1" max="60" style="width:100px"><span class="unit">个月</span></div><div class="dim-row"><span class="lb">未开封到期日</span><input type="date" id="prodExpiry" style="width:200px"></div><div class="dim-row" style="align-items:flex-start;padding-top:10px;"><span class="lb" style="margin-top:8px;">成分</span><textarea id="prodIngredients" placeholder="粘贴成分表（可选，AI 会参考它判断产品用途）" style="flex:1;border:1.5px solid #E3E6EF;border-radius:10px;padding:8px 10px;font-family:inherit;font-size:13px;min-height:60px;resize:vertical;"></textarea></div><div id="prodIngredientsFrom" style="display:none;margin:6px 0 0 70px;font-size:11.5px;line-height:1.55;padding:7px 9px;border-radius:8px;background:#EFF6FF;color:#1E40AF;"></div><p class="tip" style="margin-top:8px;font-size:12.5px;color:var(--sub);">填写「开封时间 + 开封后可用月数」会自动倒计时；未开封可只填到期日。具体放在护肤流程哪一步，由 AI 根据产品名和成分判断。</p><button class="btn-primary" data-act="addProduct" style="margin-top:12px;background:linear-gradient(135deg,var(--pink),var(--pink2))">＋ 添加到产品库</button></div><div class="card"><div class="row-between" style="margin-bottom:10px;"><div style="font-size:13px;font-weight:700;">产品列表（按护肤流程顺序）</div><span class="muted" style="color:var(--sub);font-size:12.5px">${lib.length} 件</span></div>${groupedHtml || '<p class="tip" style="color:#8A90A2;text-align:center;padding:16px 0">还没有添加产品</p>'}</div>`; }
 function renderRoutineStep(r, idx){ const p = r.product; const productName = p ? p.name : (r.productName || r.product || '—'); const major = p ? (PRODUCT_CATS[p.majorCat]||{}).label || '' : ''; const daysLeft = p ? productDaysLeft(p) : null; let daysCls = '', daysText = ''; if (daysLeft !== null){ if (daysLeft < 0){ daysCls = 'danger'; daysText = '已过期'; } else if (daysLeft <= 7){ daysCls = 'danger'; daysText = '剩 ' + daysLeft + ' 天'; } else if (daysLeft <= 30){ daysCls = 'warn'; daysText = '剩 ' + daysLeft + ' 天'; } else { daysCls = ''; daysText = '剩 ' + daysLeft + ' 天'; } } return `<div class="routine-step"><span class="rs-num">${idx+1}</span><div class="rs-body"><div class="rs-title">${esc(r.step)}</div><div class="rs-prod">🧴 ${esc(productName)}${major ? ' <span style="font-size:11.5px;opacity:.7;">· '+esc(major)+'</span>' : ''}</div>${r.note ? `<div class="rs-note">💡 ${esc(r.note)}</div>` : ''}</div>${daysText ? `<span class="rs-days ${daysCls}">${daysText}</span>` : ''}</div>`; }
 function resolveAIProduct(name){ if (!name) return null; const lib = getProductLibrary(); return lib.find(p => p.name === name) || lib.find(p => p.name && p.name.indexOf(name) >= 0) || lib.find(p => name.indexOf(p.name) >= 0) || null; }
 function buildRoutineFromAI(aiRoutine){ const morning = (aiRoutine.morning || []).map(r => { const p = resolveAIProduct(r.product || ''); return { step: r.step || '', product: p, productName: r.product || '', note: r.note || '' }; }); const night = (aiRoutine.night || []).map(r => { const p = resolveAIProduct(r.product || ''); return { step: r.step || '', product: p, productName: r.product || '', note: r.note || '' }; }); return { morning, night, empty: false }; }
@@ -4318,6 +4444,9 @@ async function render(options){
   
   requestAnimationFrame(() => { 
     if (keepScroll) view.scrollTop = prevScroll; 
+    /* 二级标签（月历/未完成/总代办、帮我记/账本/报表…）跟随一级标签一起吸顶：
+       top 取一级标签实测高度，没有一级标签的页面就贴 0，避免两级重叠。 */
+    try { const st = view.querySelector('.subtabs'); view.style.setProperty('--sec-top', st ? Math.round(st.getBoundingClientRect().height) + 'px' : '0px'); } catch(e){}
     applyChecks(); 
     if (tab === 'home') fetchWeather(); 
     if (tab === 'life' && state.lifeSub === 'money' && state.moneySub === 'record' && state.pendingTx) renderTxEditor();
@@ -4966,9 +5095,18 @@ view.addEventListener('change', e => { if (e.target.id === 'planStartInput'){ co
         showPickedPhoto('prodPhotoPreview', raw);   /* ★ 立刻显示已选照片，与 AI 结果无关 */
         if (wrap) wrap.style.display = 'block';
         try {
-          const info = await recognizeProductPhoto(raw);
+          const info = await recognizeProductPhoto(raw, p => {
+            fillProductFromAI(p, true);   /* 先把产品名/大类/已有成分填上，联网检索期间表单不空着 */
+            setPhotoStatus('③ 已识别「' + (p.name || '产品') + '」，正在核对成分表…');
+          });
           fillProductFromAI(info);
-          setPhotoStatus('✓ 识别成功：' + (info.name || '') + ' — 请核对表单内容后点「＋ 添加到产品库」');
+          const srcTip = info.ingredientsSource === 'web' ? '｜成分：已联网检索到公开成分表'
+                       : info.ingredientsSource === 'photo' ? '｜成分：已抄录照片成分表'
+                       : info.ingredientsSource === 'ai' ? '｜成分：AI 按产品名推断，请核对'
+                       : info.ingredientsSource === 'manual' ? '｜成分：已保留手动填写'
+                       : '｜成分：未获取到，可手动粘贴';
+          const note = info.ingredientsNote ? '（' + info.ingredientsNote.slice(0, 70) + '）' : '';
+          setPhotoStatus('✓ 识别成功：' + (info.name || '（名称未识别，请手动填）') + srcTip + note + ' — 请核对表单内容后点「＋ 添加到产品库」');
           toast('识别成功，请核对后添加');
         } catch(err){
           setPhotoStatus('✗ 识别失败：' + ((err && err.message) || '请手动填写'), true);
