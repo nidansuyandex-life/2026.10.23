@@ -1411,6 +1411,30 @@ function AI_set_lastGood(v){ LS.set('ai-last-good', v || ''); }
 function AI_get_lastUsed(){ try { return LS.get('ai-last-used', null); } catch(e){ return null; } }
 function AI_set_lastUsed(c){ LS.set('ai-last-used', c ? { id:c.id, label:c.label, provider:c.provider, model:c.model, ts:Date.now() } : null); }
 function AI_keyTail(k){ const s = String(k || ''); return s.length > 4 ? '••••' + s.slice(-4) : '••••'; }
+/* ===== 豆包（火山方舟）模型自动回退（P31）=====
+   火山方舟每个模型都要在「开通管理」里单独开通，未开通返回 404 ModelNotOpen。
+   内置多个候选自动试，用户仍然只填 Key；试成功后记住模型，下次直接用。 */
+const AI_MODEL_FALLBACK = {
+  doubao: {
+    vision: ['doubao-seed-1-6-vision-250815', 'doubao-seed-2-1-pro-260915', 'doubao-1.5-vision-pro-32k', 'doubao-vision-pro-32k'],
+    chat:   ['doubao-seed-1-6-250615', 'doubao-seed-2-1-pro-260915', 'doubao-pro-32k']
+  }
+};
+function AI_modelCandidates(provider, kind, primary){
+  const list = (AI_MODEL_FALLBACK[provider] && AI_MODEL_FALLBACK[provider][kind]) || [];
+  let pref = ''; try { pref = LS.get('ai-model-pref:' + provider + ':' + kind, ''); } catch(e){}
+  const out = [];
+  [pref].concat(list, [primary]).forEach(m => { if (m && out.indexOf(m) < 0) out.push(m); });
+  return out.length ? out : (primary ? [primary] : []);
+}
+function AI_setModelPref(provider, kind, model){
+  try { LS.set('ai-model-pref:' + provider + ':' + kind, model); } catch(e){}
+}
+function AI_isModelError(e){
+  const t = String((e && e.message) || '');
+  return /not activated|ModelNotOpen|model not found|does not exist|未开通|InvalidModel|model.*not.*(found|exist|open)/i.test(t)
+      || /HTTP (404|403)\b/.test(t);
+}
 const AI = { get provider(){ return AI_get_provider(); }, get apiKey(){ return AI_get_apiKey(); }, get model(){ return AI_get_model(); }, get visionModel(){ return AI_get_visionModel(); }, set(p,k){ LS.set('ai-provider', p||'none'); LS.set('ai-key', k||''); LS.set('ai-model',''); LS.set('ai-vision-model',''); }, enabled(){ return ((this.provider !== 'none' && !!this.apiKey) || AI_get_keys().some(x => x && x.key && x.provider && x.provider !== 'none')); }, roles: { engineer:{ name:'👷 工程师', prompt:'你是阀门行业资深工程师。' }, customer:{ name:'👤 客户', prompt:'你是一个挑剔的客户。' }, boss:{ name:'💼 老板', prompt:'你是一个务实的老板。' }, teacher:{ name:'🎓 英语老师', prompt:'你是英语老师。' }, health:{ name:'💊 健康顾问', prompt:'你是健康生活顾问。' }, skincare:{ name:'💄 护肤顾问', prompt:'你是专业护肤顾问。' } }, endpoints(){ return { deepseek:{ base:'https://api.deepseek.com/v1/chat/completions', model:'deepseek-chat' }, qwen:{ base:'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model:'qwen-turbo' }, zhipu:{ base:'https://open.bigmodel.cn/api/paas/v4/chat/completions', model:'glm-4.7-flash' }, doubao:{ base:'https://ark.cn-beijing.volces.com/api/v3/chat/completions', model:'doubao-seed-2-1-pro-260915' } }; }, visionModels(){ return { deepseek:'', qwen:'qwen-vl-max', zhipu:'glm-4.6v-flash', doubao:'doubao-seed-2-1-pro-260915' }; }, visionName(){ return this.visionModels()[this.provider] || ''; }, keys(){ return AI_get_keys(); }, lastGood(){ return AI_get_lastGood(); }, lastUsed(){ return AI_get_lastUsed(); },
   candidates(kind, main){
     const eps = this.endpoints(), vm = this.visionModels(), list = [];
@@ -1433,22 +1457,33 @@ const AI = { get provider(){ return AI_get_provider(); }, get apiKey(){ return A
     if (!cs.length) throw new Error(kind === 'vision'
       ? '没有能拍照识别的 Key：DeepSeek 不支持读图，请添加智谱 / 通义千问的 Key'
       : '请先填入 API Key');
-    // 真实照片的视觉识别要 10~60 秒；多 Key 轮询时也不能压缩单 Key 超时，
-    // 否则照片还没推理完就超时，表现就是「上传后转半天、最后没反应」。
+    // 真实照片的视觉识别要 10~60 秒；多 Key 轮询时也不能压缩单 Key 超时。
     const per = timeout || 90000;
     const errs = [];
+    let modelErrCount = 0;
     for (const c of cs){
-      try {
-        const d = await aiPostJSON(c.base, bodyFn(c.model), per, c.key);
-        AI_set_lastGood(c.id); AI_set_lastUsed(c);
-        return d;
-      } catch(e){
-        errs.push(c.label + '：' + ((e && e.message) || '失败'));
-        if (c.id === AI_get_lastGood()) AI_set_lastGood('');
+      const models = AI_modelCandidates(c.provider, kind, c.model);
+      let lastErr = null;
+      for (const m of models){
+        try {
+          const d = await aiPostJSON(c.base, bodyFn(m), per, c.key);
+          AI_set_lastGood(c.id); AI_set_lastUsed(c); AI_setModelPref(c.provider, kind, m);
+          return d;
+        } catch(e){
+          lastErr = e;
+          // 401 / 超时 / 网络错误换模型没意义，直接换下一个 Key
+          if (!AI_isModelError(e)) break;
+          modelErrCount++;
+        }
       }
+      errs.push(c.label + '：' + ((lastErr && lastErr.message) || '失败'));
+      if (c.id === AI_get_lastGood()) AI_set_lastGood('');
     }
-    const err = new Error('全部 ' + cs.length + ' 个 Key 都失败 → ' + errs.join('；').slice(0, 260));
-    err.allFailed = true; throw err;
+    let msg = '全部 ' + cs.length + ' 个 Key 都失败 → ' + errs.join('；').slice(0, 260);
+    const notOpen = modelErrCount > 0 && /not activated|has not activated|ModelNotOpen|未开通/i.test(errs.join(' '));
+    if (notOpen) msg = '模型服务未开通：火山方舟要为每个模型单独开通，只填 API Key 不会自动开通。请看下方开通指引。（原始错误：' + errs.join('；').slice(0, 150) + '）';
+    const err = new Error(msg);
+    err.allFailed = true; err.modelNotOpen = notOpen; throw err;
   }, async call(system, user, maxTokens, temp){ if (!this.enabled()) throw new Error('AI 未配置'); try { const d = await this.request('chat', model => ({ model, messages: [{ role:'system', content:system }, { role:'user', content:user }], temperature: temp == null ? 0.4 : temp, max_tokens: maxTokens || 1000 }), 30000); return (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || null; } catch(e) { if (e && e.name === 'AbortError') throw new Error('AI 请求超时，请检查网络后重试'); throw e; } }, parseJSON(content){ if (!content) return null; let json = content.trim(); if (json.startsWith('```')) json = json.replace(/^```(?:json)?\s*/, '').replace(/```\s*$/, ''); const i = json.indexOf('{'), j = json.lastIndexOf('}'); if (i>=0 && j>i) json = json.slice(i, j+1); return JSON.parse(json); }, async scoreAnswer(q,a,ref){ if (!this.enabled()) return null; const system = `严格导师。只输出 JSON：{"accuracy":0-100,"correct":[],"missing":[],"supplement":""}`; return this.parseJSON(await this.call(system, `【问题】\n${q}\n\n【参考】\n${ref}\n\n【学员】\n${a}\n\n请评分。`, 1000, 0.2)); }, async judgeWord(w,a,cn){ if (!this.enabled()) return null; const system = `英语单词判卷。只输出 JSON：{"correct":true/false,"score":0-100,"feedback":"20字以内"}`; return this.parseJSON(await this.call(system, `单词：${w}\n参考：${cn}\n学员：${a}`, 200, 0.1)); }, async answerQuestion(q, ctx){ if (!this.enabled()) return null; const system = `专业助手。回答专业准确。1.直接回答 2.给适用边界 3.分点，400字内。`; return await this.call(system, ctx ? `背景：${ctx}\n\n问题：${q}` : q, 1000, 0.4); }, async assistant(q, role){ if (!this.enabled()) throw new Error('AI 未配置'); const cfg = this.roles[role] || this.roles.engineer; return await this.call(cfg.prompt + '\n分点作答，每点短句，400字内。', q, 1000, 0.4); }, async gradeExpression(scene, q, guide, answer){ if (!this.enabled()) return null; const system = `表达训练教练。场景「${scene}」\n题目：${q}\n要求：${guide}\n只输出 JSON：{"score":0-100,"level":"","strengths":[],"issues":[],"improved":"","advice":""}`; return this.parseJSON(await this.call(system, '用户的回答：\n'+answer, 1200, 0.3)); }, async recommendRoutine(skinKey, skinProfile, products){ if (!this.enabled()) return null; const system = `你是专业护肤顾问。根据皮肤状态、肤质档案和用户产品库（已开封未过期），生成今日早间和晚间护肤流程。只输出 JSON：{"morning":[{"step":"步骤名","product":"产品名","note":"注意（可空）"}],"night":[...],"reason":"一句话推荐说明"}。重要规则：1. 只用给定产品，不可虚构，product 必须是产品库中的产品名之一；2. 你要根据产品名和成分，自行判断每个产品属于哪一类（卸妆/洁面/爽肤水/精华/乳液/面霜/防晒/面膜/去角质），并决定它放在护肤流程的哪一步；3. 标准顺序：卸妆 → 洁面 → 爽肤水 → 精华 → 乳液 → 面霜 → 防晒（防晒只白天用）；面膜/去角质放在精华之前或替代精华；4. 早间优先抗氧化（VC、烟酰胺等），晚间优先修复/抗老（A醇、壬二酸、胜肽等）；A醇、酸类、去角质只能晚间用；VC白天需配合防晒；5. 严重期（severe）：只用最温和的洁面、水、修复精华（B5/积雪草/神经酰胺等）、简单保湿霜、物理防晒，避免所有活性成分；6. 痘痘期（acne）：早间温和洁面+控油水+烟酰胺类+保湿乳+防晒，晚间卸妆(如有)+洁面+局部壬二酸/水杨酸+修复+保湿，避开A醇；7. 稳定期（stable）：早间抗氧化精华+保湿+防晒，晚间活性精华（A醇/壬二酸/VC/胜肽等轮换）+修复+保湿；周三周日可安排面膜，周六可安排去角质；8. 关键：让产品库中所有开封产品在一周内都被用到，不要反复只用其中1-2件；同类产品（如多个精华）按日期轮换，不要每天用同一支；9. 如果某产品不适合当前皮肤状态，可以不用它，但要在 reason 里说明。`; const userMsg = `今日：${todayStr()}（星期${'日一二三四五六'[new Date().getDay()]}）\n皮肤状态：${skinKey}\n肤质档案：${JSON.stringify(skinProfile)}\n可用产品（已开封未过期）：\n${products.map(p => `- ${p.name}（大类：${(PRODUCT_CATS[p.majorCat]||{}).label || p.majorCat}${p.ingredients ? '；成分：'+p.ingredients.slice(0,120) : ''}）`).join('\n')}\n\n请安排今天早间和晚间的护肤流程，确保所有产品在一周内轮换使用。`; return this.parseJSON(await this.call(system, userMsg, 2500, 0.3)); } };
 
 const CACHE_KEY_KNOWLEDGE = 'knowledge-v12';
@@ -1477,7 +1512,7 @@ const state = {
   generalLoading:false, quoteResults:[], quoteLoading:false, storyResults:[], storyLoading:false, 
   yiyanData:null, yiyanLoading:false, newsResults:[], newsLoading:false, 
   recData:null, recLoading:false, lifeSub:'calendar', calendarSub:'month', moneySub:'record', sportSub:'plan', 
-  closetSub:'add', careSub:'skin', closetCat:'top', garmentDraft:{ bust:88, shoulder:38, length:62, sleeve:58, waist:70, hip:96, thigh:54, footLength:24, footWidth:9.5 }, 
+  closetSub:'add', closetMoreOpen:false, clothDraft:{}, careSub:'skin', closetCat:'top', garmentDraft:{ bust:88, shoulder:38, length:62, sleeve:58, waist:70, hip:96, thigh:54, footLength:24, footWidth:9.5 }, 
   selectedDate: HealthStore.load('selectedDate', todayStr()), calYear: HealthStore.load('calYear', new Date().getFullYear()), 
   calMonth: HealthStore.load('calMonth', new Date().getMonth()), setsDone: HealthStore.load('setsDone', {}), 
   restTimers: {}, exportRange: HealthStore.load('exportRange', 'month'), pendingTx: null, calendarData: {}, 
@@ -2449,6 +2484,20 @@ function setAIStatus(msg, isError){
   el.style.background = isError ? '#FFF1F0' : '#EFF6FF';
   el.style.color = isError ? '#B42318' : '#1E40AF';
 }
+function showAIActivationHint(show){
+  const el = document.getElementById('aiFixHint');
+  if (!el) return;
+  if (!show){ el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = 'block';
+  el.innerHTML = `<div style="font-size:12.5px;font-weight:750;color:#92400E;margin-bottom:6px;">🌐 豆包模型服务未开通，怎么修？</div>
+    <div style="font-size:12px;line-height:1.75;color:#78350F;">火山方舟的模型要<b>逐个开通</b>，只有 API Key 不会自动开通，所以报 404。<br>
+    ① 点下方链接进控制台 → 左侧「<b>开通管理</b>」<br>
+    ② 找到 <b>Doubao-Seed-Vision / Doubao-Seed-1.6-Vision</b> 等视觉模型，点「开通」并勾选协议<br>
+    ③ 建议打开「<b>自动开通新增模型</b>」开关，以后不用再管<br>
+    ④ 等约 30 秒生效，回来重新点「📷 测试拍照识别」<br>
+    <span style="color:#B45309;">省事做法：把服务商换成「智谱 GLM」，免费、只需填 Key、无需开通模型。</span></div>
+    <a href="https://console.volcengine.com/ark" style="display:block;margin-top:9px;padding:9px 12px;border-radius:9px;background:#F59E0B;color:#fff;text-align:center;font-size:12.5px;font-weight:700;text-decoration:none;">🌐 打开火山方舟控制台</a>`;
+}
 async function recognizeProductPhoto(dataUrl){
   setPhotoStatus('① 正在读取并压缩照片…');
   const url = await shrinkImage(dataUrl, 800, 0.68);
@@ -2478,20 +2527,33 @@ function fillProductFromAI(info){
 }
 
 function closetSection(){ const sub = state.closetSub || 'add'; const subs = [{ id:'add', label:'增加衣服' },{ id:'lib', label:'产品库' },{ id:'free', label:'自由搭配台' }]; let content = ''; if (sub === 'add') content = closetAddPane(); else if (sub === 'lib') content = closetLibPane(); else content = closetFreePane(); return `<div class="subtabs-secondary">${subs.map(s => `<button class="subtab ${s.id===sub?'on':''}" data-act="closetSub" data-sub="${s.id}">${s.label}</button>`).join('')}</div>${content}`; }
-function closetAddPane(){ 
-  const sh = calcShape(); 
-  const cat = state.closetCat || 'top'; 
-  const sizeType = getSizeType(cat); 
-  const fields = GARMENT_FIELDS[sizeType] || []; 
-  const analysis = analyzeGarment(); 
-  
+function captureClothForm(){
+  const g = id => document.getElementById(id);
+  const d = state.clothDraft = state.clothDraft || {};
+  if (g('clothName')) d.name = g('clothName').value;
+  if (g('clothSize')) d.size = g('clothSize').value;
+  if (g('clothColor')) d.color = g('clothColor').value;
+}
+function closetAddPane(){
+  const sh = calcShape();
+  const cat = state.closetCat || 'top';
+  const sizeType = getSizeType(cat);
+  const fields = GARMENT_FIELDS[sizeType] || [];
+  const analysis = analyzeGarment();
+  const d = state.clothDraft || {};
+  const moreOpen = !!state.closetMoreOpen;
+  const field = (label, inner) => `<div><div style="font-size:11.5px;color:var(--sub);margin-bottom:4px;">${label}</div>${inner}</div>`;
+  const txtInp = (id, ph, v) => `<input type="text" id="${id}" placeholder="${ph}" value="${esc(v||'')}" style="width:100%;box-sizing:border-box;text-align:left;">`;
+  const catOptions = Object.values(CATEGORIES).map(c => `<option value="${c.key}" ${c.key === cat ? 'selected' : ''}>${c.icon} ${c.label}</option>`).join('');
+  const sizeOpts = ['均码','XS','S','M','L','XL','XXL','35','36','37','38','39','40'].map(v => `<option value="${v}"></option>`).join('');
+
   const garmentHtml = fields.length ? `
     <div class="card">
       <div class="row-between" style="margin-bottom:8px;">
         <div style="font-size:13px;font-weight:700;">该件衣服实际尺寸</div>
         <span style="font-size:12.5px;color:var(--sub)">填完自动分析合身度</span>
       </div>
-      ${fields.map(f => { 
+      ${fields.map(f => {
         const row = analysis ? analysis.rows.find(r => r.key === f.key) : null;
         const fitHtml = row ? `<span style="font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;background:${row.fit.bg};color:${row.fit.color};margin-left:6px;white-space:nowrap;">${row.fit.t}</span>` : '';
         return `
@@ -2504,10 +2566,10 @@ function closetAddPane(){
               <input type="number" step="0.5" data-gkey="${f.key}" value="${typeof state.garmentDraft[f.key] !== 'undefined' && state.garmentDraft[f.key] !== null ? state.garmentDraft[f.key] : ''}" style="width:70px;text-align:right;padding:6px 8px;">
               <span class="unit" style="width:24px;font-size:12px;">${f.unit}</span>
             </div>
-          </div>`; 
+          </div>`;
       }).join('')}
     </div>` : '';
-  
+
   const analysisHtml = analysis ? `
     <div class="card" style="padding:14px;">
       <div class="row-between" style="margin-bottom:10px;">
@@ -2519,26 +2581,30 @@ function closetAddPane(){
     </div>` : `<div class="card" style="background:#F7F8FC;"><div style="font-size:12.5px;color:var(--sub);text-align:center;padding:8px 0;">该品类无需尺寸分析</div></div>`;
 
   return `
-    <div class="card" style="background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;border:0;">
-      <div style="font-size:12px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">身材类型</div>
-      <div style="font-size:19px;font-weight:750;margin-bottom:6px;">${sh.name}</div>
-      <div style="font-size:13px;opacity:.92;">${sh.desc}</div>
-      <button class="btn" style="background:rgba(255,255,255,.92);color:var(--purple);margin-top:12px;font-weight:700;" data-act="gotoBodyData">📐 修改身材数据 →</button>
+    <div class="card" style="padding:11px 13px;background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;border:0;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div style="min-width:0;"><div style="font-size:11px;letter-spacing:1px;font-weight:700;opacity:.8;">身材类型</div><div style="font-size:16px;font-weight:750;margin-top:2px;">${sh.name}</div></div>
+        <button class="btn" style="background:rgba(255,255,255,.92);color:var(--purple);font-weight:700;padding:7px 11px;font-size:12px;flex:none;" data-act="gotoBodyData">📐 修改数据</button>
+      </div>
     </div>
-    <div class="card">
+    <div class="card" style="padding:14px;">
       <div style="font-size:13px;font-weight:700;margin-bottom:10px;">添加单品</div>
-      <label class="upload" style="min-height:120px;"><span class="plus">＋</span><span>${state.clothImage ? '照片已就绪 · 点这里换一张' : '点击上传衣物照片（可裁剪）'}</span><input type="file" id="clothUpload" accept="image/*"><img id="clothPreview" src="${state.clothImage ? esc(state.clothImage) : ''}" style="display:${state.clothImage ? 'block' : 'none'}" alt="预览"></label>
+      <label class="upload" style="min-height:86px;padding:12px;margin-bottom:8px;"><span class="plus" style="font-size:22px;margin-bottom:2px;">＋</span><span style="font-size:11.5px;">${state.clothImage ? '照片已就绪 · 点这里换一张' : '点击上传衣物照片（可裁剪）'}</span><input type="file" id="clothUpload" accept="image/*"><img id="clothPreview" src="${state.clothImage ? esc(state.clothImage) : ''}" style="display:${state.clothImage ? 'block' : 'none'}" alt="预览"></label>
       <div id="clothPhotoStatus" style="display:none;font-size:12px;line-height:1.6;padding:9px 11px;border-radius:9px;margin:8px 0 4px;background:#EFF6FF;color:#1E40AF;word-break:break-all;"></div>
-      ${state.clothImage ? '<div style="display:flex;gap:14px;margin:8px 2px 2px;"><button class="link-btn" data-act="clothReCrop" style="font-size:12.5px;">✂️ 重新裁剪</button><button class="link-btn" data-act="clothClearImg" style="font-size:12.5px;color:#dc2626;">移除照片</button></div>' : ''}
-      <div class="dim-row"><span class="lb">名称</span><input type="text" id="clothName" placeholder="如 米色风衣" style="width:180px;text-align:left"></div>
-      <div class="dim-row"><span class="lb">品类</span><select id="clothCat" style="width:180px;text-align:left;font-weight:600;">${Object.values(CATEGORIES).map(c => `<option value="${c.key}" ${c.key === cat ? 'selected' : ''}>${c.icon} ${c.label}</option>`).join('')}</select></div>
-      <div class="dim-row"><span class="lb">尺码</span><input type="text" id="clothSize" list="clothSizeOpts" placeholder="如 M / 38 / 均码" style="width:180px;text-align:left"><datalist id="clothSizeOpts"><option value="均码"></option><option value="XS"></option><option value="S"></option><option value="M"></option><option value="L"></option><option value="XL"></option><option value="XXL"></option><option value="35"></option><option value="36"></option><option value="37"></option><option value="38"></option><option value="39"></option><option value="40"></option></datalist></div>
-      <div class="dim-row"><span class="lb">颜色</span><input type="text" id="clothColor" placeholder="米白" style="width:180px;text-align:left"></div>
+      ${state.clothImage ? '<div style="display:flex;gap:14px;margin:6px 2px 10px;"><button class="link-btn" data-act="clothReCrop" style="font-size:12.5px;">✂️ 重新裁剪</button><button class="link-btn" data-act="clothClearImg" style="font-size:12.5px;color:#dc2626;">移除照片</button></div>' : ''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;">
+        ${field('名称', txtInp('clothName', '如 米色风衣', d.name))}
+        ${field('品类', `<select id="clothCat" style="width:100%;box-sizing:border-box;text-align:left;font-weight:600;">${catOptions}</select>`)}
+        ${field('尺码', `<input type="text" id="clothSize" list="clothSizeOpts" placeholder="如 M / 38 / 均码" value="${esc(d.size||'')}" style="width:100%;box-sizing:border-box;text-align:left;"><datalist id="clothSizeOpts">${sizeOpts}</datalist>`)}
+        ${field('颜色', txtInp('clothColor', '米白', d.color))}
+      </div>
     </div>
-    ${garmentHtml}
-    ${analysisHtml}
-    <button class="btn-primary" data-act="saveCloth" style="margin-top:6px;background:linear-gradient(135deg,var(--purple),var(--purple2))">保存到衣橱</button>
-  `; 
+    <button class="btn wide" data-act="toggleClothMore" style="background:#F1F2F9;color:#4b5265;margin:0 0 8px;font-size:12.5px;font-weight:650;">${moreOpen ? '▴ 收起' : '▾ 展开'} 📐 尺寸与合身分析（可选）</button>
+    ${moreOpen ? garmentHtml + analysisHtml : ''}
+    <div style="position:sticky;bottom:6px;z-index:5;margin-top:10px;padding:8px 0 4px;background:rgba(255,255,255,.95);border-radius:12px;">
+      <button class="btn-primary" data-act="saveCloth" style="margin:0;background:linear-gradient(135deg,var(--purple),var(--purple2))">保存到衣橱</button>
+    </div>
+  `;
 }
 function closetLibPane(){ const counts = Object.keys(CATEGORIES).map(k => ({ k, label:CATEGORIES[k].label, count: clothes.filter(c => c.cat === k).length })); let listHtml = ''; if (clothes.length) { listHtml = `<div class="lib-grid">${clothes.map(c => { const meta = CATEGORIES[c.cat]; let thumbHtml = `<span class="placeholder">${meta.icon}</span>`; if (c.imagePath){ const src = readImageFromNative(c.imagePath); if (src) thumbHtml = `<img src="${src}" style="max-width:100%;max-height:100%;object-fit:contain">`; } else if (c.image){ thumbHtml = `<img src="${c.image}" style="max-width:100%;max-height:100%;object-fit:contain">`; } return `<div class="lib-item"><button class="del" data-act="delCloth" data-id="${c.id}">✕</button><div class="thumb">${thumbHtml}</div><div class="n">${esc(c.name||meta.label)}</div><div class="s">${meta.label} · ${esc(c.size||'均码')}</div></div>`; }).join('')}</div>`; } else { listHtml = `<div class="empty-state" style="margin-top:16px;"><div class="es-icon">👗</div><div class="es-title">衣橱空空的</div><div class="es-desc">添加你的第一件衣服，系统会帮你<br>计算版型适配度。</div></div>`; } return `<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;">我的产品库 <span class="muted" style="color:var(--sub);font-size:12.5px">${clothes.length} 件</span></div><div class="cat-tabs">${counts.map(c => `<button class="cat-tab">${c.label} ${c.count}</button>`).join('')}</div>${listHtml}</div>`; }
 function closetFreePane(){ const slots = ['上装','下装','鞋/包/饰品']; const slotHTML = slots.map((label, i) => `<div style="border:2px dashed #D9DEEA;border-radius:16px;padding:16px;text-align:center;color:#9AA0B2;font-size:12px;background:#fff;margin-bottom:10px;"><span style="font-size:26px;display:block;margin-bottom:6px">＋</span>点击选择${label}</div>`).join(''); return `<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;">搭配台</div>${slotHTML}</div>`; }
@@ -3613,13 +3679,15 @@ function settingsSheet(sec){
         <div class="set-lab" style="margin-bottom:6px;">API Key</div>
         <input type="password" id="aiKey" placeholder="粘贴开放平台生成的 API Key" value="${esc(AI.apiKey)}">
         <p class="set-hint" style="margin:8px 2px 0;">✅ 模型已自动选好，<b>不用填模型名</b>。填 Key → 点测试 → 保存即可。</p>
+        ${AI.provider === 'doubao' ? '<div style="margin-top:8px;padding:9px 11px;border-radius:9px;background:#FFFBEB;color:#92400E;font-size:12px;line-height:1.6;">⚠️ 豆包（火山方舟）需在控制台「开通管理」里逐个开通模型服务，仅填 Key 常报 404。若不想折腾，建议改用「智谱 GLM」。</div>' : ''}
         <button class="btn primary wide" style="margin-top:12px;" data-act="saveAI">保存 AI 配置</button>
         <button class="btn wide" style="background:#f1f2f9;color:#4b5265;margin-top:8px;" data-act="testAI">🔌 测试对话</button>
         <button class="btn wide" style="background:#f1f2f9;color:#4b5265;margin-top:8px;" data-act="testVision">📷 测试拍照识别</button>
         <div id="aiTestStatus" style="display:none;font-size:12px;line-height:1.65;padding:9px 11px;border-radius:9px;margin-top:10px;background:#EFF6FF;color:#1E40AF;word-break:break-all;"></div>
+        <div id="aiFixHint" style="display:none;margin-top:9px;padding:11px 12px;border-radius:10px;background:#FFFBEB;border:1px solid #FDE68A;"></div>
       </div>
       ${aiKeysPanel()}
-      <p class="tip" style="margin:10px 2px 0;"><b>推荐 · 智谱 GLM（最省事）</b>：浏览器打开 <b>open.bigmodel.cn</b> → 注册登录 → 控制台「API Keys」→ 复制整串（形如 <b>xxxxxxxx.yyyyyyyy</b>，不是 sk- 开头）→ 粘贴到上面 → 点「📷 测试拍照识别」。对话和拍照模型都已内置且免费，<b>不用填模型名、不用开通、不用建接入点</b>。<br><b>通义千问</b>：Key 来自阿里云百炼；<b>DeepSeek</b>：不支持读图。<br><b>豆包（火山方舟）</b>：该平台通常还要求「开通模型 + 创建 ep- 接入点」，只填 Key 大概率会失败，想省事请直接用智谱。<br>若测试提示「模型不存在 / 无权限 / Key 无效」，把提示文字发我，我在代码里更新内置模型即可，<b>你这边始终只需填 Key</b>。<br><b>多个 Key</b>：在「备用 Key」里都加进来即可，调用时自动按序尝试，某个失效/欠费/没权限会跳过换下一个，无需手动切换；也可指定某 Key「只用于拍照」。⚠️ 测试通过后记得点「保存 AI 配置」；Key 只存本机、不进备份，卸载或清数据后需重新填。</p>`,
+      <p class="tip" style="margin:10px 2px 0;"><b>推荐 · 智谱 GLM（最省事）</b>：浏览器打开 <b>open.bigmodel.cn</b> → 注册登录 → 控制台「API Keys」→ 复制整串（形如 <b>xxxxxxxx.yyyyyyyy</b>，不是 sk- 开头）→ 粘贴到上面 → 点「📷 测试拍照识别」。对话和拍照模型都已内置且免费，<b>不用填模型名、不用开通、不用建接入点</b>。<br><b>通义千问</b>：Key 来自阿里云百炼；<b>DeepSeek</b>：不支持读图。<br><b>豆包（火山方舟）</b>：该平台<b>每个模型都要在「开通管理」单独开通</b>，只填 Key 会报 404 ModelNotOpen；失败时上方会出现开通指引。想省事请直接用智谱。<br>若测试提示「模型不存在 / 无权限 / Key 无效」，把提示文字发我，我在代码里更新内置模型即可，<b>你这边始终只需填 Key</b>。<br><b>多个 Key</b>：在「备用 Key」里都加进来即可，调用时自动按序尝试，某个失效/欠费/没权限会跳过换下一个，无需手动切换；也可指定某 Key「只用于拍照」。⚠️ 测试通过后记得点「保存 AI 配置」；Key 只存本机、不进备份，卸载或清数据后需重新填。</p>`,
     backup: () => `
       <div class="set-row"><div><div class="set-lab">每周自动备份</div><div class="set-hint">存成文件，保留最近 6 份</div></div>${segHTML('setCfg','autoBackup',s.autoBackup?1:0,[[1,'开'],[0,'关']])}</div>
       ${bk.length ? `<div style="margin-top:6px;">${bk.map((b, i) => `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #f1f3f9;"><div><div style="font-size:13px;font-weight:650;">${mmdd(b.t)} <span style="font-size:11px;font-weight:600;color:${b.file ? 'var(--ok)' : 'var(--sub)'};">${b.file ? '文件' : '内存'}</span></div><div class="set-hint">${Math.round((b.size||0)/1024)} KB${b.file ? ' · ' + (b.name || '') : ''}</div></div><div style="display:flex;gap:12px;flex-shrink:0;"><button class="link-btn" style="padding:0;font-size:12.5px;" data-act="restoreBackup" data-i="${i}">恢复</button>${b.file ? `<button class="link-btn" style="padding:0;font-size:12.5px;color:#dc2626;" data-act="delBackup" data-i="${i}">删除</button>` : ''}</div></div>`).join('')}</div>` : '<p class="tip" style="margin-top:8px;">还没有自动备份记录。</p>'}
@@ -4235,6 +4303,7 @@ const SKELETON = { home:'<div class="sk" style="height:140px"></div>', study:'<d
 let renderToken = 0;
 async function render(options){ 
   try { captureTxEditor(); } catch(e){}
+  try { captureClothForm(); } catch(e){}
   options = options || {}; 
   const token = ++renderToken; const tab = state.tab; const keepScroll = options.keepScroll; const prevScroll = keepScroll ? view.scrollTop : 0; 
   renderTabs(); updateTopbar(); 
@@ -4651,6 +4720,7 @@ if (act === 'clearExample'){
   if (act === 'closetSub'){ state.closetSub = t.dataset.sub; render(); return; }
   if (act === 'cropConfirm'){ confirmClothCrop(); return; }
   if (act === 'cropCancel'){ _cropState = null; closeSheet(); return; }
+  if (act === 'toggleClothMore'){ state.closetMoreOpen = !state.closetMoreOpen; render({ keepScroll:true }); return; }
   if (act === 'clothReCrop'){ if (state.clothImage) openClothCrop(state.clothImage); else { const f = document.getElementById('clothUpload'); if (f) f.click(); } return; }
   if (act === 'clothClearImg'){ state.clothImage = null; render({ keepScroll: true }); return; }
   if (act === 'prodPhotoPick' || act === 'prodCameraPick'){
@@ -4686,7 +4756,7 @@ if (act === 'clearExample'){
   if (act === 'shiftPlanStart'){ const t0 = new Date(PLAN_START); t0.setDate(t0.getDate() + 7); setPlanStart(t0); buildCalendarFromPlans(); toast('已顺延 1 周'); render(); return; }
   if (act === 'incSet'){ const code = t.dataset.code; const plan = currentPlan(); const ex = (Array.isArray(plan.exercises) ? plan.exercises : []).find(x => x && x.code === code); if (!ex) { toast('当前运动模式没有可打卡的动作'); return; } const key = `${todayStr()}_${code}`; const done = state.setsDone[key] || 0; if (done < ex.sets){ state.setsDone[key] = done + 1; HealthStore.save('setsDone', state.setsDone); const s = getSportSession(); if (s && !s.endTs){ if (!s.sets) s.sets = {}; if (!s.sets[code]) s.sets[code] = []; s.sets[code].push(Date.now()); saveSportSession(s); } render({ keepScroll: true }); } return; }
   if (act === 'saveBodyForm'){ let cnt = 0; document.querySelectorAll('[data-bkey]').forEach(input => { const k = input.dataset.bkey; const v = parseFloat(input.value); if (!isNaN(v)){ body[k] = v; cnt++; } }); HealthStore.save('body', body); const hist = getBodyHistory(); const idx = hist.findIndex(x => x.date === todayStr()); const entry = { date: todayStr(), weight: body.weight, bodyFat: body.bodyFat }; if (idx >= 0) hist[idx] = entry; else hist.push(entry); saveBodyHistory(hist); toast(`已保存 ${cnt} 项身材尺寸`); render({ keepScroll: true }); return; }
-  if (act === 'saveCloth'){ const name = document.getElementById('clothName').value.trim(); const cat = document.getElementById('clothCat').value; const size = document.getElementById('clothSize').value.trim(); const color = document.getElementById('clothColor').value.trim(); const img = state.clothImage || null; let imagePath = null; if (img){ imagePath = saveImageToNative(img, 'cloth_' + Date.now() + '.jpg'); } const item = { id:Date.now()+Math.floor(Math.random()*1000), cat, name: name || CATEGORIES[cat].label, size: size || '均码', color, garment: { ...state.garmentDraft }, imagePath }; clothes.unshift(item); LS.set('app_h_clothes', clothes); state.clothImage = null; state.garmentDraft = {}; toast('已保存'); render(); return; }
+  if (act === 'saveCloth'){ const name = document.getElementById('clothName').value.trim(); const cat = document.getElementById('clothCat').value; const size = document.getElementById('clothSize').value.trim(); const color = document.getElementById('clothColor').value.trim(); const img = state.clothImage || null; let imagePath = null; if (img){ imagePath = saveImageToNative(img, 'cloth_' + Date.now() + '.jpg'); } const item = { id:Date.now()+Math.floor(Math.random()*1000), cat, name: name || CATEGORIES[cat].label, size: size || '均码', color, garment: { ...state.garmentDraft }, imagePath }; clothes.unshift(item); LS.set('app_h_clothes', clothes); state.clothImage = null; state.garmentDraft = {}; state.clothDraft = {}; toast('已保存'); render(); return; }
   if (act === 'delCloth'){ if (!confirm('删除这件单品？')) return; const id = Number(t.dataset.id); const item = clothes.find(c => c.id === id); if (item && item.imagePath) deleteImageNative(item.imagePath); clothes = clothes.filter(c => c.id !== id); LS.set('app_h_clothes', clothes); render(); return; }
   if (act === 'addProduct'){ const name = (document.getElementById('prodName').value || '').trim(); const majorCat = document.getElementById('prodMajorCat').value; const openedDate = document.getElementById('prodOpened').value || null; const shelfLifeMonths = document.getElementById('prodShelfLife').value ? Number(document.getElementById('prodShelfLife').value) : null; const expiryDate = document.getElementById('prodExpiry').value || null; const ingredients = (document.getElementById('prodIngredients').value || '').trim(); if (!name){ toast('请填写产品名称'); return; } if (!majorCat){ toast('请选择大类'); return; } if (!openedDate && !expiryDate){ toast('开封时间或未开封到期日至少填一个'); return; } const lib = getProductLibrary(); lib.push({ id:'p_'+Date.now()+'_'+Math.floor(Math.random()*1000), name, majorCat, openedDate, shelfLifeMonths, expiryDate, ingredients, createdAt:Date.now() }); saveProductLibrary(lib); toast('✓ 已添加：' + name); render({ keepScroll: true }); return; }
   if (act === 'delProduct'){ const id = t.dataset.id; if (!id) return; if (!confirm('从产品库删除这件产品？')) return; const lib = getProductLibrary().filter(p => p.id !== id); saveProductLibrary(lib); toast('已删除'); render({ keepScroll: true }); return; }
@@ -4733,21 +4803,21 @@ if (act === 'clearExample'){
  if (act === 'testAI'){
    const provider = document.getElementById('aiProvider').value;
    const key = (document.getElementById('aiKey').value || '').trim();
-   if (provider === 'none' || !key){ toast('请先选服务商并填入 API Key'); return; }
-   toast('正在测试全部 Key …');
+   if (provider === 'none' || !key){ setAIStatus('✗ 请先选服务商并填入 API Key', true); return; }
+   setAIStatus('正在测试全部 Key …'); showAIActivationHint(false);
    try {
      const d = await AI.request('chat', model => ({ model, messages:[{ role:'user', content:'只回复两个字：正常' }], temperature:0.1, max_tokens:16 }), 20000, { provider, key });
      const txt = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
      const lu = AI.lastUsed();
-     toast('✓ 连接成功（' + (lu ? (AI_LABELS[lu.provider] || lu.provider) + ' · ' + (lu.id === 'main' ? '主 Key' : '备用 Key') : '') + '）' + (txt ? '：' + String(txt).trim().slice(0,16) : ''));
-   } catch(err){ const em = (err && err.message) ? err.message : '未知错误'; toast('✗ 失败：' + em); }
+     setAIStatus('✓ 连接成功（' + (lu ? (AI_LABELS[lu.provider] || lu.provider) + ' · ' + (lu.id === 'main' ? '主 Key' : '备用 Key') : '') + '）' + (txt ? '：' + String(txt).trim().slice(0,16) : ''));
+   } catch(err){ const em = (err && err.message) ? err.message : '未知错误'; setAIStatus('✗ 对话失败：' + em, true); showAIActivationHint(!!(err && err.modelNotOpen)); }
    return;
  }
  if (act === 'testVision'){
    const provider = document.getElementById('aiProvider').value;
    const key = (document.getElementById('aiKey').value || '').trim();
    if (provider === 'none' || !key){ setAIStatus('✗ 请先选服务商并填入 API Key', true); return; }
-   setAIStatus('正在用真实尺寸图片测试拍照识别（约 10–60 秒）…');
+   setAIStatus('正在用真实尺寸图片测试拍照识别（约 10–60 秒）…'); showAIActivationHint(false);
    try {
      const d = await AI.request('vision', model => ({ model, max_tokens:16, messages:[{ role:'user', content:[
        { type:'text', text:'只回答四个字：看到了图' },
@@ -4757,7 +4827,7 @@ if (act === 'clearExample'){
      const txt = ok && d.choices[0].message && d.choices[0].message.content;
      const lu = AI.lastUsed();
      setAIStatus((ok ? '✓ 拍照识别可用' : '✗ 拍照识别无返回') + (lu ? '（' + (AI_LABELS[lu.provider] || lu.provider) + ' · ' + (lu.id === 'main' ? '主 Key' : '备用 Key') + '）' : '') + (txt ? '：' + String(txt).trim().slice(0,12) : ''), !ok);
-   } catch(err){ const em = (err && err.message) ? err.message : '未知错误'; setAIStatus('✗ 视觉失败：' + em, true); }
+   } catch(err){ const em = (err && err.message) ? err.message : '未知错误'; setAIStatus('✗ 视觉失败：' + em, true); showAIActivationHint(!!(err && err.modelNotOpen)); }
    return;
  }
   if (act === 'exportData'){ doExport(); return; }
