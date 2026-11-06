@@ -974,16 +974,22 @@ function nativeGetRaw(url, timeout){
   });
 }
 window.__nativeHttpCb = function(id, res){ const cbs = window.__nativeHttpCbs || {}; if (cbs[id]) cbs[id](res); };
-/* 原生桥返回体统一解析 */
+/* 原生桥返回体统一解析：Java 可能回传 JSON 字符串，也可能回传已解析的对象。
+   以前直接 JSON.parse(res)，对象会被转成 "[object Object]" 而抛错，AI 请求就被误判成失败。 */
+function nativeBridgeObj(raw){
+  if (raw && typeof raw === 'object') return raw;
+  if (typeof raw !== 'string') return null;
+  try { return JSON.parse(raw); } catch(e){ return null; }
+}
 async function nativeJson(url, timeout){
-  const raw = await nativeGetRaw(url, timeout);
-  let j; try { j = JSON.parse(raw); } catch(e){ throw new Error('原生桥返回非 JSON'); }
+  const j = nativeBridgeObj(await nativeGetRaw(url, timeout));
+  if (!j) throw new Error('原生桥返回非 JSON');
   if (!j.ok) throw new Error('HTTP ' + (j.status || 0) + (j.error ? ' ' + j.error : ''));
   return JSON.parse(j.body);
 }
 async function nativeText(url, timeout){
-  const raw = await nativeGetRaw(url, timeout);
-  let j; try { j = JSON.parse(raw); } catch(e){ throw new Error('原生桥返回非 JSON'); }
+  const j = nativeBridgeObj(await nativeGetRaw(url, timeout));
+  if (!j) throw new Error('原生桥返回非 JSON');
   if (!j.ok) throw new Error('HTTP ' + (j.status || 0) + (j.error ? ' ' + j.error : ''));
   return j.body;
 }
@@ -1421,7 +1427,9 @@ const AI = { get provider(){ return AI_get_provider(); }, get apiKey(){ return A
     if (!cs.length) throw new Error(kind === 'vision'
       ? '没有能拍照识别的 Key：DeepSeek 不支持读图，请添加智谱 / 通义千问的 Key'
       : '请先填入 API Key');
-    const per = cs.length > 1 ? Math.min(timeout || 30000, 15000) : (timeout || 30000);
+    // 真实照片的视觉识别要 10~60 秒；多 Key 轮询时也不能压缩单 Key 超时，
+    // 否则照片还没推理完就超时，表现就是「上传后转半天、最后没反应」。
+    const per = timeout || 90000;
     const errs = [];
     for (const c of cs){
       try {
@@ -2298,16 +2306,21 @@ function confirmClothCrop(){
 }
 function shrinkImage(dataUrl, maxSide, quality){
   return new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => {
-      const s = Math.min(1, maxSide / Math.max(img.width, img.height));
-      const c = document.createElement('canvas');
-      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      resolve(c.toDataURL('image/jpeg', quality || 0.72));
-    };
-    img.onerror = () => resolve(null);
-    img.src = dataUrl;
+    let done = false;
+    const guard = setTimeout(() => finish(null), 15000);
+    function finish(v){ if (done) return; done = true; clearTimeout(guard); resolve(v); }
+    try {
+      const img = new Image();
+      img.onload = () => { try {
+        const s = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        finish(c.toDataURL('image/jpeg', quality || 0.72));
+      } catch(e){ finish(null); } };
+      img.onerror = () => finish(null);
+      img.src = dataUrl;
+    } catch(e){ finish(null); }
   });
 }
 
@@ -2337,6 +2350,19 @@ function garmentAdvice(analysis, cat){
 }
 
 /* ===== 护肤品拍照 AI 识别（P16） ===== */
+/* 用真实尺寸的测试图，才能覆盖「大图 base64 过原生桥 + 视觉模型推理」这条完整链路。
+   以前用 1×1 像素图只能测连通性，会出现「测试成功、上传真照片却没反应」。 */
+window.makeVisionTestImage = function(){
+  try {
+    const c = document.createElement('canvas'); c.width = 320; c.height = 240;
+    const x = c.getContext('2d');
+    x.fillStyle = '#F2F4FF'; x.fillRect(0, 0, 320, 240);
+    x.fillStyle = '#4F46E5'; x.fillRect(28, 32, 120, 92);
+    x.fillStyle = '#EC4899'; x.fillRect(168, 104, 120, 96);
+    x.fillStyle = '#111827'; x.font = 'bold 26px sans-serif'; x.fillText('VISION OK', 30, 214);
+    return c.toDataURL('image/jpeg', 0.82);
+  } catch(e){ return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg=='; }
+}
 function nativePostJson(url, obj, timeout, headers){
   return new Promise((resolve, reject) => {
     if (!window.AndroidHttp || typeof window.AndroidHttp.httpPostJson !== 'function'){ reject(new Error('原生桥不可用')); return; }
@@ -2346,11 +2372,10 @@ function nativePostJson(url, obj, timeout, headers){
     const timer = setTimeout(() => { delete window.__nativeHttpCbs[id]; reject(new Error('AI 请求超时')); }, ms + 3000);
     window.__nativeHttpCbs[id] = res => {
       clearTimeout(timer); delete window.__nativeHttpCbs[id];
-      try {
-        const j = JSON.parse(res);
-        if (!j.ok){ let why = ''; try { const b = JSON.parse(j.body || '{}'); why = (b.error && (b.error.message || b.error.code)) || b.message || ''; } catch(er){ why = String(j.body || '').slice(0,120); } if (!why) why = String(j.error || ''); const err = new Error('HTTP ' + (j.status || 0) + (why ? ' · ' + String(why).slice(0,140) : '')); err.isHttpError = true; reject(err); }
-        else resolve(j.body);
-      } catch(e){ reject(new Error('原生桥返回异常')); }
+      const j = nativeBridgeObj(res);
+      if (!j){ reject(new Error('原生桥返回异常')); return; }
+      if (!j.ok){ let why = ''; try { const b = JSON.parse(j.body || '{}'); why = (b.error && (b.error.message || b.error.code)) || b.message || ''; } catch(er){ why = String(j.body || '').slice(0,120); } if (!why) why = String(j.error || ''); const err = new Error('HTTP ' + (j.status || 0) + (why ? ' · ' + String(why).slice(0,140) : '')); err.isHttpError = true; reject(err); return; }
+      resolve(j.body);
     };
     try { window.AndroidHttp.httpPostJson(url, JSON.stringify(obj), JSON.stringify(headers || {}), id); }
     catch(e){ clearTimeout(timer); delete window.__nativeHttpCbs[id]; reject(e); }
@@ -2360,25 +2385,54 @@ function hasNativePost(){ return !!(window.AndroidHttp && typeof window.AndroidH
 async function aiPostJSON(url, body, timeout, apiKey){
   const headers = { 'Content-Type':'application/json' };
   if (apiKey) headers['Authorization'] = 'Bearer ' + apiKey;
+  const t = timeout || 90000;
   if (hasNativePost()){
-    try { return JSON.parse(await nativePostJson(url, body, timeout, headers)); }
-    catch(e){ if (e && e.isHttpError) throw e; console.warn('[AI] 原生桥失败，改用 WebView fetch', e.message); }
+    try {
+      const raw = await nativePostJson(url, body, t, headers);
+      try { return JSON.parse(raw); }
+      catch(pe){ throw new Error('AI 返回不是 JSON：' + String(raw || '').slice(0,120)); }
+    } catch(e){
+      // 只有「桥本身不可用」才降级到 WebView fetch。
+      // 以前 401 / 超时 / 解析异常都会被当成桥失败再发一次，用户看到的是双倍耗时和莫名的失败。
+      if (!e || e.message !== '原生桥不可用') throw e;
+      console.warn('[AI] 原生桥不可用，改用 WebView fetch');
+    }
   }
-  const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeout || 30000);
+  const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), t);
   try {
     const r = await fetch(url, { method:'POST', headers, body: JSON.stringify(body), signal: controller.signal });
     if (!r.ok){ let why = ''; try { why = (await r.text()).slice(0,140); } catch(er){} throw new Error('HTTP ' + r.status + (why ? ' · ' + why : '')); }
     return await r.json();
   } finally { clearTimeout(timer); }
 }
+/* 页面内常驻状态区：拍照识别步骤多、耗时长，只用一闪而过的 toast 会让人以为「没反应」 */
+function setPhotoStatus(msg, isError){
+  const el = document.getElementById('prodPhotoStatus');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.style.display = msg ? 'block' : 'none';
+  el.style.background = isError ? '#FFF1F0' : '#EFF6FF';
+  el.style.color = isError ? '#B42318' : '#1E40AF';
+}
+function setAIStatus(msg, isError){
+  const el = document.getElementById('aiTestStatus');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.style.display = msg ? 'block' : 'none';
+  el.style.background = isError ? '#FFF1F0' : '#EFF6FF';
+  el.style.color = isError ? '#B42318' : '#1E40AF';
+}
 async function recognizeProductPhoto(dataUrl){
+  setPhotoStatus('① 正在读取并压缩照片…');
   const url = await shrinkImage(dataUrl, 800, 0.68);
-  if (!url) throw new Error('图片读取失败');
+  if (!url) throw new Error('图片读取失败或超时，请换一张照片，或改用「从相册选图」');
   if (!AI.enabled()) throw new Error('请先在「我的 → 设置 → AI 助手」填入 API Key');
+  setPhotoStatus('② 照片已就绪，正在发给 AI 识别（真实照片一般要 10–60 秒，请勿退出页面）…');
   const prompt = '你是一位化妆品成分顾问。仔细看这张护肤品/化妆品瓶身照片，只输出 JSON（不要解释）：{"name":"完整产品名（品牌+品名）","majorCat":"产品大类","ingredients":"能看清的成分表，用逗号分隔；看不清就留空","shelfLifeMonths":6}。majorCat 只能从这些里选一个：makeupRemover 卸妆 / cleanser 洁面 / toner 爽肤水 / serum 精华 / lotion 乳液 / cream 面霜 / sunscreen 防晒 / mask 面膜 / exfoliant 去角质 / other 其他。shelfLifeMonths 根据瓶身 PAO 标识（如 6M、12M）填写，看不清填 6。';
   const d = await AI.request('vision', model => ({ model, temperature:0.1, max_tokens:700, messages:[{ role:'user', content:[
     { type:'text', text:prompt }, { type:'image_url', image_url:{ url } }
-  ] }] }), 30000);
+  ] }] }), 90000);
+  setPhotoStatus('③ AI 已返回，正在解析结果…');
   const content = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
   const info = AI.parseJSON(content);
   if (!info || !info.name) throw new Error('没识别出产品名，请拍清楚瓶身正面再试');
@@ -2463,8 +2517,9 @@ function closetFreePane(){ const slots = ['上装','下装','鞋/包/饰品']; c
 function careSection(){ const sub = state.careSub || 'skin'; const subs = [{ id:'skin', label:'护肤推荐' },{ id:'ingredient', label:'成分' },{ id:'productLib', label:'产品库' },{ id:'supp', label:'补剂' },{ id:'suppLib', label:'补剂库' }]; let content = ''; if (sub === 'skin') content = skinExpireAlert() + skinCheckCard() + careSkinPane(); else if (sub === 'ingredient') content = ingredientSection(); else if (sub === 'productLib') content = careProductLibPane(); else if (sub === 'supp') content = careSuppPane(); else content = careSuppLibPane(); return `<div class="subtabs-secondary">${subs.map(s => `<button class="subtab ${s.id===sub?'on':''}" data-act="careSub" data-sub="${s.id}">${s.label}</button>`).join('')}</div>${content}`; }
 function renderProductCard(p){ const days = productDaysLeft(p); const expired = isProductExpired(p); const cat = PRODUCT_CATS[p.majorCat] || PRODUCT_CATS.other; let daysBadge = ''; if (days !== null){ if (days < 0) daysBadge = '<span class="plc-badge danger">已过期</span>'; else if (days <= 7) daysBadge = '<span class="plc-badge danger">剩 ' + days + ' 天</span>'; else if (days <= 30) daysBadge = '<span class="plc-badge warn">剩 ' + days + ' 天</span>'; else daysBadge = '<span class="plc-badge ok">剩 ' + days + ' 天</span>'; } const openedBadge = p.openedDate ? ('<span class="plc-badge info">开封 '+p.openedDate+'</span>') : '<span class="plc-badge info">未开封</span>'; return `<div class="prod-lib-card ${expired?'expired':''}"><button class="plc-del" data-act="delProduct" data-id="${p.id}">✕</button><div class="plc-head"><div class="plc-icon">${cat.icon}</div><div class="plc-body"><div class="plc-name">${esc(p.name)}</div><div class="plc-meta">${esc(cat.label)}</div><div style="margin-top:6px;">${openedBadge}${daysBadge}</div>${p.ingredients ? `<div style="font-size:12px;color:var(--sub);margin-top:6px;line-height:1.55;">成分：${esc(p.ingredients).slice(0,70)}${p.ingredients.length>70?'…':''}</div>` : ''}</div></div></div>`; }
 function careProductLibPane(){ const lib = getProductLibrary(); const openedCount = lib.filter(p => p.openedDate && !isProductExpired(p)).length; const expiredCount = lib.filter(p => isProductExpired(p)).length; const byMajor = {}; lib.forEach(p => { const m = p.majorCat || 'other'; if (!byMajor[m]) byMajor[m] = []; byMajor[m].push(p); }); const sortedKeys = Object.keys(byMajor).sort((a,b) => { const oa = (PRODUCT_CATS[a] && PRODUCT_CATS[a].order !== undefined) ? PRODUCT_CATS[a].order : 99; const ob = (PRODUCT_CATS[b] && PRODUCT_CATS[b].order !== undefined) ? PRODUCT_CATS[b].order : 99; return oa - ob; }); const groupedHtml = sortedKeys.map(k => { const cat = PRODUCT_CATS[k] || PRODUCT_CATS.other; const items = byMajor[k]; return `<div style="margin-bottom:14px;"><div style="font-size:12px;font-weight:750;color:var(--sub);letter-spacing:.5px;margin-bottom:8px;">${cat.icon} ${cat.label} <span style="font-weight:500;">(${items.length})</span></div>${items.map(p => renderProductCard(p)).join('')}</div>`; }).join(''); const majorOptions = Object.entries(PRODUCT_CATS).map(([key, cat]) => `<option value="${key}">${cat.icon} ${cat.label}</option>`).join(''); return `<div class="card" style="background:linear-gradient(135deg,var(--pink),var(--pink2));color:#fff;border:0;"><div style="font-size:12px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">📦 我的产品库</div><div style="font-size:19px;font-weight:750;margin-bottom:8px;">共 ${lib.length} 件 · ${openedCount} 件可用</div><div style="font-size:13px;opacity:.92;line-height:1.7;">${expiredCount > 0 ? '⚠️ 有 '+expiredCount+' 件已过期，建议清理' : '所有产品状态正常'}</div></div><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;">添加产品</div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;"><button class="btn primary" id="prodPhotoBtn" data-act="prodPhotoPick" style="flex:1;">📷 拍照识别产品</button><input type="file" id="prodPhoto" accept="image/*" capture="environment" style="display:none"></div>
-      <p class="tip" style="font-size:11.5px;color:var(--sub);margin:0 0 10px;line-height:1.6;">对准瓶身正面拍一张，AI 会自动填好名称、大类、成分和开封后可用月数；识别后可手动修改。需在设置里配置通义千问或智谱 GLM（支持读图的模型）。</p>
+      <div style="display:flex;gap:8px;margin-bottom:10px;"><button class="btn primary" id="prodPhotoBtn" data-act="prodPhotoPick" style="flex:1;">📷 拍照 / 选图识别产品</button><input type="file" id="prodPhoto" accept="image/*" style="display:none"></div>
+      <div id="prodPhotoStatus" style="display:none;font-size:12px;line-height:1.65;padding:9px 11px;border-radius:9px;margin-bottom:10px;background:#EFF6FF;color:#1E40AF;word-break:break-all;"></div>
+      <p class="tip" style="font-size:11.5px;color:var(--sub);margin:0 0 10px;line-height:1.6;">对准瓶身正面拍一张，或直接「从相册选图」；AI 会自动填好名称、大类、成分和开封后可用月数，识别后可手动修改。识别进度与失败原因显示在上方，真实照片一般要 10–60 秒。需在设置里配置智谱 / 通义千问 / 豆包等支持读图的服务商。</p>
       <div class="dim-row"><span class="lb">名称</span><input type="text" id="prodName" placeholder="如 OLAY 大红瓶" style="width:200px;text-align:left"></div><div class="dim-row"><span class="lb">大类</span><select id="prodMajorCat" style="width:200px;text-align:left;font-weight:600;">${majorOptions}</select></div><div class="dim-row"><span class="lb">开封时间</span><input type="date" id="prodOpened" style="width:200px"></div><div class="dim-row"><span class="lb">开封后可用月数</span><input type="number" id="prodShelfLife" placeholder="如 6" min="1" max="60" style="width:100px"><span class="unit">个月</span></div><div class="dim-row"><span class="lb">未开封到期日</span><input type="date" id="prodExpiry" style="width:200px"></div><div class="dim-row" style="align-items:flex-start;padding-top:10px;"><span class="lb" style="margin-top:8px;">成分</span><textarea id="prodIngredients" placeholder="粘贴成分表（可选，AI 会参考它判断产品用途）" style="flex:1;border:1.5px solid #E3E6EF;border-radius:10px;padding:8px 10px;font-family:inherit;font-size:13px;min-height:60px;resize:vertical;"></textarea></div><p class="tip" style="margin-top:8px;font-size:12.5px;color:var(--sub);">填写「开封时间 + 开封后可用月数」会自动倒计时；未开封可只填到期日。具体放在护肤流程哪一步，由 AI 根据产品名和成分判断。</p><button class="btn-primary" data-act="addProduct" style="margin-top:12px;background:linear-gradient(135deg,var(--pink),var(--pink2))">＋ 添加到产品库</button></div><div class="card"><div class="row-between" style="margin-bottom:10px;"><div style="font-size:13px;font-weight:700;">产品列表（按护肤流程顺序）</div><span class="muted" style="color:var(--sub);font-size:12.5px">${lib.length} 件</span></div>${groupedHtml || '<p class="tip" style="color:#8A90A2;text-align:center;padding:16px 0">还没有添加产品</p>'}</div>`; }
 function renderRoutineStep(r, idx){ const p = r.product; const productName = p ? p.name : (r.productName || r.product || '—'); const major = p ? (PRODUCT_CATS[p.majorCat]||{}).label || '' : ''; const daysLeft = p ? productDaysLeft(p) : null; let daysCls = '', daysText = ''; if (daysLeft !== null){ if (daysLeft < 0){ daysCls = 'danger'; daysText = '已过期'; } else if (daysLeft <= 7){ daysCls = 'danger'; daysText = '剩 ' + daysLeft + ' 天'; } else if (daysLeft <= 30){ daysCls = 'warn'; daysText = '剩 ' + daysLeft + ' 天'; } else { daysCls = ''; daysText = '剩 ' + daysLeft + ' 天'; } } return `<div class="routine-step"><span class="rs-num">${idx+1}</span><div class="rs-body"><div class="rs-title">${esc(r.step)}</div><div class="rs-prod">🧴 ${esc(productName)}${major ? ' <span style="font-size:11.5px;opacity:.7;">· '+esc(major)+'</span>' : ''}</div>${r.note ? `<div class="rs-note">💡 ${esc(r.note)}</div>` : ''}</div>${daysText ? `<span class="rs-days ${daysCls}">${daysText}</span>` : ''}</div>`; }
 function resolveAIProduct(name){ if (!name) return null; const lib = getProductLibrary(); return lib.find(p => p.name === name) || lib.find(p => p.name && p.name.indexOf(name) >= 0) || lib.find(p => name.indexOf(p.name) >= 0) || null; }
@@ -3532,6 +3587,7 @@ function settingsSheet(sec){
         <button class="btn primary wide" style="margin-top:12px;" data-act="saveAI">保存 AI 配置</button>
         <button class="btn wide" style="background:#f1f2f9;color:#4b5265;margin-top:8px;" data-act="testAI">🔌 测试对话</button>
         <button class="btn wide" style="background:#f1f2f9;color:#4b5265;margin-top:8px;" data-act="testVision">📷 测试拍照识别</button>
+        <div id="aiTestStatus" style="display:none;font-size:12px;line-height:1.65;padding:9px 11px;border-radius:9px;margin-top:10px;background:#EFF6FF;color:#1E40AF;word-break:break-all;"></div>
       </div>
       ${aiKeysPanel()}
       <p class="tip" style="margin:10px 2px 0;"><b>推荐 · 智谱 GLM（最省事）</b>：浏览器打开 <b>open.bigmodel.cn</b> → 注册登录 → 控制台「API Keys」→ 复制整串（形如 <b>xxxxxxxx.yyyyyyyy</b>，不是 sk- 开头）→ 粘贴到上面 → 点「📷 测试拍照识别」。对话和拍照模型都已内置且免费，<b>不用填模型名、不用开通、不用建接入点</b>。<br><b>通义千问</b>：Key 来自阿里云百炼；<b>DeepSeek</b>：不支持读图。<br><b>豆包（火山方舟）</b>：该平台通常还要求「开通模型 + 创建 ep- 接入点」，只填 Key 大概率会失败，想省事请直接用智谱。<br>若测试提示「模型不存在 / 无权限 / Key 无效」，把提示文字发我，我在代码里更新内置模型即可，<b>你这边始终只需填 Key</b>。<br><b>多个 Key</b>：在「备用 Key」里都加进来即可，调用时自动按序尝试，某个失效/欠费/没权限会跳过换下一个，无需手动切换；也可指定某 Key「只用于拍照」。⚠️ 测试通过后记得点「保存 AI 配置」；Key 只存本机、不进备份，卸载或清数据后需重新填。</p>`,
@@ -4568,7 +4624,11 @@ if (act === 'clearExample'){
   if (act === 'cropCancel'){ _cropState = null; closeSheet(); return; }
   if (act === 'clothReCrop'){ if (state.clothImage) openClothCrop(state.clothImage); else { const f = document.getElementById('clothUpload'); if (f) f.click(); } return; }
   if (act === 'clothClearImg'){ state.clothImage = null; render({ keepScroll: true }); return; }
-  if (act === 'prodPhotoPick'){ const f = document.getElementById('prodPhoto'); if (f) f.click(); return; }
+  if (act === 'prodPhotoPick'){
+    const f = document.getElementById('prodPhoto');
+    if (f){ f.value = ''; setPhotoStatus('正在打开系统「相册 / 相机」…选好照片后会自动开始识别'); f.click(); }
+    return;
+  }
   if (act === 'careSub'){ state.careSub = t.dataset.sub; render(); return; }
   if (act === 'prevMonth'){ state.calMonth--; if (state.calMonth < 0){ state.calMonth = 11; state.calYear--; } HealthStore.save('calMonth', state.calMonth); HealthStore.save('calYear', state.calYear); render(); return; }
   if (act === 'nextMonth'){ state.calMonth++; if (state.calMonth > 11){ state.calMonth = 0; state.calYear++; } HealthStore.save('calMonth', state.calMonth); HealthStore.save('calYear', state.calYear); render(); return; }
@@ -4656,18 +4716,18 @@ if (act === 'clearExample'){
  if (act === 'testVision'){
    const provider = document.getElementById('aiProvider').value;
    const key = (document.getElementById('aiKey').value || '').trim();
-   if (provider === 'none' || !key){ toast('请先选服务商并填入 API Key'); return; }
-   toast('正在测试全部 Key 的拍照识别 …');
+   if (provider === 'none' || !key){ setAIStatus('✗ 请先选服务商并填入 API Key', true); return; }
+   setAIStatus('正在用真实尺寸图片测试拍照识别（约 10–60 秒）…');
    try {
      const d = await AI.request('vision', model => ({ model, max_tokens:16, messages:[{ role:'user', content:[
        { type:'text', text:'只回答四个字：看到了图' },
-       { type:'image_url', image_url:{ url:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==' } }
-     ] }] }), 20000, { provider, key });
+       { type:'image_url', image_url:{ url: makeVisionTestImage() } }
+     ] }] }), 90000, { provider, key });
      const ok = !!(d && d.choices && d.choices[0]);
      const txt = ok && d.choices[0].message && d.choices[0].message.content;
      const lu = AI.lastUsed();
-     toast((ok ? '✓ 拍照识别可用' : '✗ 拍照识别无返回') + (lu ? '（' + (AI_LABELS[lu.provider] || lu.provider) + ' · ' + (lu.id === 'main' ? '主 Key' : '备用 Key') + '）' : '') + (txt ? '：' + String(txt).trim().slice(0,12) : ''));
-   } catch(err){ const em = (err && err.message) ? err.message : '未知错误'; toast('✗ 视觉失败：' + em); }
+     setAIStatus((ok ? '✓ 拍照识别可用' : '✗ 拍照识别无返回') + (lu ? '（' + (AI_LABELS[lu.provider] || lu.provider) + ' · ' + (lu.id === 'main' ? '主 Key' : '备用 Key') + '）' : '') + (txt ? '：' + String(txt).trim().slice(0,12) : ''), !ok);
+   } catch(err){ const em = (err && err.message) ? err.message : '未知错误'; setAIStatus('✗ 视觉失败：' + em, true); }
    return;
  }
   if (act === 'exportData'){ doExport(); return; }
@@ -4764,16 +4824,28 @@ view.addEventListener('change', e => { if (e.target.id === 'planStartInput'){ co
       reader.onload = ev => { shrinkImage(ev.target.result, 1400, 0.85).then(u => { if (u) openClothCrop(u); else toast('图片读取失败'); }); };
       reader.readAsDataURL(file);
     } else if (e.target.id === 'prodPhoto'){
-      const file = e.target.files[0]; if (!file) return;
+      const file = e.target.files && e.target.files[0];
+      if (!file){ setPhotoStatus('✗ 没有拿到照片：请重新点按钮，在弹窗里选「相册」里的图片再试', true); return; }
       const btn = document.getElementById('prodPhotoBtn');
+      setPhotoStatus('① 正在读取照片…');
+      if (btn){ btn.disabled = true; btn.textContent = '⏳ AI 识别中…'; }
       const reader = new FileReader();
+      const restore = () => { if (btn){ btn.disabled = false; btn.textContent = '📷 拍照 / 选图识别产品'; } };
+      reader.onerror = () => { setPhotoStatus('✗ 照片读取失败，请换一张或改用「从相册选图」', true); restore(); };
+      reader.onabort = () => { setPhotoStatus('✗ 照片读取被中断，请重试', true); restore(); };
       reader.onload = async ev => {
-        if (btn){ btn.disabled = true; btn.textContent = '⏳ AI 识别中…'; }
-        try { const info = await recognizeProductPhoto(ev.target.result); fillProductFromAI(info); }
-        catch(err){ toast('识别失败：' + (err.message || '请手动填写')); }
-        finally { if (btn){ btn.disabled = false; btn.textContent = '📷 拍照识别产品'; } }
+        try {
+          const info = await recognizeProductPhoto(ev.target.result);
+          fillProductFromAI(info);
+          setPhotoStatus('✓ 识别成功：' + (info.name || '') + ' — 请核对表单内容后点「＋ 添加到产品库」');
+          toast('识别成功，请核对后添加');
+        } catch(err){
+          setPhotoStatus('✗ 识别失败：' + ((err && err.message) || '请手动填写'), true);
+          toast('识别失败，详细原因见上方提示');
+        } finally { restore(); }
       };
-      reader.readAsDataURL(file);
+      try { reader.readAsDataURL(file); }
+      catch(er){ setPhotoStatus('✗ 照片读取失败：' + (er.message || ''), true); restore(); }
     } else if (e.target.id === 'notePhoto'){
       const file = e.target.files[0]; if (!file) return;
       const reader = new FileReader();
