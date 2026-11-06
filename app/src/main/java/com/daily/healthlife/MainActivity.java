@@ -43,6 +43,9 @@ public class MainActivity extends AppCompatActivity {
     private File mCameraPhotoFile;
     private final static int FILE_CHOOSER_RESULT_CODE = 10000;
     private volatile boolean mDestroyed = false;
+    /** 系统文件选择器/相机打开期间为 true：此时 onResume 不得整页重绘 */
+    private volatile boolean mFileChooserBusy = false;
+    private volatile long mFileChooserTs = 0L;
 
     /** 供 WalkAlarmReceiver 判断 App 是否在前台、以及直接调用页面里的方法 */
     private static volatile boolean sForeground = false;
@@ -211,6 +214,8 @@ public class MainActivity extends AppCompatActivity {
                     try { mUploadMessage.onReceiveValue(null); } catch (Throwable ignored) {}
                 }
                 mUploadMessage = filePathCallback;
+                mFileChooserBusy = true;
+                mFileChooserTs = System.currentTimeMillis();
                 mCameraPhotoUri = null;
                 mCameraPhotoFile = null;
                 try {
@@ -293,11 +298,13 @@ public class MainActivity extends AppCompatActivity {
                         pick.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,
                                 fileChooserParams.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE);
                     } catch (Throwable ignored) {}
-                    startActivityForResult(Intent.createChooser(pick,
-                            imageOnly ? "选择图片" : "选择文件"), FILE_CHOOSER_RESULT_CODE);
+                    // 直接启动，不经 createChooser：中转 Activity 会吞掉 Uri 的临时读权限，
+                    // 导致 WebView 在 file:// 页面里把照片读成 0 字节。
+                    startActivityForResult(pick, FILE_CHOOSER_RESULT_CODE);
                     return true;
                 } catch (Exception e) {
                     mUploadMessage = null;
+                    mFileChooserBusy = false;
                     try { Toast.makeText(MainActivity.this, "无法打开文件选择器", Toast.LENGTH_SHORT).show(); }
                     catch (Throwable ignored) {}
                     return false;
@@ -344,36 +351,125 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode != FILE_CHOOSER_RESULT_CODE) return;
-        if (mUploadMessage == null) return;
-        Uri[] results = null;
+        if (mUploadMessage == null) { scheduleChooserUnlock(); return; }
+        Uri[] raw = null;
         try {
             if (resultCode == Activity.RESULT_OK) {
                 if (data != null) {
                     String dataString = data.getDataString();
                     if (dataString != null) {
-                        results = new Uri[]{ Uri.parse(dataString) };
+                        raw = new Uri[]{ Uri.parse(dataString) };
                     } else if (data.getClipData() != null && data.getClipData().getItemCount() > 0) {
                         int count = data.getClipData().getItemCount();
-                        results = new Uri[count];
+                        raw = new Uri[count];
                         for (int i = 0; i < count; i++) {
-                            results[i] = data.getClipData().getItemAt(i).getUri();
+                            raw[i] = data.getClipData().getItemAt(i).getUri();
                         }
                     } else if (data.getExtras() != null && data.getExtras().get("data") instanceof Bitmap) {
                         Uri u = bitmapToCacheUri((Bitmap) data.getExtras().get("data"));
-                        if (u != null) results = new Uri[]{ u };
+                        if (u != null) raw = new Uri[]{ u };
                     }
                 }
                 // 相机拍照成功但 data == null（绝大多数机型）：用我们预先给它的那个文件
-                if (results == null && mCameraPhotoFile != null
+                if (raw == null && mCameraPhotoFile != null
                         && mCameraPhotoFile.exists() && mCameraPhotoFile.length() > 0) {
-                    results = new Uri[]{ Uri.fromFile(mCameraPhotoFile) };
+                    raw = new Uri[]{ Uri.fromFile(mCameraPhotoFile) };
                 }
             }
         } catch (Throwable ignored) {}
+
+        /* ★ 把系统返回的 content:// Uri 落盘成 App 私有文件再交给 WebView。
+           file input 只拿到临时读授权，一旦页面重绘、input 节点被替换，
+           FileReader 就会读到 0 字节 —— 表现为「选完照片界面跳一下，照片没出现」。 */
+        Uri[] results = null;
+        if (raw != null) {
+            java.util.ArrayList<Uri> list = new java.util.ArrayList<Uri>();
+            for (int i = 0; i < raw.length; i++) {
+                Uri local = copyPickedUriToCache(raw[i], i);
+                list.add(local != null ? local : raw[i]);   // 复制失败时退回原 Uri
+            }
+            if (!list.isEmpty()) results = list.toArray(new Uri[0]);
+        }
         try { mUploadMessage.onReceiveValue(results); } catch (Throwable ignored) {}
         mUploadMessage = null;
         mCameraPhotoUri = null;
         mCameraPhotoFile = null;
+        scheduleChooserUnlock();
+    }
+
+    /** 给 WebView 派发 change / FileReader 留足时间，之后再允许回前台重绘 */
+    private void scheduleChooserUnlock() {
+        try {
+            if (webView != null) {
+                webView.postDelayed(() -> { mFileChooserBusy = false; }, 1500);
+                return;
+            }
+        } catch (Throwable ignored) {}
+        mFileChooserBusy = false;
+    }
+
+    /** content:// → App 私有缓存文件；保留原文件名后缀（记账 CSV/XLSX 靠后缀判断格式） */
+    private Uri copyPickedUriToCache(Uri uri, int index) {
+        if (uri == null) return null;
+        java.io.InputStream in = null;
+        java.io.FileOutputStream out = null;
+        File dst = null;
+        try {
+            File dir = new File(getCacheDir(), "picked");
+            if (!dir.exists()) dir.mkdirs();
+            String name = displayNameFor(uri);
+            if (name == null || name.isEmpty()) name = "pick" + extensionFor(uri);
+            name = name.replaceAll("[/\\\\:*?\"<>|]", "_");
+            dst = new File(dir, "pick_" + System.currentTimeMillis() + "_" + index + "_" + name);
+            if ("file".equalsIgnoreCase(uri.getScheme())) {
+                in = new java.io.FileInputStream(new File(uri.getPath()));
+            } else {
+                in = getContentResolver().openInputStream(uri);
+            }
+            if (in == null) return null;
+            out = new java.io.FileOutputStream(dst);
+            byte[] buf = new byte[16384];
+            int n; long total = 0;
+            while ((n = in.read(buf)) > 0) { out.write(buf, 0, n); total += n; }
+            out.flush();
+            if (total <= 0) { try { dst.delete(); } catch (Throwable ignored) {} return null; }
+            return Uri.fromFile(dst);
+        } catch (Throwable e) {
+            Log.w(TAG, "copy picked uri failed: " + uri, e);
+            if (dst != null) { try { dst.delete(); } catch (Throwable ignored) {} }
+            return null;
+        } finally {
+            try { if (in != null) in.close(); } catch (Throwable ignored) {}
+            try { if (out != null) out.close(); } catch (Throwable ignored) {}
+        }
+    }
+
+    private String displayNameFor(Uri uri) {
+        android.database.Cursor c = null;
+        try {
+            c = getContentResolver().query(uri,
+                    new String[]{ android.provider.OpenableColumns.DISPLAY_NAME }, null, null, null);
+            if (c != null && c.moveToFirst()) {
+                int i = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME);
+                if (i >= 0) return c.getString(i);
+            }
+        } catch (Throwable ignored) {} finally {
+            try { if (c != null) c.close(); } catch (Throwable ignored) {}
+        }
+        return null;
+    }
+
+    private String extensionFor(Uri uri) {
+        String mime = null;
+        try { mime = getContentResolver().getType(uri); } catch (Throwable ignored) {}
+        if (mime != null) {
+            if (mime.contains("png")) return ".png";
+            if (mime.contains("webp")) return ".webp";
+            if (mime.contains("json")) return ".json";
+            if (mime.contains("csv") || mime.contains("text/plain")) return ".csv";
+            if (mime.contains("spreadsheet") || mime.contains("excel")) return ".xlsx";
+        }
+        return ".jpg";
     }
 
     public void checkPermissions() {
@@ -402,6 +498,12 @@ public class MainActivity extends AppCompatActivity {
         sForeground = true;
         // 回到前台时校正一次闹钟（设备重启、改过系统时间、切过时区都能修正）
         try { WalkAlarmReceiver.scheduleNext(getApplicationContext()); } catch (Throwable ignored) {}
+        /* ★ 系统相册/文件选择器返回时也会走 onResume。此时执行 merge → render 会把刚
+           拿到文件的 <input type=file> 与预览节点整体替换，照片就「不见了」、界面闪一下。*/
+        if (mFileChooserBusy) {
+            if (System.currentTimeMillis() - mFileChooserTs < 30000L) return;
+            mFileChooserBusy = false;   // 异常兜底：选择器结果一直没回来
+        }
         // 每次回到前台，同步一次小组件打卡状态
         try { MainActivity.runJs("window.mergeNativeWidgetCheckins && window.mergeNativeWidgetCheckins()"); }
         catch (Throwable ignored) {}
