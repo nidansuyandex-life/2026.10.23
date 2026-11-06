@@ -533,7 +533,7 @@ public class JsBridge {
             }
             final String r = result;
             // 网络回调可能晚于 Activity 销毁（切微信、内存回收），统一走安全通道
-            MainActivity.runJs("window.__nativeHttpCb && window.__nativeHttpCb(" + org.json.JSONObject.quote(cbId) + "," + r + ")");
+            MainActivity.runJs("window.__nativeHttpCb && window.__nativeHttpCb(" + org.json.JSONObject.quote(cbId) + "," + org.json.JSONObject.quote(r) + ")");
         }).start();
     }
 
@@ -548,7 +548,7 @@ public class JsBridge {
             try {
                 conn = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
                 conn.setConnectTimeout(12000);
-                conn.setReadTimeout(32000);
+                conn.setReadTimeout(90000);
                 conn.setRequestMethod("POST");
                 conn.setDoOutput(true);
                 conn.setInstanceFollowRedirects(true);
@@ -590,7 +590,7 @@ public class JsBridge {
             }
             final String r = result;
             // 网络回调可能晚于 Activity 销毁（切微信、内存回收），统一走安全通道
-            MainActivity.runJs("window.__nativeHttpCb && window.__nativeHttpCb(" + org.json.JSONObject.quote(cbId) + "," + r + ")");
+            MainActivity.runJs("window.__nativeHttpCb && window.__nativeHttpCb(" + org.json.JSONObject.quote(cbId) + "," + org.json.JSONObject.quote(r) + ")");
         }).start();
     }
 

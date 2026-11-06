@@ -3,9 +3,11 @@ package com.daily.healthlife;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.graphics.Bitmap;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.provider.MediaStore;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
@@ -22,6 +24,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -36,6 +39,8 @@ public class MainActivity extends AppCompatActivity {
     private WebView webView;
     private JsBridge jsBridge;
     private ValueCallback<Uri[]> mUploadMessage;
+    private Uri mCameraPhotoUri;
+    private File mCameraPhotoFile;
     private final static int FILE_CHOOSER_RESULT_CODE = 10000;
     private volatile boolean mDestroyed = false;
 
@@ -206,14 +211,51 @@ public class MainActivity extends AppCompatActivity {
                     try { mUploadMessage.onReceiveValue(null); } catch (Throwable ignored) {}
                 }
                 mUploadMessage = filePathCallback;
+                mCameraPhotoUri = null;
+                mCameraPhotoFile = null;
                 try {
-                    Intent intent = fileChooserParams.createIntent();
-                    intent.addCategory(Intent.CATEGORY_OPENABLE);
-                    startActivityForResult(Intent.createChooser(intent, "选择图片"), FILE_CHOOSER_RESULT_CODE);
+                    // 相册：始终用 ACTION_GET_CONTENT。
+                    // 旧写法用 createIntent()，遇到 <input capture="environment"> 会变成
+                    // ACTION_IMAGE_CAPTURE；相机结果里常常没有 Uri，回调只能传 null，
+                    // <input type=file> 的 change 永远不触发 → 表现为「选完照片没反应」。
+                    Intent gallery = new Intent(Intent.ACTION_GET_CONTENT);
+                    gallery.addCategory(Intent.CATEGORY_OPENABLE);
+                    gallery.setType("image/*");
+
+                    Intent camera = null;
+                    try {
+                        File dir = new File(getCacheDir(), "images");
+                        if (!dir.exists()) dir.mkdirs();
+                        File photo = new File(dir, "camera_" + System.currentTimeMillis() + ".jpg");
+                        Uri photoUri = FileProvider.getUriForFile(MainActivity.this,
+                                getPackageName() + ".fileprovider", photo);
+                        Intent cam = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                        cam.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
+                        cam.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        cam.setClipData(android.content.ClipData.newUri(getContentResolver(), "photo", photoUri));
+                        // 部分机型经 chooser 包装后 flag 会丢，逐个显式授权
+                        try {
+                            java.util.List<android.content.pm.ResolveInfo> ris = getPackageManager()
+                                    .queryIntentActivities(cam, PackageManager.MATCH_DEFAULT_ONLY);
+                            for (android.content.pm.ResolveInfo ri : ris) {
+                                grantUriPermission(ri.activityInfo.packageName, photoUri,
+                                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            }
+                        } catch (Throwable ignored) {}
+                        mCameraPhotoUri = photoUri;
+                        mCameraPhotoFile = photo;
+                        camera = cam;
+                    } catch (Throwable ignored) { mCameraPhotoUri = null; mCameraPhotoFile = null; }
+
+                    Intent chooser = Intent.createChooser(gallery, "选择图片或拍照");
+                    if (camera != null) {
+                        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{ camera });
+                    }
+                    startActivityForResult(chooser, FILE_CHOOSER_RESULT_CODE);
                     return true;
                 } catch (Exception e) {
                     mUploadMessage = null;
-                    try { Toast.makeText(MainActivity.this, "无法打开文件选择器", Toast.LENGTH_SHORT).show(); }
+                    try { Toast.makeText(MainActivity.this, "无法打开图片选择器", Toast.LENGTH_SHORT).show(); }
                     catch (Throwable ignored) {}
                     return false;
                 }
@@ -223,29 +265,58 @@ public class MainActivity extends AppCompatActivity {
         webView.loadUrl("file:///android_asset/index.html");
     }
 
+    /** 极少数相机 App 只回一个缩略图 Bitmap，落成本地文件再交给 WebView */
+    private Uri bitmapToCacheUri(Bitmap bmp) {
+        if (bmp == null) return null;
+        try {
+            File dir = new File(getCacheDir(), "images");
+            if (!dir.exists()) dir.mkdirs();
+            File f = new File(dir, "thumb_" + System.currentTimeMillis() + ".jpg");
+            java.io.FileOutputStream os = new java.io.FileOutputStream(f);
+            bmp.compress(Bitmap.CompressFormat.JPEG, 88, os);
+            os.flush();
+            os.close();
+            return Uri.fromFile(f);
+        } catch (Throwable ignored) { return null; }
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == FILE_CHOOSER_RESULT_CODE) {
-            if (mUploadMessage == null) return;
-            Uri[] results = null;
-            try {
-                if (resultCode == Activity.RESULT_OK && data != null) {
+        if (requestCode != FILE_CHOOSER_RESULT_CODE) return;
+        if (mUploadMessage == null) return;
+        Uri[] results = null;
+        try {
+            if (resultCode == Activity.RESULT_OK) {
+                if (data != null) {
                     String dataString = data.getDataString();
                     if (dataString != null) {
-                        results = new Uri[]{Uri.parse(dataString)};
-                    } else if (data.getClipData() != null) {
+                        results = new Uri[]{ Uri.parse(dataString) };
+                    } else if (data.getClipData() != null && data.getClipData().getItemCount() > 0) {
                         int count = data.getClipData().getItemCount();
                         results = new Uri[count];
                         for (int i = 0; i < count; i++) {
                             results[i] = data.getClipData().getItemAt(i).getUri();
                         }
+                    } else if (data.getExtras() != null && data.getExtras().get("data") instanceof Bitmap) {
+                        Uri u = bitmapToCacheUri((Bitmap) data.getExtras().get("data"));
+                        if (u != null) results = new Uri[]{ u };
                     }
                 }
-            } catch (Throwable ignored) {}
-            try { mUploadMessage.onReceiveValue(results); } catch (Throwable ignored) {}
-            mUploadMessage = null;
-        }
+                // 相机拍照成功但 data == null（绝大多数机型）：用我们预先给它的那个文件
+                if (results == null && mCameraPhotoFile != null
+                        && mCameraPhotoFile.exists() && mCameraPhotoFile.length() > 0) {
+                    results = new Uri[]{ Uri.fromFile(mCameraPhotoFile) };
+                }
+                if (results == null && mCameraPhotoUri != null) {
+                    results = new Uri[]{ mCameraPhotoUri };
+                }
+            }
+        } catch (Throwable ignored) {}
+        try { mUploadMessage.onReceiveValue(results); } catch (Throwable ignored) {}
+        mUploadMessage = null;
+        mCameraPhotoUri = null;
+        mCameraPhotoFile = null;
     }
 
     public void checkPermissions() {
