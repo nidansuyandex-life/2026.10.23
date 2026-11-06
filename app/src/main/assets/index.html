@@ -1389,8 +1389,8 @@ function getCatList(type){ const base = (type === 'income' ? INCOME_CATS : EXPEN
 function csvEscape(v){ const s = String(v == null ? '' : v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
 function getRangeTransactions(){ const today = todayStr(), ym = today.slice(0,7), list = transactions; if (state.exportRange === 'month') return list.filter(t => t.date.startsWith(ym)); if (state.exportRange === 'lastMonth'){ const d = new Date(); d.setMonth(d.getMonth() - 1); const lym = `${d.getFullYear()}-${pad(d.getMonth()+1)}`; return list.filter(t => t.date.startsWith(lym)); } if (state.exportRange === '3months'){ const c = new Date(); c.setMonth(c.getMonth() - 2); const cut = `${c.getFullYear()}-${pad(c.getMonth()+1)}-01`; return list.filter(t => t.date >= cut); } return list; }
 
-function AI_get_provider(){ return LS.get('ai-provider', 'none'); } function AI_get_apiKey(){ return LS.get('ai-key', ''); } function AI_get_model(){ return LS.get('ai-model', ''); }
-const AI = { get provider(){ return AI_get_provider(); }, get apiKey(){ return AI_get_apiKey(); }, get model(){ return AI_get_model(); }, set(p,k,m){ LS.set('ai-provider', p||'none'); LS.set('ai-key', k||''); LS.set('ai-model', m||''); }, enabled(){ return this.provider !== 'none' && !!this.apiKey; }, roles: { engineer:{ name:'👷 工程师', prompt:'你是阀门行业资深工程师。' }, customer:{ name:'👤 客户', prompt:'你是一个挑剔的客户。' }, boss:{ name:'💼 老板', prompt:'你是一个务实的老板。' }, teacher:{ name:'🎓 英语老师', prompt:'你是英语老师。' }, health:{ name:'💊 健康顾问', prompt:'你是健康生活顾问。' }, skincare:{ name:'💄 护肤顾问', prompt:'你是专业护肤顾问。' } }, endpoints(){ return { deepseek:{ base:'https://api.deepseek.com/v1/chat/completions', model:'deepseek-chat' }, qwen:{ base:'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model:'qwen-turbo' }, zhipu:{ base:'https://open.bigmodel.cn/api/paas/v4/chat/completions', model:'glm-4-flash' } }; }, async call(system, user, maxTokens, temp){ const cfg = this.endpoints()[this.provider]; if (!cfg) throw new Error('AI 未配置'); const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 30000); try { const d = await aiPostJSON(cfg.base, { model: this.model || cfg.model, messages: [{ role:'system', content:system }, { role:'user', content:user }], temperature: temp == null ? 0.4 : temp, max_tokens: maxTokens || 1000 }, 30000, this.apiKey); return (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || null; } catch(e) { if (e && e.name === 'AbortError') throw new Error('AI 请求超时，请检查网络后重试'); throw e; } finally { clearTimeout(timer); } }, parseJSON(content){ if (!content) return null; let json = content.trim(); if (json.startsWith('```')) json = json.replace(/^```(?:json)?\s*/, '').replace(/```\s*$/, ''); const i = json.indexOf('{'), j = json.lastIndexOf('}'); if (i>=0 && j>i) json = json.slice(i, j+1); return JSON.parse(json); }, async scoreAnswer(q,a,ref){ if (!this.enabled()) return null; const system = `严格导师。只输出 JSON：{"accuracy":0-100,"correct":[],"missing":[],"supplement":""}`; return this.parseJSON(await this.call(system, `【问题】\n${q}\n\n【参考】\n${ref}\n\n【学员】\n${a}\n\n请评分。`, 1000, 0.2)); }, async judgeWord(w,a,cn){ if (!this.enabled()) return null; const system = `英语单词判卷。只输出 JSON：{"correct":true/false,"score":0-100,"feedback":"20字以内"}`; return this.parseJSON(await this.call(system, `单词：${w}\n参考：${cn}\n学员：${a}`, 200, 0.1)); }, async answerQuestion(q, ctx){ if (!this.enabled()) return null; const system = `专业助手。回答专业准确。1.直接回答 2.给适用边界 3.分点，400字内。`; return await this.call(system, ctx ? `背景：${ctx}\n\n问题：${q}` : q, 1000, 0.4); }, async assistant(q, role){ if (!this.enabled()) throw new Error('AI 未配置'); const cfg = this.roles[role] || this.roles.engineer; return await this.call(cfg.prompt + '\n分点作答，每点短句，400字内。', q, 1000, 0.4); }, async gradeExpression(scene, q, guide, answer){ if (!this.enabled()) return null; const system = `表达训练教练。场景「${scene}」\n题目：${q}\n要求：${guide}\n只输出 JSON：{"score":0-100,"level":"","strengths":[],"issues":[],"improved":"","advice":""}`; return this.parseJSON(await this.call(system, '用户的回答：\n'+answer, 1200, 0.3)); }, async recommendRoutine(skinKey, skinProfile, products){ if (!this.enabled()) return null; const system = `你是专业护肤顾问。根据皮肤状态、肤质档案和用户产品库（已开封未过期），生成今日早间和晚间护肤流程。只输出 JSON：{"morning":[{"step":"步骤名","product":"产品名","note":"注意（可空）"}],"night":[...],"reason":"一句话推荐说明"}。重要规则：1. 只用给定产品，不可虚构，product 必须是产品库中的产品名之一；2. 你要根据产品名和成分，自行判断每个产品属于哪一类（卸妆/洁面/爽肤水/精华/乳液/面霜/防晒/面膜/去角质），并决定它放在护肤流程的哪一步；3. 标准顺序：卸妆 → 洁面 → 爽肤水 → 精华 → 乳液 → 面霜 → 防晒（防晒只白天用）；面膜/去角质放在精华之前或替代精华；4. 早间优先抗氧化（VC、烟酰胺等），晚间优先修复/抗老（A醇、壬二酸、胜肽等）；A醇、酸类、去角质只能晚间用；VC白天需配合防晒；5. 严重期（severe）：只用最温和的洁面、水、修复精华（B5/积雪草/神经酰胺等）、简单保湿霜、物理防晒，避免所有活性成分；6. 痘痘期（acne）：早间温和洁面+控油水+烟酰胺类+保湿乳+防晒，晚间卸妆(如有)+洁面+局部壬二酸/水杨酸+修复+保湿，避开A醇；7. 稳定期（stable）：早间抗氧化精华+保湿+防晒，晚间活性精华（A醇/壬二酸/VC/胜肽等轮换）+修复+保湿；周三周日可安排面膜，周六可安排去角质；8. 关键：让产品库中所有开封产品在一周内都被用到，不要反复只用其中1-2件；同类产品（如多个精华）按日期轮换，不要每天用同一支；9. 如果某产品不适合当前皮肤状态，可以不用它，但要在 reason 里说明。`; const userMsg = `今日：${todayStr()}（星期${'日一二三四五六'[new Date().getDay()]}）\n皮肤状态：${skinKey}\n肤质档案：${JSON.stringify(skinProfile)}\n可用产品（已开封未过期）：\n${products.map(p => `- ${p.name}（大类：${(PRODUCT_CATS[p.majorCat]||{}).label || p.majorCat}${p.ingredients ? '；成分：'+p.ingredients.slice(0,120) : ''}）`).join('\n')}\n\n请安排今天早间和晚间的护肤流程，确保所有产品在一周内轮换使用。`; return this.parseJSON(await this.call(system, userMsg, 2500, 0.3)); } };
+function AI_get_provider(){ return LS.get('ai-provider', 'none'); } function AI_get_apiKey(){ return LS.get('ai-key', ''); } function AI_get_model(){ return LS.get('ai-model', ''); } function AI_get_visionModel(){ return LS.get('ai-vision-model', ''); }
+const AI = { get provider(){ return AI_get_provider(); }, get apiKey(){ return AI_get_apiKey(); }, get model(){ return AI_get_model(); }, get visionModel(){ return AI_get_visionModel(); }, set(p,k,m,v){ LS.set('ai-provider', p||'none'); LS.set('ai-key', k||''); LS.set('ai-model', m||''); LS.set('ai-vision-model', v||''); }, enabled(){ return this.provider !== 'none' && !!this.apiKey; }, roles: { engineer:{ name:'👷 工程师', prompt:'你是阀门行业资深工程师。' }, customer:{ name:'👤 客户', prompt:'你是一个挑剔的客户。' }, boss:{ name:'💼 老板', prompt:'你是一个务实的老板。' }, teacher:{ name:'🎓 英语老师', prompt:'你是英语老师。' }, health:{ name:'💊 健康顾问', prompt:'你是健康生活顾问。' }, skincare:{ name:'💄 护肤顾问', prompt:'你是专业护肤顾问。' } }, endpoints(){ return { deepseek:{ base:'https://api.deepseek.com/v1/chat/completions', model:'deepseek-chat' }, qwen:{ base:'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model:'qwen-turbo' }, zhipu:{ base:'https://open.bigmodel.cn/api/paas/v4/chat/completions', model:'glm-4.7-flash' }, doubao:{ base:'https://ark.cn-beijing.volces.com/api/v3/chat/completions', model:'doubao-seed-2-1-pro-260915' } }; }, visionModels(){ return { deepseek:'', qwen:'qwen-vl-max', zhipu:'glm-4.6v-flash', doubao:'doubao-seed-2-1-pro-260915' }; }, visionName(){ return this.visionModel || (this.visionModels()[this.provider] || ''); }, async call(system, user, maxTokens, temp){ const cfg = this.endpoints()[this.provider]; if (!cfg) throw new Error('AI 未配置'); const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 30000); try { const d = await aiPostJSON(cfg.base, { model: this.model || cfg.model, messages: [{ role:'system', content:system }, { role:'user', content:user }], temperature: temp == null ? 0.4 : temp, max_tokens: maxTokens || 1000 }, 30000, this.apiKey); return (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || null; } catch(e) { if (e && e.name === 'AbortError') throw new Error('AI 请求超时，请检查网络后重试'); throw e; } finally { clearTimeout(timer); } }, parseJSON(content){ if (!content) return null; let json = content.trim(); if (json.startsWith('```')) json = json.replace(/^```(?:json)?\s*/, '').replace(/```\s*$/, ''); const i = json.indexOf('{'), j = json.lastIndexOf('}'); if (i>=0 && j>i) json = json.slice(i, j+1); return JSON.parse(json); }, async scoreAnswer(q,a,ref){ if (!this.enabled()) return null; const system = `严格导师。只输出 JSON：{"accuracy":0-100,"correct":[],"missing":[],"supplement":""}`; return this.parseJSON(await this.call(system, `【问题】\n${q}\n\n【参考】\n${ref}\n\n【学员】\n${a}\n\n请评分。`, 1000, 0.2)); }, async judgeWord(w,a,cn){ if (!this.enabled()) return null; const system = `英语单词判卷。只输出 JSON：{"correct":true/false,"score":0-100,"feedback":"20字以内"}`; return this.parseJSON(await this.call(system, `单词：${w}\n参考：${cn}\n学员：${a}`, 200, 0.1)); }, async answerQuestion(q, ctx){ if (!this.enabled()) return null; const system = `专业助手。回答专业准确。1.直接回答 2.给适用边界 3.分点，400字内。`; return await this.call(system, ctx ? `背景：${ctx}\n\n问题：${q}` : q, 1000, 0.4); }, async assistant(q, role){ if (!this.enabled()) throw new Error('AI 未配置'); const cfg = this.roles[role] || this.roles.engineer; return await this.call(cfg.prompt + '\n分点作答，每点短句，400字内。', q, 1000, 0.4); }, async gradeExpression(scene, q, guide, answer){ if (!this.enabled()) return null; const system = `表达训练教练。场景「${scene}」\n题目：${q}\n要求：${guide}\n只输出 JSON：{"score":0-100,"level":"","strengths":[],"issues":[],"improved":"","advice":""}`; return this.parseJSON(await this.call(system, '用户的回答：\n'+answer, 1200, 0.3)); }, async recommendRoutine(skinKey, skinProfile, products){ if (!this.enabled()) return null; const system = `你是专业护肤顾问。根据皮肤状态、肤质档案和用户产品库（已开封未过期），生成今日早间和晚间护肤流程。只输出 JSON：{"morning":[{"step":"步骤名","product":"产品名","note":"注意（可空）"}],"night":[...],"reason":"一句话推荐说明"}。重要规则：1. 只用给定产品，不可虚构，product 必须是产品库中的产品名之一；2. 你要根据产品名和成分，自行判断每个产品属于哪一类（卸妆/洁面/爽肤水/精华/乳液/面霜/防晒/面膜/去角质），并决定它放在护肤流程的哪一步；3. 标准顺序：卸妆 → 洁面 → 爽肤水 → 精华 → 乳液 → 面霜 → 防晒（防晒只白天用）；面膜/去角质放在精华之前或替代精华；4. 早间优先抗氧化（VC、烟酰胺等），晚间优先修复/抗老（A醇、壬二酸、胜肽等）；A醇、酸类、去角质只能晚间用；VC白天需配合防晒；5. 严重期（severe）：只用最温和的洁面、水、修复精华（B5/积雪草/神经酰胺等）、简单保湿霜、物理防晒，避免所有活性成分；6. 痘痘期（acne）：早间温和洁面+控油水+烟酰胺类+保湿乳+防晒，晚间卸妆(如有)+洁面+局部壬二酸/水杨酸+修复+保湿，避开A醇；7. 稳定期（stable）：早间抗氧化精华+保湿+防晒，晚间活性精华（A醇/壬二酸/VC/胜肽等轮换）+修复+保湿；周三周日可安排面膜，周六可安排去角质；8. 关键：让产品库中所有开封产品在一周内都被用到，不要反复只用其中1-2件；同类产品（如多个精华）按日期轮换，不要每天用同一支；9. 如果某产品不适合当前皮肤状态，可以不用它，但要在 reason 里说明。`; const userMsg = `今日：${todayStr()}（星期${'日一二三四五六'[new Date().getDay()]}）\n皮肤状态：${skinKey}\n肤质档案：${JSON.stringify(skinProfile)}\n可用产品（已开封未过期）：\n${products.map(p => `- ${p.name}（大类：${(PRODUCT_CATS[p.majorCat]||{}).label || p.majorCat}${p.ingredients ? '；成分：'+p.ingredients.slice(0,120) : ''}）`).join('\n')}\n\n请安排今天早间和晚间的护肤流程，确保所有产品在一周内轮换使用。`; return this.parseJSON(await this.call(system, userMsg, 2500, 0.3)); } };
 
 const CACHE_KEY_KNOWLEDGE = 'knowledge-v12';
 // 自动清理旧版本缓存
@@ -2303,7 +2303,7 @@ function nativePostJson(url, obj, timeout, headers){
       clearTimeout(timer); delete window.__nativeHttpCbs[id];
       try {
         const j = JSON.parse(res);
-        if (!j.ok) reject(new Error('HTTP ' + (j.status || 0) + (j.error ? ' ' + j.error : '')));
+        if (!j.ok){ let why = ''; try { const b = JSON.parse(j.body || '{}'); why = (b.error && (b.error.message || b.error.code)) || b.message || ''; } catch(er){ why = String(j.body || '').slice(0,120); } if (!why) why = String(j.error || ''); const err = new Error('HTTP ' + (j.status || 0) + (why ? ' · ' + String(why).slice(0,140) : '')); err.isHttpError = true; reject(err); }
         else resolve(j.body);
       } catch(e){ reject(new Error('原生桥返回异常')); }
     };
@@ -2317,12 +2317,12 @@ async function aiPostJSON(url, body, timeout, apiKey){
   if (apiKey) headers['Authorization'] = 'Bearer ' + apiKey;
   if (hasNativePost()){
     try { return JSON.parse(await nativePostJson(url, body, timeout, headers)); }
-    catch(e){ console.warn('[AI] 原生桥失败，改用 WebView fetch', e.message); }
+    catch(e){ if (e && e.isHttpError) throw e; console.warn('[AI] 原生桥失败，改用 WebView fetch', e.message); }
   }
   const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeout || 30000);
   try {
     const r = await fetch(url, { method:'POST', headers, body: JSON.stringify(body), signal: controller.signal });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    if (!r.ok){ let why = ''; try { why = (await r.text()).slice(0,140); } catch(er){} throw new Error('HTTP ' + r.status + (why ? ' · ' + why : '')); }
     return await r.json();
   } finally { clearTimeout(timer); }
 }
@@ -2330,9 +2330,10 @@ async function recognizeProductPhoto(dataUrl){
   const url = await shrinkImage(dataUrl, 800, 0.68);
   if (!url) throw new Error('图片读取失败');
   if (!AI.enabled()) throw new Error('请先在「我的 → 设置 → AI 助手」配置服务商和 Key');
-  if (AI.provider === 'deepseek') throw new Error('DeepSeek 不支持读图，请把 AI 服务商切换成通义千问或智谱 GLM');
   const cfg = AI.endpoints()[AI.provider];
-  const model = AI.provider === 'qwen' ? 'qwen-vl-max' : 'glm-4v-flash';
+  if (!cfg) throw new Error('请先在「我的 → 设置 → AI 助手」配置 AI 服务商');
+  const model = AI.visionName();
+  if (!model) throw new Error(AI.provider === 'deepseek' ? 'DeepSeek 不支持读图，请切换成智谱 GLM / 豆包 / 通义千问' : '请先在「我的 → 设置 → AI 助手」填写视觉模型名');
   const prompt = '你是一位化妆品成分顾问。仔细看这张护肤品/化妆品瓶身照片，只输出 JSON（不要解释）：{"name":"完整产品名（品牌+品名）","majorCat":"产品大类","ingredients":"能看清的成分表，用逗号分隔；看不清就留空","shelfLifeMonths":6}。majorCat 只能从这些里选一个：makeupRemover 卸妆 / cleanser 洁面 / toner 爽肤水 / serum 精华 / lotion 乳液 / cream 面霜 / sunscreen 防晒 / mask 面膜 / exfoliant 去角质 / other 其他。shelfLifeMonths 根据瓶身 PAO 标识（如 6M、12M）填写，看不清填 6。';
   const body = { model, temperature:0.1, max_tokens:700, messages:[{ role:'user', content:[
     { type:'text', text:prompt }, { type:'image_url', image_url:{ url } }
@@ -3440,11 +3441,18 @@ function settingsSheet(sec){
       <div class="set-row"><div><div class="set-lab">英语朗读语速</div><div class="set-hint">慢速适合新手跟读，对单词/句子/短文全部生效</div></div>${segHTML('setCfg','speakRate',s.speakRate,[['verySlow','很慢'],['slow','慢速'],['normal','正常']])}</div>`,
     ai: () => `
       <div class="set-row" style="display:block;"><div class="set-lab" style="margin-bottom:8px;">服务商</div>
-        <select id="aiProvider" style="width:100%;margin-bottom:10px;"><option value="none" ${AI.provider==='none'?'selected':''}>不启用</option><option value="deepseek" ${AI.provider==='deepseek'?'selected':''}>DeepSeek</option><option value="qwen" ${AI.provider==='qwen'?'selected':''}>通义千问</option><option value="zhipu" ${AI.provider==='zhipu'?'selected':''}>智谱 GLM</option></select>
-        <input type="password" id="aiKey" placeholder="API Key（sk-...）" value="${esc(AI.apiKey)}">
+        <select id="aiProvider" style="width:100%;margin-bottom:10px;"><option value="none" ${AI.provider==='none'?'selected':''}>不启用</option><option value="deepseek" ${AI.provider==='deepseek'?'selected':''}>DeepSeek</option><option value="qwen" ${AI.provider==='qwen'?'selected':''}>通义千问</option><option value="zhipu" ${AI.provider==='zhipu'?'selected':''}>智谱 GLM</option><option value="doubao" ${AI.provider==='doubao'?'selected':''}>豆包 · 火山方舟</option></select>
+        <div class="set-lab" style="margin-bottom:6px;">API Key</div>
+        <input type="password" id="aiKey" placeholder="粘贴开放平台生成的 API Key" value="${esc(AI.apiKey)}">
+        <div class="set-lab" style="margin:12px 0 6px;">对话模型名（留空用默认）</div>
+        <input id="aiModel" placeholder="默认：${esc((AI.endpoints()[AI.provider]||{}).model || '—')}" value="${esc(AI.model)}">
+        <div class="set-lab" style="margin:12px 0 6px;">拍照识别模型名（留空用默认）</div>
+        <input id="aiVisionModel" placeholder="默认：${esc(AI.visionModels()[AI.provider] || '请先选服务商')}" value="${esc(AI.visionModel)}">
         <button class="btn primary wide" style="margin-top:12px;" data-act="saveAI">保存 AI 配置</button>
+        <button class="btn wide" style="background:#f1f2f9;color:#4b5265;margin-top:8px;" data-act="testAI">🔌 测试对话</button>
+        <button class="btn wide" style="background:#f1f2f9;color:#4b5265;margin-top:8px;" data-act="testVision">📷 测试拍照识别</button>
       </div>
-      <p class="tip" style="margin:10px 2px 0;">护肤品拍照识别需要支持视觉模型的服务商：通义千问 qwen-vl-max 或智谱 glm-4v-flash；DeepSeek 不支持读图。</p>`,
+      <p class="tip" style="margin:10px 2px 0;"><b>智谱</b>：open.bigmodel.cn → 控制台「API Keys」，Key 形如 xxxxxxxx.yyyyyyyy（不是 sk- 开头）。默认对话 glm-4.7-flash、拍照 glm-4.6v-flash，均为免费模型。<br><b>豆包（火山方舟）</b>：ark.volcengine.com → 「API Key 管理」拿 Key，再到「模型广场 / 开通管理」<b>开通一个视觉模型</b>，把 Model ID 或推理接入点 ID（ep-开头）填进上面两个框。豆包一般不能直接用模型名调用，必须先开通。<br>通义千问拍照用 qwen-vl-max；DeepSeek 不支持读图。模型下线或报「模型不存在」时，直接改上面两个模型名再测试即可，不用改代码。具体可用模型以各家控制台为准。</p>`,
     backup: () => `
       <div class="set-row"><div><div class="set-lab">每周自动备份</div><div class="set-hint">存成文件，保留最近 6 份</div></div>${segHTML('setCfg','autoBackup',s.autoBackup?1:0,[[1,'开'],[0,'关']])}</div>
       ${bk.length ? `<div style="margin-top:6px;">${bk.map((b, i) => `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #f1f3f9;"><div><div style="font-size:13px;font-weight:650;">${mmdd(b.t)} <span style="font-size:11px;font-weight:600;color:${b.file ? 'var(--ok)' : 'var(--sub)'};">${b.file ? '文件' : '内存'}</span></div><div class="set-hint">${Math.round((b.size||0)/1024)} KB${b.file ? ' · ' + (b.name || '') : ''}</div></div><div style="display:flex;gap:12px;flex-shrink:0;"><button class="link-btn" style="padding:0;font-size:12.5px;" data-act="restoreBackup" data-i="${i}">恢复</button>${b.file ? `<button class="link-btn" style="padding:0;font-size:12.5px;color:#dc2626;" data-act="delBackup" data-i="${i}">删除</button>` : ''}</div></div>`).join('')}</div>` : '<p class="tip" style="margin-top:8px;">还没有自动备份记录。</p>'}
@@ -4529,7 +4537,42 @@ if (act === 'clearExample'){
   setTimeout(() => location.reload(), 600);
   return;
 }
- if (act === 'saveAI'){ const provider = document.getElementById('aiProvider').value; const key = document.getElementById('aiKey').value.trim(); if (provider !== 'none' && !key){ toast('请填入 API Key'); return; } AI.set(provider, key, ''); toast(provider === 'none' ? '已关闭 AI' : '已保存'); closeSheet(); render({ keepScroll: true }); return; }
+ if (act === 'saveAI'){ const provider = document.getElementById('aiProvider').value; const key = document.getElementById('aiKey').value.trim(); const mEl = document.getElementById('aiModel'); const model = mEl ? mEl.value.trim() : ''; const vEl = document.getElementById('aiVisionModel'); const vModel = vEl ? vEl.value.trim() : ''; if (provider !== 'none' && !key){ toast('请填入 API Key'); return; } AI.set(provider, key, provider === 'none' ? '' : model, provider === 'none' ? '' : vModel); toast(provider === 'none' ? '已关闭 AI' : '已保存'); closeSheet(); render({ keepScroll: true }); return; }
+ if (act === 'testAI'){
+   const provider = document.getElementById('aiProvider').value;
+   const key = (document.getElementById('aiKey').value || '').trim();
+   const mEl = document.getElementById('aiModel'); const model = mEl ? mEl.value.trim() : '';
+   if (provider === 'none' || !key){ toast('请先选服务商并填入 API Key'); return; }
+   const cfg = AI.endpoints()[provider]; if (!cfg){ toast('未识别的服务商'); return; }
+   const useModel = model || cfg.model;
+   toast('正在测试 ' + useModel + ' …');
+   try {
+     const d = await aiPostJSON(cfg.base, { model: useModel, messages:[{ role:'user', content:'只回复两个字：正常' }], temperature:0.1, max_tokens:16 }, 20000, key);
+     const txt = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+     toast('✓ 连接成功' + (txt ? '：' + String(txt).trim().slice(0,16) : ''));
+   } catch(err){ toast('✗ 失败：' + ((err && err.message) ? err.message : '未知错误')); }
+   return;
+ }
+ if (act === 'testVision'){
+   const provider = document.getElementById('aiProvider').value;
+   const key = (document.getElementById('aiKey').value || '').trim();
+   const vEl = document.getElementById('aiVisionModel'); const vModel = vEl ? vEl.value.trim() : '';
+   if (provider === 'none' || !key){ toast('请先选服务商并填入 API Key'); return; }
+   const cfg = AI.endpoints()[provider]; if (!cfg){ toast('未识别的服务商'); return; }
+   const useModel = vModel || (AI.visionModels()[provider] || '');
+   if (!useModel){ toast('当前服务商不支持读图，请先填写拍照识别模型名'); return; }
+   toast('正在测试视觉模型 ' + useModel + ' …');
+   try {
+     const d = await aiPostJSON(cfg.base, { model: useModel, max_tokens:16, messages:[{ role:'user', content:[
+       { type:'text', text:'只回答四个字：看到了图' },
+       { type:'image_url', image_url:{ url:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==' } }
+     ] }] }, 20000, key);
+     const ok = !!(d && d.choices && d.choices[0]);
+     const txt = ok && d.choices[0].message && d.choices[0].message.content;
+     toast((ok ? '✓ 视觉模型可用' : '✗ 视觉模型无返回') + (txt ? '：' + String(txt).trim().slice(0,12) : ''));
+   } catch(err){ toast('✗ 视觉失败：' + ((err && err.message) ? err.message : '未知错误')); }
+   return;
+ }
   if (act === 'exportData'){ doExport(); return; }
   if (act === 'importData'){ doImport(); return; }
   if (act === 'clearData'){ clearAllData(); return; }
