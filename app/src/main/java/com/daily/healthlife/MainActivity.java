@@ -214,48 +214,91 @@ public class MainActivity extends AppCompatActivity {
                 mCameraPhotoUri = null;
                 mCameraPhotoFile = null;
                 try {
-                    // 相册：始终用 ACTION_GET_CONTENT。
-                    // 旧写法用 createIntent()，遇到 <input capture="environment"> 会变成
-                    // ACTION_IMAGE_CAPTURE；相机结果里常常没有 Uri，回调只能传 null，
-                    // <input type=file> 的 change 永远不触发 → 表现为「选完照片没反应」。
-                    Intent gallery = new Intent(Intent.ACTION_GET_CONTENT);
-                    gallery.addCategory(Intent.CATEGORY_OPENABLE);
-                    gallery.setType("image/*");
+                    String[] accepts = null;
+                    boolean capture = false;
+                    try { accepts = fileChooserParams.getAcceptTypes(); } catch (Throwable ignored) {}
+                    try { capture = fileChooserParams.isCaptureEnabled(); } catch (Throwable ignored) {}
 
-                    Intent camera = null;
-                    try {
-                        File dir = new File(getCacheDir(), "images");
-                        if (!dir.exists()) dir.mkdirs();
-                        File photo = new File(dir, "camera_" + System.currentTimeMillis() + ".jpg");
-                        Uri photoUri = FileProvider.getUriForFile(MainActivity.this,
-                                getPackageName() + ".fileprovider", photo);
-                        Intent cam = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                        cam.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
-                        cam.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        cam.setClipData(android.content.ClipData.newUri(getContentResolver(), "photo", photoUri));
-                        // 部分机型经 chooser 包装后 flag 会丢，逐个显式授权
-                        try {
-                            java.util.List<android.content.pm.ResolveInfo> ris = getPackageManager()
-                                    .queryIntentActivities(cam, PackageManager.MATCH_DEFAULT_ONLY);
-                            for (android.content.pm.ResolveInfo ri : ris) {
-                                grantUriPermission(ri.activityInfo.packageName, photoUri,
-                                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    // 按 input 的 accept 归一出 MIME 列表。
+                    // 上一版把类型写死成 image/*，导致「从 JSON 导入 / 记账 CSV 导入」只能看到照片。
+                    java.util.ArrayList<String> mimes = new java.util.ArrayList<String>();
+                    boolean anyType = false, imageType = false;
+                    if (accepts != null) {
+                        for (String a : accepts) {
+                            if (a == null) continue;
+                            a = a.trim().toLowerCase(Locale.ROOT);
+                            if (a.isEmpty()) continue;
+                            if (a.equals("*/*")) { anyType = true; continue; }
+                            if (a.startsWith(".")) {
+                                String m = mimeForExtension(a);
+                                if (m != null) { if (!mimes.contains(m)) mimes.add(m); }
+                                else anyType = true;
+                                continue;
                             }
-                        } catch (Throwable ignored) {}
-                        mCameraPhotoUri = photoUri;
-                        mCameraPhotoFile = photo;
-                        camera = cam;
-                    } catch (Throwable ignored) { mCameraPhotoUri = null; mCameraPhotoFile = null; }
-
-                    Intent chooser = Intent.createChooser(gallery, "选择图片或拍照");
-                    if (camera != null) {
-                        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{ camera });
+                            if (a.indexOf('/') > 0) {
+                                if (!mimes.contains(a)) mimes.add(a);
+                                if (a.startsWith("image/")) imageType = true;
+                            }
+                        }
                     }
-                    startActivityForResult(chooser, FILE_CHOOSER_RESULT_CODE);
+                    if ((accepts == null || accepts.length == 0) && !capture) anyType = true;
+                    final boolean imageOnly = imageType && !anyType && !mimes.isEmpty()
+                            && allMimePrefix(mimes, "image/");
+
+                    // 只有明确带 capture 的输入（护肤品「拍照识别」）才开系统相机。
+                    // 直接 startActivityForResult，不经 chooser 包装，EXTRA_OUTPUT 不会被吞掉。
+                    if (capture && !anyType) {
+                        try {
+                            File dir = new File(getCacheDir(), "images");
+                            if (!dir.exists()) dir.mkdirs();
+                            File photo = new File(dir, "camera_" + System.currentTimeMillis() + ".jpg");
+                            Uri photoUri = FileProvider.getUriForFile(MainActivity.this,
+                                    getPackageName() + ".fileprovider", photo);
+                            Intent cam = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                            cam.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
+                            cam.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            cam.setClipData(android.content.ClipData.newUri(getContentResolver(), "photo", photoUri));
+                            try {
+                                java.util.List<android.content.pm.ResolveInfo> ris = getPackageManager()
+                                        .queryIntentActivities(cam, PackageManager.MATCH_DEFAULT_ONLY);
+                                for (android.content.pm.ResolveInfo ri : ris) {
+                                    grantUriPermission(ri.activityInfo.packageName, photoUri,
+                                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                }
+                            } catch (Throwable ignored) {}
+                            mCameraPhotoUri = photoUri;
+                            mCameraPhotoFile = photo;
+                            startActivityForResult(cam, FILE_CHOOSER_RESULT_CODE);
+                            return true;
+                        } catch (Throwable e) {
+                            mCameraPhotoUri = null;
+                            mCameraPhotoFile = null;
+                            // 相机不可用时落到下面的通用选择器
+                        }
+                    }
+
+                    // 其余输入框：纯文件选择器，绝不附加相机。
+                    // 衣橱/随手记/探店看到图片；备份 JSON、记账 CSV/XLSX 看到全部文件。
+                    Intent pick = new Intent(Intent.ACTION_GET_CONTENT);
+                    pick.addCategory(Intent.CATEGORY_OPENABLE);
+                    if (imageOnly) {
+                        pick.setType("image/*");
+                    } else if (!mimes.isEmpty() && !anyType) {
+                        pick.setType(mimes.get(0));
+                        pick.putExtra(Intent.EXTRA_MIME_TYPES, mimes.toArray(new String[0]));
+                    } else {
+                        pick.setType("*/*");
+                    }
+                    try {
+                        pick.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,
+                                fileChooserParams.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE);
+                    } catch (Throwable ignored) {}
+                    startActivityForResult(Intent.createChooser(pick,
+                            imageOnly ? "选择图片" : "选择文件"), FILE_CHOOSER_RESULT_CODE);
                     return true;
                 } catch (Exception e) {
                     mUploadMessage = null;
-                    try { Toast.makeText(MainActivity.this, "无法打开图片选择器", Toast.LENGTH_SHORT).show(); }
+                    try { Toast.makeText(MainActivity.this, "无法打开文件选择器", Toast.LENGTH_SHORT).show(); }
                     catch (Throwable ignored) {}
                     return false;
                 }
@@ -263,6 +306,23 @@ public class MainActivity extends AppCompatActivity {
         });
 
         webView.loadUrl("file:///android_asset/index.html");
+    }
+
+    /** input accept 里的扩展名映射成 Android MIME；未知扩展名返回 null，让调用方显示所有文件 */
+    private static String mimeForExtension(String ext) {
+        if (".json".equals(ext)) return "application/json";
+        if (".csv".equals(ext)) return "text/csv";
+        if (".txt".equals(ext)) return "text/plain";
+        if (".xls".equals(ext)) return "application/vnd.ms-excel";
+        if (".xlsx".equals(ext)) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        if (".jpg".equals(ext) || ".jpeg".equals(ext)) return "image/jpeg";
+        if (".png".equals(ext)) return "image/png";
+        if (".pdf".equals(ext)) return "application/pdf";
+        return null;
+    }
+    private static boolean allMimePrefix(java.util.List<String> list, String prefix) {
+        for (String s : list) { if (s == null || !s.startsWith(prefix)) return false; }
+        return true;
     }
 
     /** 极少数相机 App 只回一个缩略图 Bitmap，落成本地文件再交给 WebView */
@@ -307,9 +367,6 @@ public class MainActivity extends AppCompatActivity {
                 if (results == null && mCameraPhotoFile != null
                         && mCameraPhotoFile.exists() && mCameraPhotoFile.length() > 0) {
                     results = new Uri[]{ Uri.fromFile(mCameraPhotoFile) };
-                }
-                if (results == null && mCameraPhotoUri != null) {
-                    results = new Uri[]{ mCameraPhotoUri };
                 }
             }
         } catch (Throwable ignored) {}
