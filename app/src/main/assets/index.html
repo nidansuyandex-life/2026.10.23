@@ -701,6 +701,9 @@ window.onWidgetCheckin = function(key, done) {
 
 window.mergeNativeWidgetCheckins = function(){
     try {
+        /* ★ 正在选图/读图/AI 识别时，绝不能整页重绘：render() 会替换
+           <input type=file> 和预览节点，让刚选中的照片「消失」。 */
+        if (window._photoBusy) return;
         if (!window.AndroidBridge || !AndroidBridge.getWidgetTimelineData) return;
         const raw = AndroidBridge.getWidgetTimelineData();
         const items = JSON.parse(raw || '[]');
@@ -717,15 +720,18 @@ window.mergeNativeWidgetCheckins = function(){
                     const target = list.find(x => (x.time || '') === (payload.time || '') && x.title === payload.title);
                     if (target) {
                         const k = getTodoKey(payload.date, target);
-                        if (item.done) todoMap[k] = true; else delete todoMap[k];
-                        changed = true;
+                        if (item.done){ if (!todoMap[k]){ todoMap[k] = true; changed = true; } }
+                        else if (todoMap[k]){ delete todoMap[k]; changed = true; }
                     }
                 } catch(err) { console.warn('widget todo merge skipped', err); }
             } else {
-                if (item.done) checks[item.key] = true; else delete checks[item.key];
-                changed = true;
+                const k = String(item.key);
+                if (item.done){ if (!checks[k]){ checks[k] = true; changed = true; } }
+                else if (checks[k]){ delete checks[k]; changed = true; }
             }
         });
+        /* 原实现对每个 item 都无条件 changed=true，只要小组件有打卡记录，
+           每次回前台必 render 一次 —— 这正是选完照片后「界面跳一下」的来源。 */
         if (changed) { saveChecks(checks); saveTodoStatusMap(todoMap); render({ keepScroll:true }); }
     } catch(e) { console.warn('mergeNativeWidgetCheckins failed', e); }
 };
@@ -2293,7 +2299,7 @@ function openClothCrop(dataUrl){
       <button class="btn wide" style="background:#F1F2F9;color:#4b5265;margin-top:8px;" data-act="cropCancel">取消</button>`);
     drawCropPreview();
   };
-  img.onerror = () => toast('图片读取失败，请换一张');
+  img.onerror = () => { setClothPhotoStatus('✗ 图片读取失败，请换一张照片', true); toast('图片读取失败，请换一张'); };
   img.src = dataUrl;
 }
 function confirmClothCrop(){
@@ -2405,6 +2411,27 @@ async function aiPostJSON(url, body, timeout, apiKey){
     return await r.json();
   } finally { clearTimeout(timer); }
 }
+/* ===== 选图保护：文件读取期间禁止整页重绘 ===== */
+window._photoBusy = 0;
+function photoBusy(on){
+  window._photoBusy = Math.max(0, (window._photoBusy || 0) + (on ? 1 : -1));
+  return window._photoBusy;
+}
+function showPickedPhoto(id, dataUrl){
+  const el = document.getElementById(id);
+  if (!el || !dataUrl) return false;
+  el.src = dataUrl;
+  el.style.display = 'block';
+  return true;
+}
+function setClothPhotoStatus(msg, isError){
+  const el = document.getElementById('clothPhotoStatus');
+  if (!el) return;
+  el.textContent = msg || '';
+  el.style.display = msg ? 'block' : 'none';
+  el.style.background = isError ? '#FFF1F0' : '#EFF6FF';
+  el.style.color = isError ? '#B42318' : '#1E40AF';
+}
 /* 页面内常驻状态区：拍照识别步骤多、耗时长，只用一闪而过的 toast 会让人以为「没反应」 */
 function setPhotoStatus(msg, isError){
   const el = document.getElementById('prodPhotoStatus');
@@ -2501,6 +2528,7 @@ function closetAddPane(){
     <div class="card">
       <div style="font-size:13px;font-weight:700;margin-bottom:10px;">添加单品</div>
       <label class="upload" style="min-height:120px;"><span class="plus">＋</span><span>${state.clothImage ? '照片已就绪 · 点这里换一张' : '点击上传衣物照片（可裁剪）'}</span><input type="file" id="clothUpload" accept="image/*"><img id="clothPreview" src="${state.clothImage ? esc(state.clothImage) : ''}" style="display:${state.clothImage ? 'block' : 'none'}" alt="预览"></label>
+      <div id="clothPhotoStatus" style="display:none;font-size:12px;line-height:1.6;padding:9px 11px;border-radius:9px;margin:8px 0 4px;background:#EFF6FF;color:#1E40AF;word-break:break-all;"></div>
       ${state.clothImage ? '<div style="display:flex;gap:14px;margin:8px 2px 2px;"><button class="link-btn" data-act="clothReCrop" style="font-size:12.5px;">✂️ 重新裁剪</button><button class="link-btn" data-act="clothClearImg" style="font-size:12.5px;color:#dc2626;">移除照片</button></div>' : ''}
       <div class="dim-row"><span class="lb">名称</span><input type="text" id="clothName" placeholder="如 米色风衣" style="width:180px;text-align:left"></div>
       <div class="dim-row"><span class="lb">品类</span><select id="clothCat" style="width:180px;text-align:left;font-weight:600;">${Object.values(CATEGORIES).map(c => `<option value="${c.key}" ${c.key === cat ? 'selected' : ''}>${c.icon} ${c.label}</option>`).join('')}</select></div>
@@ -2519,6 +2547,7 @@ function renderProductCard(p){ const days = productDaysLeft(p); const expired = 
 function careProductLibPane(){ const lib = getProductLibrary(); const openedCount = lib.filter(p => p.openedDate && !isProductExpired(p)).length; const expiredCount = lib.filter(p => isProductExpired(p)).length; const byMajor = {}; lib.forEach(p => { const m = p.majorCat || 'other'; if (!byMajor[m]) byMajor[m] = []; byMajor[m].push(p); }); const sortedKeys = Object.keys(byMajor).sort((a,b) => { const oa = (PRODUCT_CATS[a] && PRODUCT_CATS[a].order !== undefined) ? PRODUCT_CATS[a].order : 99; const ob = (PRODUCT_CATS[b] && PRODUCT_CATS[b].order !== undefined) ? PRODUCT_CATS[b].order : 99; return oa - ob; }); const groupedHtml = sortedKeys.map(k => { const cat = PRODUCT_CATS[k] || PRODUCT_CATS.other; const items = byMajor[k]; return `<div style="margin-bottom:14px;"><div style="font-size:12px;font-weight:750;color:var(--sub);letter-spacing:.5px;margin-bottom:8px;">${cat.icon} ${cat.label} <span style="font-weight:500;">(${items.length})</span></div>${items.map(p => renderProductCard(p)).join('')}</div>`; }).join(''); const majorOptions = Object.entries(PRODUCT_CATS).map(([key, cat]) => `<option value="${key}">${cat.icon} ${cat.label}</option>`).join(''); return `<div class="card" style="background:linear-gradient(135deg,var(--pink),var(--pink2));color:#fff;border:0;"><div style="font-size:12px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">📦 我的产品库</div><div style="font-size:19px;font-weight:750;margin-bottom:8px;">共 ${lib.length} 件 · ${openedCount} 件可用</div><div style="font-size:13px;opacity:.92;line-height:1.7;">${expiredCount > 0 ? '⚠️ 有 '+expiredCount+' 件已过期，建议清理' : '所有产品状态正常'}</div></div><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;">添加产品</div>
       <div style="display:flex;gap:8px;margin-bottom:10px;"><button class="btn primary" id="prodPhotoBtn" data-act="prodPhotoPick" style="flex:1;">🖼 从相册选图识别</button><button class="btn" id="prodCameraBtn" data-act="prodCameraPick" style="flex:1;background:#f1f2f9;color:#4b5265;">📷 拍照识别</button><input type="file" id="prodPhoto" accept="image/*" style="display:none"><input type="file" id="prodCamera" accept="image/*" capture="environment" style="display:none"></div>
       <div id="prodPhotoStatus" style="display:none;font-size:12px;line-height:1.65;padding:9px 11px;border-radius:9px;margin-bottom:10px;background:#EFF6FF;color:#1E40AF;word-break:break-all;"></div>
+      <div id="prodPhotoPreviewWrap" style="display:none;margin-bottom:10px;text-align:center;"><img id="prodPhotoPreview" alt="已选中的照片" style="max-width:100%;max-height:190px;border-radius:12px;border:1px solid #E3E6EF;"><div style="font-size:11px;color:var(--sub);margin-top:4px;">↑ 已选中的照片</div></div>
       <p class="tip" style="font-size:11.5px;color:var(--sub);margin:0 0 10px;line-height:1.6;">拍瓶身正面用「📷 拍照识别」，已有照片用「🖼 从相册选图识别」；AI 会自动填好名称、大类、成分和开封后可用月数，识别后可手动修改。识别进度与失败原因显示在上方，真实照片一般要 10–60 秒。需在设置里配置智谱 / 通义千问 / 豆包等支持读图的服务商。</p>
       <div class="dim-row"><span class="lb">名称</span><input type="text" id="prodName" placeholder="如 OLAY 大红瓶" style="width:200px;text-align:left"></div><div class="dim-row"><span class="lb">大类</span><select id="prodMajorCat" style="width:200px;text-align:left;font-weight:600;">${majorOptions}</select></div><div class="dim-row"><span class="lb">开封时间</span><input type="date" id="prodOpened" style="width:200px"></div><div class="dim-row"><span class="lb">开封后可用月数</span><input type="number" id="prodShelfLife" placeholder="如 6" min="1" max="60" style="width:100px"><span class="unit">个月</span></div><div class="dim-row"><span class="lb">未开封到期日</span><input type="date" id="prodExpiry" style="width:200px"></div><div class="dim-row" style="align-items:flex-start;padding-top:10px;"><span class="lb" style="margin-top:8px;">成分</span><textarea id="prodIngredients" placeholder="粘贴成分表（可选，AI 会参考它判断产品用途）" style="flex:1;border:1.5px solid #E3E6EF;border-radius:10px;padding:8px 10px;font-family:inherit;font-size:13px;min-height:60px;resize:vertical;"></textarea></div><p class="tip" style="margin-top:8px;font-size:12.5px;color:var(--sub);">填写「开封时间 + 开封后可用月数」会自动倒计时；未开封可只填到期日。具体放在护肤流程哪一步，由 AI 根据产品名和成分判断。</p><button class="btn-primary" data-act="addProduct" style="margin-top:12px;background:linear-gradient(135deg,var(--pink),var(--pink2))">＋ 添加到产品库</button></div><div class="card"><div class="row-between" style="margin-bottom:10px;"><div style="font-size:13px;font-weight:700;">产品列表（按护肤流程顺序）</div><span class="muted" style="color:var(--sub);font-size:12.5px">${lib.length} 件</span></div>${groupedHtml || '<p class="tip" style="color:#8A90A2;text-align:center;padding:16px 0">还没有添加产品</p>'}</div>`; }
 function renderRoutineStep(r, idx){ const p = r.product; const productName = p ? p.name : (r.productName || r.product || '—'); const major = p ? (PRODUCT_CATS[p.majorCat]||{}).label || '' : ''; const daysLeft = p ? productDaysLeft(p) : null; let daysCls = '', daysText = ''; if (daysLeft !== null){ if (daysLeft < 0){ daysCls = 'danger'; daysText = '已过期'; } else if (daysLeft <= 7){ daysCls = 'danger'; daysText = '剩 ' + daysLeft + ' 天'; } else if (daysLeft <= 30){ daysCls = 'warn'; daysText = '剩 ' + daysLeft + ' 天'; } else { daysCls = ''; daysText = '剩 ' + daysLeft + ' 天'; } } return `<div class="routine-step"><span class="rs-num">${idx+1}</span><div class="rs-body"><div class="rs-title">${esc(r.step)}</div><div class="rs-prod">🧴 ${esc(productName)}${major ? ' <span style="font-size:11.5px;opacity:.7;">· '+esc(major)+'</span>' : ''}</div>${r.note ? `<div class="rs-note">💡 ${esc(r.note)}</div>` : ''}</div>${daysText ? `<span class="rs-days ${daysCls}">${daysText}</span>` : ''}</div>`; }
@@ -4820,24 +4849,54 @@ view.addEventListener('click', e => { const c = e.target.closest('.check'); if (
 view.addEventListener('click', e => { const tl = e.target.closest('[data-home-action]'); if (!tl || e.target.closest('.check')) return; const action = tl.dataset.homeAction; if (action === 'skin-morning' || action === 'skin-night'){ state.tab = 'life'; state.lifeSub = 'care'; state.careSub = 'skin'; render(); return; } if (action === 'supplement'){ state.tab = 'life'; state.lifeSub = 'care'; state.careSub = 'supp'; render(); return; } if (action === 'sport'){ state.tab = 'life'; state.lifeSub = 'sport'; state.sportSub = 'plan'; render(); return; } if (action === 'study'){ state.tab = 'study'; render(); return; } if (action === 'todo'){ state.tab = 'life'; state.lifeSub = 'calendar'; render(); return; } });
 view.addEventListener('click', e => { const del = e.target.closest('[data-del-tx]'); if (del){ e.stopPropagation(); const id = Number(del.dataset.delTx); if (!confirm('删除这笔记录？')) return; transactions = transactions.filter(x => x.id !== id); state.transactions = transactions; LS.set('app_h_transactions', transactions); syncToNativeWidget(); render(); return; } const tx = e.target.closest('[data-tx-id]'); if (tx){ const item = transactions.find(x => x.id === Number(tx.dataset.txId)); if (!item) return; state.pendingTx = { type:item.type, amount:item.amount, category:item.category, account:item.account||'现金', note:item.note||'', date:item.date||todayStr(), editingId:item.id }; renderTxEditor(); setTimeout(() => { const area = document.getElementById('txEditArea'); if (area) area.scrollIntoView({ block:'center', behavior:'smooth' }); }, 100); return; } });
 view.addEventListener('change', e => { if (e.target.id === 'planStartInput'){ const v = e.target.value; if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return; setPlanStart(new Date(v + 'T00:00:00')); buildCalendarFromPlans(); render(); return; } if (e.target.id === 'clothCat'){ state.closetCat = e.target.value; render({ keepScroll: true }); return; } if (e.target.dataset && e.target.dataset.gkey){ const v = parseFloat(e.target.value); if (!isNaN(v)) state.garmentDraft[e.target.dataset.gkey] = v; else delete state.garmentDraft[e.target.dataset.gkey]; render({ keepScroll: true }); return; } if (e.target.id === 'clothUpload'){
-      const file = e.target.files[0]; if (!file) return;
+      const input = e.target;
+      const file = input.files && input.files[0];
+      if (!file){ setClothPhotoStatus('✗ 没有拿到照片，请重新点一次上传', true); return; }
+      photoBusy(true);
+      setClothPhotoStatus('① 已选中照片，正在读取…');
+      let settled = false;
+      const done = () => { if (settled) return; settled = true; photoBusy(false); };
+      try { input.value = ''; } catch(er){}   /* 允许重复选同一张 */
       const reader = new FileReader();
-      reader.onload = ev => { shrinkImage(ev.target.result, 1400, 0.85).then(u => { if (u) openClothCrop(u); else toast('图片读取失败'); }); };
-      reader.readAsDataURL(file);
+      reader.onerror = () => { setClothPhotoStatus('✗ 照片读取失败：请从相册重新选一张，或换一张照片', true); done(); };
+      reader.onabort = () => { setClothPhotoStatus('✗ 照片读取被中断，请重试', true); done(); };
+      reader.onload = ev => {
+        const raw = ev.target && ev.target.result;
+        if (!raw || String(raw).indexOf('data:image') !== 0 || String(raw).length < 128){ setClothPhotoStatus('✗ 照片内容为空，请换一张照片', true); done(); return; }
+        showPickedPhoto('clothPreview', raw);   /* ★ 立刻出现在界面上，不等裁剪 */
+        const lb = input.closest('label');
+        if (lb){ const sp = lb.querySelector('span:not(.plus)'); if (sp) sp.textContent = '照片已就绪 · 点这里换一张'; }
+        setClothPhotoStatus('② 照片已显示，正在打开裁剪窗口…');
+        shrinkImage(raw, 1400, 0.85).then(u => {
+          done();
+          if (u){ setClothPhotoStatus('✓ 请在裁剪窗口点「确定裁剪」；取消则不保存照片'); openClothCrop(u); }
+          else setClothPhotoStatus('✗ 图片处理失败或超时，请换一张照片', true);
+        }).catch(er => { done(); setClothPhotoStatus('✗ 图片处理失败：' + ((er && er.message) || ''), true); });
+      };
+      try { reader.readAsDataURL(file); }
+      catch(er){ setClothPhotoStatus('✗ 照片读取失败：' + ((er && er.message) || ''), true); done(); }
     } else if (e.target.id === 'prodPhoto' || e.target.id === 'prodCamera'){
-      const file = e.target.files && e.target.files[0];
+      const input = e.target;
+      const file = input.files && input.files[0];
       if (!file){ setPhotoStatus('✗ 没有拿到照片：请重新点按钮再试；拍照失败时可改用「🖼 从相册选图识别」', true); return; }
+      photoBusy(true);
       const btns = ['prodPhotoBtn','prodCameraBtn'].map(id => document.getElementById(id)).filter(Boolean);
       const labels = btns.map(b => b.textContent);
+      const wrap = document.getElementById('prodPhotoPreviewWrap');
+      let restored = false;
+      const restore = () => { if (restored) return; restored = true; btns.forEach((b, i) => { b.disabled = false; b.textContent = labels[i]; }); photoBusy(false); };
       setPhotoStatus('① 正在读取照片…');
       btns.forEach(b => { b.disabled = true; b.textContent = '⏳ AI 识别中…'; });
       const reader = new FileReader();
-      const restore = () => btns.forEach((b, i) => { b.disabled = false; b.textContent = labels[i]; });
       reader.onerror = () => { setPhotoStatus('✗ 照片读取失败，请换一张或改用「🖼 从相册选图识别」', true); restore(); };
       reader.onabort = () => { setPhotoStatus('✗ 照片读取被中断，请重试', true); restore(); };
       reader.onload = async ev => {
+        const raw = ev.target && ev.target.result;
+        if (!raw || String(raw).indexOf('data:image') !== 0 || String(raw).length < 128){ setPhotoStatus('✗ 照片内容为空：请改用「🖼 从相册选图识别」重新选一张', true); restore(); return; }
+        showPickedPhoto('prodPhotoPreview', raw);   /* ★ 立刻显示已选照片，与 AI 结果无关 */
+        if (wrap) wrap.style.display = 'block';
         try {
-          const info = await recognizeProductPhoto(ev.target.result);
+          const info = await recognizeProductPhoto(raw);
           fillProductFromAI(info);
           setPhotoStatus('✓ 识别成功：' + (info.name || '') + ' — 请核对表单内容后点「＋ 添加到产品库」');
           toast('识别成功，请核对后添加');
@@ -4846,15 +4905,18 @@ view.addEventListener('change', e => { if (e.target.id === 'planStartInput'){ co
           toast('识别失败，详细原因见上方提示');
         } finally { restore(); }
       };
+      try { input.value = ''; } catch(er){}   /* 允许重复选同一张 */
       try { reader.readAsDataURL(file); }
       catch(er){ setPhotoStatus('✗ 照片读取失败：' + (er.message || ''), true); restore(); }
     } else if (e.target.id === 'notePhoto'){
       const file = e.target.files[0]; if (!file) return;
+      try { e.target.value = ''; } catch(er){}
       const reader = new FileReader();
       reader.onload = ev => { shrinkImage(ev.target.result, 1400, 0.85).then(u => { if (u){ state.noteDraftPhotos = state.noteDraftPhotos || []; state.noteDraftPhotos.push(saveImageToNative(u, 'note_' + Date.now())); render({ keepScroll:true }); } else { toast('图片读取失败'); } }); };
       reader.readAsDataURL(file);
     } else if (e.target.id === 'eatPhoto'){
       const file = e.target.files[0]; if (!file) return;
+      try { e.target.value = ''; } catch(er){}
       const reader = new FileReader();
       reader.onload = ev => { shrinkImage(ev.target.result, 1400, 0.85).then(u => { if (u){ state.eatDraftPhotos = state.eatDraftPhotos || []; state.eatDraftPhotos.push(saveImageToNative(u, 'eat_' + Date.now())); render({ keepScroll:true }); } else { toast('图片读取失败'); } }); };
       reader.readAsDataURL(file);
