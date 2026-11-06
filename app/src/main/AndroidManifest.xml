@@ -17,7 +17,7 @@
     <application
         android:name=".App"
         android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:label="日常 · 健康生活"
-        android:roundIcon="@mipmap/ic_launcher" android:supportsRtl="true" android:usesCleartextTraffic="true"
+        android:roundIcon="@mipmap/ic_launcher_round" android:supportsRtl="true" android:usesCleartextTraffic="true"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">
         
         <!-- 【关键修改】添加了 android:windowSoftInputMode="adjustResize" -->

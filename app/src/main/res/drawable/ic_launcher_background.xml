@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#2563EB" android:pathData="M0,0 L108,0 L108,108 L0,108 Z"/>
+    <!-- 右下青绿色光斑，与渐变 PNG 呼应 -->
+    <path android:fillColor="#12A08A" android:fillAlpha="0.55"
+        android:pathData="M108,34 A74,74 0 0 1 108,108 L34,108 A74,74 0 0 1 108,34 Z"/>
+    <!-- 左上柔光 -->
+    <path android:fillColor="#FFFFFF" android:fillAlpha="0.10"
+        android:pathData="M0,0 L72,0 A72,72 0 0 1 0,72 Z"/>
+</vector>
