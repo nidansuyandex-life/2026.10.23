@@ -205,6 +205,17 @@ public class MainActivity extends AppCompatActivity {
                 }
                 return false;
             }
+
+            /* Android 7+ 走这个重载；设置页「打开火山方舟控制台」链接要靠它跳外部浏览器 */
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, android.webkit.WebResourceRequest request) {
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && request != null && request.getUrl() != null) {
+                        return shouldOverrideUrlLoading(view, request.getUrl().toString());
+                    }
+                } catch (Throwable ignored) {}
+                return false;
+            }
         });
 
         webView.setWebChromeClient(new WebChromeClient() {
