@@ -11,11 +11,11 @@
 
   add('p1_breath', { dur:4, props: MAT + '<rect x="104" y="90" width="62" height="5" rx="2" class="prop"/><path d="M108 95 v42 M162 95 v42" class="prop"/>',
     kf: [{ hip:[75,107], t:-88, sa:100, ea:70, hk:62, ka:82, at:85, sa2:100, ea2:70, hk2:66, ka2:82, at2:85 }],
-    extra: '<circle cx="74" cy="100" r="5" fill="none" stroke="#C2452F" stroke-width="2"><animate attributeName="r" values="4;8;4" dur="4s" repeatCount="indefinite"/><animate attributeName="opacity" values=".35;.8;.35" dur="4s" repeatCount="indefinite"/></circle><text x="96" y="108" class="lab">吸气鼓肚子 ↔ 呼气放松</text>' });
+    extra: '<circle cx="74" cy="100" r="5" fill="none" stroke="#2567B5" stroke-width="2"><animate attributeName="r" values="4;8;4" dur="4s" repeatCount="indefinite"/><animate attributeName="opacity" values=".35;.8;.35" dur="4s" repeatCount="indefinite"/></circle><text x="96" y="108" class="lab">吸气鼓肚子 ↔ 呼气放松</text>' });
 
   add('p2_chintuck', { dur:2.6, props: G,
     kf: [ st(95), st(95, { hox:-6, hd:6 }), st(95) ],
-    extra: '<path d="M34 47 h13 m-4 -4 l4 4 -4 4" stroke="#C2452F" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><text x="22" y="38" class="lab">下巴水平后收</text>' });
+    extra: '<path d="M34 47 h13 m-4 -4 l4 4 -4 4" stroke="#2567B5" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><text x="22" y="38" class="lab">下巴水平后收</text>' });
 
   add('p3_wallslide', { dur:3, front:true, props:'<rect x="22" y="10" width="156" height="112" fill="#EDF1F8" rx="6"/>' + G,
     kf: [
@@ -29,14 +29,14 @@
       { hip:[72,110], t:-88, sa:100, ea:100, hk:55, ka:130, at:70, hk2:55, ka2:125, at2:90 },
       { hip:[72,110], t:-88, sa:100, ea:100, hk:92, ka:93, at:90, hk2:55, ka2:125, at2:90 },
       { hip:[72,110], t:-88, sa:100, ea:100, hk:55, ka:130, at:70, hk2:55, ka2:125, at2:90 } ],
-    extra: '<path d="M128 108 h16 m-4 -3 l4 3 -4 3" stroke="#C2452F" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><text x="118" y="128" class="lab">脚跟贴垫慢慢滑出</text>' });
+    extra: '<path d="M128 108 h16 m-4 -3 l4 3 -4 3" stroke="#2567B5" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><text x="118" y="128" class="lab">脚跟贴垫慢慢滑出</text>' });
 
   add('p5_pelvictilt', { dur:3.2, props: MAT,
     kf: [
       { hip:[78,110], t:-88, sa:100, ea:100, hk:55, ka:125, at:90, hk2:58, ka2:125, at2:90 },
       { hip:[78,108], t:-94, sa:100, ea:100, hk:55, ka:125, at:90, hk2:58, ka2:125, at2:90 },
       { hip:[78,110], t:-88, sa:100, ea:100, hk:55, ka:125, at:90, hk2:58, ka2:125, at2:90 } ],
-    extra: '<text x="20" y="96" class="lab">腰部轻轻压向垫子</text><path d="M54 94 q-6 9 2 13" stroke="#C2452F" fill="none" stroke-width="2"/>' });
+    extra: '<text x="20" y="96" class="lab">腰部轻轻压向垫子</text><path d="M54 94 q-6 9 2 13" stroke="#2567B5" fill="none" stroke-width="2"/>' });
 
   add('s1_sitstand', { dur:3.5, props:'<rect x="62" y="108" width="58" height="4" rx="2" class="prop"/><path d="M66 112 v25 M116 112 v25" class="prop"/>' + G,
     kf: [
@@ -50,7 +50,7 @@
       { hip:[98,106], t:-88, sa:95, ea:100, hk:60, ka:170, at:95, sa2:95, ea2:100, hk2:64, ka2:170, at2:95 },
       { hip:[104,83], t:-135, sa:95, ea:100, hk:113, ka:175, at:95, sa2:95, ea2:100, hk2:113, ka2:175, at2:95 },
       { hip:[98,106], t:-88, sa:95, ea:100, hk:60, ka:170, at:95, sa2:95, ea2:100, hk2:64, ka2:170, at2:95 } ],
-    extra: '<path d="M112 72 v-10 m-3 4 l3 -4 l3 4" stroke="#C2452F" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><text x="120" y="70" class="lab">髋部上顶，肩胛贴垫</text>' });
+    extra: '<path d="M112 72 v-10 m-3 4 l3 -4 l3 4" stroke="#2567B5" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><text x="120" y="70" class="lab">髋部上顶，肩胛贴垫</text>' });
 
   add('s3_bandwalk', { dur:4, front:true, props: G,
     kf: [

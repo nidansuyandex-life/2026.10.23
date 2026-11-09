@@ -15,119 +15,119 @@ window.__WORD_DECKS = [
   },
   {
     "id": "beishigaozhong_7",
-    "name": "BeiShiGaoZhong_7",
+    "name": "北师大高中英语·第7册",
     "icon": "📚",
     "count": 334,
     "file": "data/words/beishigaozhong_7.js"
   },
   {
     "id": "beishigaozhong_2",
-    "name": "BeiShiGaoZhong_2",
+    "name": "北师大高中英语·第2册",
     "icon": "📚",
     "count": 244,
     "file": "data/words/beishigaozhong_2.js"
   },
   {
     "id": "beishigaozhong_3",
-    "name": "BeiShiGaoZhong_3",
+    "name": "北师大高中英语·第3册",
     "icon": "📚",
     "count": 295,
     "file": "data/words/beishigaozhong_3.js"
   },
   {
     "id": "waiyanshechuzhong_2",
-    "name": "WaiYanSheChuZhong_2",
+    "name": "外研社初中英语·第2册",
     "icon": "📚",
     "count": 430,
     "file": "data/words/waiyanshechuzhong_2.js"
   },
   {
     "id": "waiyanshechuzhong_3",
-    "name": "WaiYanSheChuZhong_3",
+    "name": "外研社初中英语·第3册",
     "icon": "📚",
     "count": 317,
     "file": "data/words/waiyanshechuzhong_3.js"
   },
   {
     "id": "waiyanshechuzhong_1",
-    "name": "WaiYanSheChuZhong_1",
+    "name": "外研社初中英语·第1册",
     "icon": "📚",
     "count": 619,
     "file": "data/words/waiyanshechuzhong_1.js"
   },
   {
     "id": "waiyanshechuzhong_4",
-    "name": "WaiYanSheChuZhong_4",
+    "name": "外研社初中英语·第4册",
     "icon": "📚",
     "count": 263,
     "file": "data/words/waiyanshechuzhong_4.js"
   },
   {
     "id": "waiyanshechuzhong_5",
-    "name": "WaiYanSheChuZhong_5",
+    "name": "外研社初中英语·第5册",
     "icon": "📚",
     "count": 378,
     "file": "data/words/waiyanshechuzhong_5.js"
   },
   {
     "id": "waiyanshechuzhong_6",
-    "name": "WaiYanSheChuZhong_6",
+    "name": "外研社初中英语·第6册",
     "icon": "📚",
     "count": 127,
     "file": "data/words/waiyanshechuzhong_6.js"
   },
   {
     "id": "beishigaozhong_1",
-    "name": "BeiShiGaoZhong_1",
+    "name": "北师大高中英语·第1册",
     "icon": "📚",
     "count": 226,
     "file": "data/words/beishigaozhong_1.js"
   },
   {
     "id": "beishigaozhong_4",
-    "name": "BeiShiGaoZhong_4",
+    "name": "北师大高中英语·第4册",
     "icon": "📚",
     "count": 336,
     "file": "data/words/beishigaozhong_4.js"
   },
   {
     "id": "beishigaozhong_5",
-    "name": "BeiShiGaoZhong_5",
+    "name": "北师大高中英语·第5册",
     "icon": "📚",
     "count": 327,
     "file": "data/words/beishigaozhong_5.js"
   },
   {
     "id": "beishigaozhong_6",
-    "name": "BeiShiGaoZhong_6",
+    "name": "北师大高中英语·第6册",
     "icon": "📚",
     "count": 271,
     "file": "data/words/beishigaozhong_6.js"
   },
   {
     "id": "beishigaozhong_8",
-    "name": "BeiShiGaoZhong_8",
+    "name": "北师大高中英语·第8册",
     "icon": "📚",
     "count": 364,
     "file": "data/words/beishigaozhong_8.js"
   },
   {
     "id": "beishigaozhong_9",
-    "name": "BeiShiGaoZhong_9",
+    "name": "北师大高中英语·第9册",
     "icon": "📚",
     "count": 299,
     "file": "data/words/beishigaozhong_9.js"
   },
   {
     "id": "beishigaozhong_10",
-    "name": "BeiShiGaoZhong_10",
+    "name": "北师大高中英语·第10册",
     "icon": "📚",
     "count": 267,
     "file": "data/words/beishigaozhong_10.js"
   },
   {
     "id": "beishigaozhong_11",
-    "name": "BeiShiGaoZhong_11",
+    "name": "北师大高中英语·第11册",
     "icon": "📚",
     "count": 330,
     "file": "data/words/beishigaozhong_11.js"
@@ -176,7 +176,7 @@ window.__WORD_DECKS = [
   },
   {
     "id": "level8_1",
-    "name": "Level8_1",
+    "name": "专八核心词汇·第1册",
     "icon": "📚",
     "count": 684,
     "file": "data/words/level8_1.js"
@@ -204,84 +204,84 @@ window.__WORD_DECKS = [
   },
   {
     "id": "chuzhong_2",
-    "name": "ChuZhong_2",
+    "name": "初中词汇·第2册",
     "icon": "📚",
     "count": 1418,
     "file": "data/words/chuzhong_2.js"
   },
   {
     "id": "level8luan_2",
-    "name": "Level8luan_2",
+    "name": "专八核心词汇·第2册（乱序）",
     "icon": "📚",
     "count": 12197,
     "file": "data/words/level8luan_2.js"
   },
   {
     "id": "chuzhong_3",
-    "name": "ChuZhong_3",
+    "name": "初中词汇·第3册",
     "icon": "📚",
     "count": 1803,
     "file": "data/words/chuzhong_3.js"
   },
   {
     "id": "kaoyan_2",
-    "name": "KaoYan_2",
+    "name": "考研词汇·第2册",
     "icon": "📚",
     "count": 4533,
     "file": "data/words/kaoyan_2.js"
   },
   {
     "id": "kaoyan_3",
-    "name": "KaoYan_3",
+    "name": "考研词汇·第3册",
     "icon": "📚",
     "count": 3728,
     "file": "data/words/kaoyan_3.js"
   },
   {
     "id": "kaoyanluan_1",
-    "name": "KaoYanluan_1",
+    "name": "考研词汇·第1册（乱序）",
     "icon": "📚",
     "count": 1340,
     "file": "data/words/kaoyanluan_1.js"
   },
   {
     "id": "level8_2",
-    "name": "Level8_2",
+    "name": "专八核心词汇·第2册",
     "icon": "📚",
     "count": 12197,
     "file": "data/words/level8_2.js"
   },
   {
     "id": "chuzhongluan_2",
-    "name": "ChuZhongluan_2",
+    "name": "初中词汇·第2册（乱序）",
     "icon": "📚",
     "count": 1418,
     "file": "data/words/chuzhongluan_2.js"
   },
   {
     "id": "kaoyan_1",
-    "name": "KaoYan_1",
+    "name": "考研词汇·第1册",
     "icon": "📚",
     "count": 1340,
     "file": "data/words/kaoyan_1.js"
   },
   {
     "id": "gaozhongluan_2",
-    "name": "GaoZhongluan_2",
+    "name": "高中词汇·第2册（乱序）",
     "icon": "📚",
     "count": 3665,
     "file": "data/words/gaozhongluan_2.js"
   },
   {
     "id": "gaozhong_2",
-    "name": "GaoZhong_2",
+    "name": "高中词汇·第2册",
     "icon": "📚",
     "count": 3665,
     "file": "data/words/gaozhong_2.js"
   },
   {
     "id": "gaozhong_3",
-    "name": "GaoZhong_3",
+    "name": "高中词汇·第3册",
     "icon": "📚",
     "count": 2340,
     "file": "data/words/gaozhong_3.js"
