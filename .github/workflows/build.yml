@@ -23,14 +23,21 @@ jobs:
       run: |
         yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-    - name: Generate Gradle wrapper (if missing)
+    # 仓库已提交标准 Gradle Wrapper（固定 Gradle 8.5），正常情况下这一步什么都不做。
+    # 仅在 wrapper 文件缺失时兜底生成；必须带 --no-validate-url：
+    # runner 预装的 Gradle 9.x 在 wrapper 任务里会对 distributionUrl 发 HEAD 校验，
+    # 在 CI 网络下常误报 "Test of distribution url ... failed"。
+    - name: Generate Gradle wrapper (fallback)
       run: |
-        if [ ! -f ./gradlew ]; then
-          gradle wrapper --gradle-version 8.5
+        if [ ! -f ./gradlew ] || [ ! -f ./gradle/wrapper/gradle-wrapper.jar ]; then
+          gradle :wrapper --gradle-version 8.5 --distribution-type bin --no-validate-url
         fi
 
     - name: Grant execute permission
       run: chmod +x ./gradlew
+
+    - name: Gradle version
+      run: ./gradlew --version
 
     - name: Build Debug APK
       run: ./gradlew assembleDebug --stacktrace
