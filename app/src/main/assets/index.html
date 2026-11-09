@@ -73,7 +73,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans 
 .card{background:#fff;border-radius:var(--r-lg);padding:16px;margin-bottom:12px;border:1px solid var(--line);box-shadow:var(--shadow-card);}
 .card.done{background:#E9F4FF;border-style:dashed;opacity:.72;}
 /* 深色数据卡（词库/知识/测试等头部） */
-.hero-card{background:linear-gradient(135deg,#2F7BC8,#5A9AE0);color:#fff;border:1px solid rgba(255,255,255,.08);}
+.hero-card{background:linear-gradient(135deg,var(--pri-deep),var(--pri2));color:#fff;border:1px solid rgba(255,255,255,.08);}
 .hero-card .btn{background:#fff;color:#121C2A;}
 /* --- 页面标题 --- */
 .hero{padding:4px 4px 14px;}
@@ -106,7 +106,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans 
 .subtabs{position:sticky;top:0;z-index:8;display:flex;gap:8px;margin:0 -16px 14px;padding:10px 16px 12px;background:rgba(245,246,250,.93);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);overflow-x:auto;flex-wrap:nowrap;box-shadow:0 1px 0 var(--line);}
 .subtabs::-webkit-scrollbar{display:none;}
 .subtab{border:0;background:#fff;padding:9px 16px;border-radius:99px;font-size:15px;font-weight:600;color:var(--ink2);cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:inherit;transition:background .15s,color .15s;box-shadow:0 1px 3px rgba(25,27,34,.06);}
-.subtab.on{background:var(--pri);color:#fff;font-weight:700;box-shadow:0 8px 18px -8px rgba(52,133,214,.55);}
+.subtabs .subtab[data-tone]{background:var(--tab-soft);color:#121C2A;border:1px solid transparent;}
+.subtabs .subtab[data-tone]::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--tab-c);margin-right:6px;vertical-align:1px;}
+.subtabs .subtab.on{background:var(--tab-c,var(--pri));color:#fff;font-weight:700;box-shadow:0 8px 18px -8px var(--tab-c,var(--pri));text-shadow:0 1px 2px rgba(16,45,80,.35);}
+.subtabs .subtab.on::before{background:#fff;}
 /* --- 二级分段：下划线 --- */
 .subtabs-secondary{position:sticky;top:var(--sec-top,0px);z-index:7;display:flex;gap:16px;margin:0 -16px 12px;padding:7px 20px 0;border-bottom:1px solid var(--line);background:#F6FAFF;border-radius:0;border-top:none;border-left:none;border-right:none;overflow-x:auto;}
 .subtabs-secondary::-webkit-scrollbar{display:none;}
@@ -274,7 +277,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans 
 .cal-grid div.holiday .holiday-name{font-size:8px;line-height:1;margin-top:1px;font-weight:500;color:var(--ink);}
 .cal-grid div.today.holiday .holiday-name{color:#fff;}
 /* --- 记账 --- */
-.balance{background:linear-gradient(135deg,#2F7BC8,#5A9AE0);color:#fff;border-radius:var(--r-lg);padding:20px;margin-bottom:12px;}
+.balance{background:linear-gradient(135deg,var(--pri-deep),var(--pri2));color:#fff;border-radius:var(--r-lg);padding:20px;margin-bottom:12px;}
 .balance .lab{font-size:12px;opacity:.6;letter-spacing:1px;}
 .balance .big{font-size:30px;font-weight:800;margin-top:8px;letter-spacing:-.5px;}
 .balance .foot{display:flex;gap:26px;margin-top:16px;font-size:12.5px;opacity:.9;}
@@ -486,7 +489,7 @@ select,input[type=text],input[type=password]{width:100%;border:1.5px solid var(-
 .top-btn:active{transform:scale(.93);}
 
 /* 今日复习卡 */
-.rv-card{background:linear-gradient(135deg,#2F7BC8,#5A9AE0);color:#fff;border-radius:20px;padding:17px 18px;margin-bottom:14px;box-shadow:0 14px 30px -18px rgba(52,133,214,.7);}
+.rv-card{background:linear-gradient(135deg,var(--pri-deep),var(--pri2));color:#fff;border-radius:20px;padding:17px 18px;margin-bottom:14px;box-shadow:0 14px 30px -18px rgba(52,133,214,.7);}
 .rv-card.empty{background:#fff;color:#121C2A;border:1px solid var(--line);box-shadow:0 2px 8px rgba(25,27,34,.04);}
 .rv-top{display:flex;justify-content:space-between;align-items:flex-start;}
 .rv-k{font-size:12px;letter-spacing:1.2px;font-weight:700;opacity:.82;}
@@ -568,7 +571,7 @@ select,input[type=text],input[type=password]{width:100%;border:1.5px solid var(-
 .offline-tag{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:#203146;background:#FFF2DE;padding:2px 7px;border-radius:6px;}
 
 /* --- 养成：重新养一遍自己 --- */
-.grow-hero{background:linear-gradient(135deg,#2F7BC8,#5A9AE0);border-radius:20px;padding:18px 16px 16px;color:#fff;position:relative;overflow:hidden;}
+.grow-hero{background:linear-gradient(135deg,var(--pri-deep),var(--pri2));border-radius:20px;padding:18px 16px 16px;color:#fff;position:relative;overflow:hidden;}
 .grow-hero .glow{position:absolute;right:-30px;top:-30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.12);}
 .grow-top{display:flex;gap:14px;align-items:center;position:relative;}
 .grow-ava{width:96px;height:96px;flex-shrink:0;background:rgba(255,255,255,.16);border-radius:24px;display:flex;align-items:center;justify-content:center;}
@@ -629,7 +632,7 @@ select,input[type=text],input[type=password]{width:100%;border:1.5px solid var(-
 .grow-room svg{width:148%;max-width:none;height:auto;display:block;}
 .grow-room-foot{padding:10px 16px 14px;}
 .grow-prog2{height:8px;background:#EDF1F7;border-radius:99px;overflow:hidden;}
-.grow-prog2 > div{height:100%;background:linear-gradient(90deg,#3485D6,#3485D6);border-radius:99px;transition:width .4s;}
+.grow-prog2 > div{height:100%;background:linear-gradient(90deg,var(--pri),var(--pri));border-radius:99px;transition:width .4s;}
 .grow-tipbar{display:flex;gap:8px;align-items:flex-start;background:#E9F4FF;border:1px solid var(--line);border-radius:14px;padding:11px 13px;font-size:12.5px;color:var(--ink2);line-height:1.65;margin-top:12px;}
 .grow-shop-sec{font-size:12px;font-weight:750;color:var(--sub);letter-spacing:.4px;margin:16px 2px 8px;}
 .grow-shop-sec:first-of-type{margin-top:6px;}
@@ -637,7 +640,7 @@ select,input[type=text],input[type=password]{width:100%;border:1.5px solid var(-
 .grow-feedbar .btn-primary{flex:1;}
 .grow-today{font-size:12px;font-weight:700;color:#203146;background:#E3F8F1;border-radius:99px;padding:7px 12px;white-space:nowrap;}
 .ex-anim-wrap{margin:2px 0 4px;}
-.ex-anim{width:100%;height:auto;display:block;border-radius:12px;background:linear-gradient(180deg,#E9F4FF,#E9F4FF);border:1px solid #E9F4FF;}
+.ex-anim{width:100%;height:auto;display:block;border-radius:12px;background:linear-gradient(180deg,var(--pri-soft),var(--pri-soft));border:1px solid #E9F4FF;}
 .ex-anim line{fill:none;}
 .ex-anim .sk-n{stroke:#3485D6;}
 .ex-anim .sk-f{stroke:#6FB0EC;}
@@ -1724,6 +1727,70 @@ const state = {
   mimiSub: 'profile', medSearch: ''
 };
 const view = document.getElementById('view'); const tabbar = document.getElementById('tabbar'); const sheet = document.getElementById('sheet'); const fab = document.getElementById('fab');
+/* ===== P47：一个子菜单一个颜色 =====
+   只给主色 10 个色相，p2 / deep / soft 由同一色相自动生成，保证每页只有一种颜色、
+   明度统一，不会回到 P38 之前那种多彩拼盘。:root 保持晴空蓝作为默认与回归基准。*/
+function toneShades(hex){
+  const n = parseInt(String(hex).slice(1), 16);
+  let r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, l = (mx + mn) / 2;
+  let h = 0, sat = 0;
+  if (d){
+    sat = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+    if (mx === r) h = ((g - b) / d + (g < b ? 6 : 0));
+    else if (mx === g) h = ((b - r) / d + 2);
+    else h = ((r - g) / d + 4);
+    h /= 6;
+  }
+  const css = (ss, ll) => 'hsl(' + Math.round(h * 360) + ',' + Math.round(ss * 100) + '%,' + Math.round(ll * 100) + '%)';
+  return { p:hex, p2:css(Math.min(1, sat), Math.min(0.78, l + 0.13)),
+           d:css(Math.min(1, sat * 1.02), Math.max(0.24, l - 0.11)),
+           s:css(Math.min(0.75, sat * 0.72), 0.955) };
+}
+const SUB_THEME_BASE = {
+  blue:'#3485D6', teal:'#17A8B8', orange:'#E2853A', purple:'#8268D6', pink:'#DC6A9E',
+  coral:'#DE6B6B', indigo:'#4F72DA', cyan:'#1E9FCB', green:'#45B87A', amber:'#D6A032'
+};
+const SUB_THEME_COLORS = {};
+Object.keys(SUB_THEME_BASE).forEach(k => { SUB_THEME_COLORS[k] = toneShades(SUB_THEME_BASE[k]); });
+const SUB_THEME_MAP = {
+  home:'blue', tools:'teal', me:'purple', grow:'green',
+  'life:calendar':'blue', 'life:money':'teal', 'life:sport':'orange',
+  'life:closet':'purple', 'life:care':'pink', 'life:period':'coral',
+  'study:today':'blue', 'study:english':'indigo', 'study:valve':'cyan',
+  'study:cognition':'purple', 'study:test':'amber'
+};
+function currentSubThemeKey(){
+  const t = state.tab || 'home';
+  const subVar = { life:'lifeSub', study:'studySub', tools:'toolsSub' }[t];
+  let sub = subVar ? (state[subVar] || '') : '';
+  if (t === 'study' && typeof COGNITION_SUBS !== 'undefined' && COGNITION_SUBS.indexOf(sub) >= 0) sub = 'cognition';
+  return SUB_THEME_MAP[t + ':' + sub] || SUB_THEME_MAP[t] || 'blue';
+}
+function applySubTheme(){
+  const key = currentSubThemeKey();
+  const c = SUB_THEME_COLORS[key] || SUB_THEME_COLORS.blue;
+  const vars = {
+    '--pri':c.p, '--pri2':c.p2, '--pri-deep':c.d, '--pri-soft':c.s,
+    '--brand':c.p, '--brand2':c.p2,
+    '--accent':c.p, '--accent2':c.p2, '--accent-soft':c.s,
+    '--hot':c.p, '--hot2':c.p2, '--hot-soft':c.s,
+    '--purple':c.p, '--purple2':c.p2, '--purple-soft':c.s,
+    '--blue':c.p, '--blue2':c.p2, '--blue-soft':c.s,
+    '--pink':c.p, '--pink2':c.p2, '--pink-soft':c.s
+  };
+  const el = document.querySelector('.phone') || document.body;
+  Object.keys(vars).forEach(k => el.style.setProperty(k, vars[k]));
+  el.setAttribute('data-sub-theme', key);
+  return key;
+}
+function subToneStyle(tone){
+  const c = SUB_THEME_COLORS[tone] || SUB_THEME_COLORS.blue;
+  return ' data-tone="' + tone + '" style="--tab-c:' + c.p + ';--tab-soft:' + c.s + '"';
+}
+window.applySubTheme = applySubTheme;
+window.currentSubThemeKey = currentSubThemeKey;
+
 
 function updateTopbar(){
   const el = document.getElementById('todayLabel'); if (el) el.innerHTML = '';
@@ -1828,7 +1895,7 @@ async function studyView(){
   const inCognition = COGNITION_SUBS.includes(sub);
   if (inCognition) state.cognitionSub = sub;   /* 下次点「认知」回到上次的二级页 */
   /* 一级用生活页同款胶囊 .subtabs，二级用生活页同款吸顶下划线 .subtabs-secondary */
-  const subs = [{ id:'today', label:'今日' },{ id:'english', label:'英语' },{ id:'valve', label:'专业' },{ id:'cognition', label:'认知' },{ id:'test', label:'测试' }];
+  const subs = [{ id:'today', label:'今日', tone:'blue' },{ id:'english', label:'英语', tone:'indigo' },{ id:'valve', label:'专业', tone:'cyan' },{ id:'cognition', label:'认知', tone:'purple' },{ id:'test', label:'测试', tone:'amber' }];
   let content = '';
   try {
     if (sub === 'today') content = todaySection();
@@ -1845,7 +1912,7 @@ async function studyView(){
     else if (sub === 'alltest') content = testBackBar('总测') + allTestSection();
     else if (sub === 'test') content = testHub();
   } catch(e){ content = `<div class="tip-card">加载失败：${esc(e.message)}</div>`; }
-  const mainBar = `<div class="subtabs">${subs.map(x => `<button class="subtab ${((inTest && x.id === 'test') || (inCognition && x.id === 'cognition') || x.id === sub) ? 'on' : ''}" data-act="studySub" data-sub="${x.id}">${x.label}</button>`).join('')}</div>`;
+  const mainBar = `<div class="subtabs">${subs.map(x => `<button class="subtab ${((inTest && x.id === 'test') || (inCognition && x.id === 'cognition') || x.id === sub) ? 'on' : ''}"${subToneStyle(x.tone)} data-act="studySub" data-sub="${x.id}">${x.label}</button>`).join('')}</div>`;
   const secBar = inCognition ? `<div class="subtabs-secondary">${COGNITION_SUBS.map(id => `<button class="subtab ${sub===id?'on':''}" data-act="cognitionSub" data-sub="${id}">${COGNITION_LABELS[id]}</button>`).join('')}</div>` : '';
   return `<div class="hero-sm"><h1>世界</h1></div>${mainBar}${secBar}<div>${content}</div>`;
 }
@@ -2176,7 +2243,7 @@ function logicSection(){
   const totalLearned = all.filter(m => LearnStore.getThinkDoneDays(m.name).length > 0).length;
   const todayDone = today && LearnStore.getThinkDoneDays(today.name).includes(todayStr());
   if (state.openThink === undefined && today) state.openThink = today.name;
-  return `<div class="card" style="padding:14px 15px;background:linear-gradient(135deg,#E9F4FF,#E9F4FF);border:1px solid #6FB0EC;">
+  return `<div class="card" style="padding:14px 15px;background:linear-gradient(135deg,var(--pri-soft),var(--pri-soft));border:1px solid var(--pri2);">
       <div style="font-size:12px;letter-spacing:1px;font-weight:800;color:#121C2A;margin-bottom:6px;">每天一个思维模型 · 共 ${all.length} 个 / 已练 ${totalLearned} 个</div>
       <div style="font-size:12.5px;line-height:1.75;color:#121C2A;">不用背概念：先看下面的「人话解释」，再照着三步套到<b>今天真实发生的一件小事</b>上。写不出来就点「帮我起个头」，模板已经填好，改几个字就能交，不用写长。</div>
     </div>
@@ -2305,7 +2372,7 @@ function periodSection(){
   const cycleVal = draft.cycle ? draft.cycle : cyc.cycle;
   const pdVal = draft.period ? draft.period : cyc.period;
   const html = [];
-  html.push('<div class="card hero-card" style="background:linear-gradient(135deg,#3485D6,#3485D6);color:#fff;">');
+  html.push('<div class="card hero-card" style="background:linear-gradient(135deg,var(--pri),var(--pri));color:#fff;">');
   html.push('<div style="font-size:12px;letter-spacing:1.5px;font-weight:750;opacity:.85;margin-bottom:6px;">经期日历 · 预测</div>');
   html.push('<div style="font-size:23px;font-weight:850;margin-bottom:4px;">' + esc(f.status) + '</div>');
   html.push('<div style="font-size:13px;line-height:1.75;opacity:.96;">周期长度 <b>' + f.cycleLen + '</b> 天 · 经期约 <b>' + f.periodLen + '</b> 天<br>');
@@ -2334,7 +2401,7 @@ function periodSection(){
   return html.join('');
 }
 
-async function lifeView(){ const sub = state.lifeSub || 'calendar'; const mainTabs = [{ id:'calendar', label:'日历' },{ id:'money', label:'记账' },{ id:'sport', label:'运动' },{ id:'closet', label:'衣橱' },{ id:'care', label:'护肤' },{ id:'period', label:'经期' }]; const titles = { calendar:'日历行程', money:'AI 语音记账', sport:'运动打卡', closet:'私人衣橱', care:'美丽修行', period:'经期记录' }; let content = ''; try { if (sub === 'calendar') content = calendarSection(); else if (sub === 'money') content = moneySection(); else if (sub === 'sport') content = sportSection(); else if (sub === 'closet') content = closetSection(); else if (sub === 'care') content = careSection(); else if (sub === 'period') content = periodSection(); } catch(e){ console.error(e); content = `<div class="tip-card">加载失败：${esc(e.message)}</div>`; } return `<div class="hero-sm"><h1>${titles[sub]}</h1></div><div class="subtabs">${mainTabs.map(t => `<button class="subtab ${t.id===sub?'on':''}" data-act="lifeSub" data-sub="${t.id}">${t.label}</button>`).join('')}</div><div>${content}</div>`; }
+async function lifeView(){ const sub = state.lifeSub || 'calendar'; const mainTabs = [{ id:'calendar', label:'日历', tone:'blue' },{ id:'money', label:'记账', tone:'teal' },{ id:'sport', label:'运动', tone:'orange' },{ id:'closet', label:'衣橱', tone:'purple' },{ id:'care', label:'护肤', tone:'pink' },{ id:'period', label:'经期', tone:'coral' }]; const titles = { calendar:'日历行程', money:'AI 语音记账', sport:'运动打卡', closet:'私人衣橱', care:'美丽修行', period:'经期记录' }; let content = ''; try { if (sub === 'calendar') content = calendarSection(); else if (sub === 'money') content = moneySection(); else if (sub === 'sport') content = sportSection(); else if (sub === 'closet') content = closetSection(); else if (sub === 'care') content = careSection(); else if (sub === 'period') content = periodSection(); } catch(e){ console.error(e); content = `<div class="tip-card">加载失败：${esc(e.message)}</div>`; } return `<div class="hero-sm"><h1>${titles[sub]}</h1></div><div class="subtabs">${mainTabs.map(t => `<button class="subtab ${t.id===sub?'on':''}"${subToneStyle(t.tone)} data-act="lifeSub" data-sub="${t.id}">${t.label}</button>`).join('')}</div><div>${content}</div>`; }
 function getAllTodoItems(){ const items = []; Object.entries(state.calendarData || {}).forEach(([date, list]) => { (list || []).forEach(it => items.push({ date, time: it.time || '', title: it.title || '', desc: it.desc || '', done: !!it.done, manual: !!it.manual })); }); return items; }
 function todoRowHTML(it, today){ const payload = encodeURIComponent(JSON.stringify({ date: it.date, time: it.time, title: it.title })); const showDate = it.date === today ? '今天' : it.date; return `<div class="h-task" data-toggle-todo="${payload}"><span class="check ${it.done ? 'done' : ''}" data-toggle-todo="${payload}"></span><div class="body" data-toggle-todo="${payload}"><div class="h-t-name" style="${it.done ? 'text-decoration:line-through;color:var(--sub)' : ''}">${esc(it.title)}</div><div class="muted" style="font-size:12.5px;color:var(--sub)">${showDate} ${it.time} · ${esc(it.desc || '')}</div></div>${it.manual ? `<button class="del-tx" data-del-todo="${payload}">✕</button>` : ''}</div>`; }
 function calendarSection(){ const sub = state.calendarSub || 'month'; const subs = [{ id:'month', label:'月历' },{ id:'undone', label:'未完成' },{ id:'all', label:'总代办' }]; let content = ''; if (sub === 'month') content = calMonthPane(); else if (sub === 'undone') content = calUndonePane(); else content = calAllPane(); return `<div class="subtabs-secondary">${subs.map(s => `<button class="subtab ${s.id===sub?'on':''}" data-act="calendarSub" data-sub="${s.id}">${s.label}</button>`).join('')}</div>${content}`; }
@@ -3882,7 +3949,7 @@ async function recommendSection(){
   const todayCat = catList.includes(state.recommendCat) ? state.recommendCat : weekCat;
   const offset = state.recOffset || 0;
   const showAll = !!state.recShowAll;
-  const chips = `<div class="card" style="margin-bottom:10px;background:linear-gradient(135deg,#E9F4FF,#E9F4FF);border:1px solid #6FB0EC;">
+  const chips = `<div class="card" style="margin-bottom:10px;background:linear-gradient(135deg,var(--pri-soft),var(--pri-soft));border:1px solid var(--pri2);">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
         <div><div style="font-size:11px;letter-spacing:1px;font-weight:750;color:#121C2A;">本周推荐 · 每周换一个</div>
         <div style="font-size:19px;font-weight:850;color:#121C2A;margin-top:3px;">${catEmoji[todayCat]||'📌'} ${esc(todayCat)}</div>
@@ -4163,7 +4230,7 @@ function mimiHistoryCard(d){
   return `<div class="card"><div style="font-size:13px;font-weight:800;margin-bottom:7px;">🧾 最近完成</div>${h.map(x=>`<div style="font-size:12px;color:var(--sub);line-height:1.9;">${esc(x.date||'')} · ${esc(x.text||'')}</div>`).join('')}</div>`;
 }
 function mimiProfilePane(d, due){
-  return mimiCatBar(d) + `<div class="card" style="background:linear-gradient(135deg,#3485D6,#6FB0EC);color:#fff;border:0;">
+  return mimiCatBar(d) + `<div class="card" style="background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;border:0;">
       <div style="font-size:12px;letter-spacing:1.5px;font-weight:750;opacity:.75;margin-bottom:8px;">🐱 咪咪档案</div>
       <div style="font-size:20px;font-weight:800;margin-bottom:6px;">${esc(d.name)}</div>
       <div style="font-size:12.5px;opacity:.94;line-height:1.7;">驱虫/疫苗 ${d.care.length} 项 · 化毛 ${d.hairball.length} 项 · 药箱 ${d.meds.length} 种 · 提醒 ${d.reminders.length} 条</div>
@@ -5801,7 +5868,7 @@ async function render(options){
   options = options || {}; 
   try { saveNavState(); } catch(e){}
   const token = ++renderToken; const tab = state.tab; const keepScroll = options.keepScroll; const prevScroll = keepScroll ? view.scrollTop : 0; 
-  renderTabs(); updateTopbar(); 
+  renderTabs(); updateTopbar(); try { applySubTheme(); } catch(e){} 
   if (!keepScroll){ view.scrollTop = 0; view.innerHTML = SKELETON[tab] || '<div class="sk" style="height:200px"></div>'; } 
   let html; 
   try { html = await VIEWS[tab](); } catch(e){ console.error(e); html = `<div class="tip-card" style="color:#121C2A;">加载失败：${esc(e.message)}</div>`; } 
