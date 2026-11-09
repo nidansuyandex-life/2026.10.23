@@ -191,9 +191,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans 
 .task-label.on{color:#2F4359;text-decoration:line-through;}
 .task-count{font-size:12.5px;color:var(--sub);font-weight:650;}
 /* --- 复习入口 --- */
-.review-entry{background:#FFF2DE;border:1px solid #FFF2DE;border-radius:var(--r-lg);padding:16px;margin-bottom:14px;}
-.review-entry .r-title{font-size:13.5px;font-weight:750;color:#203146;margin-bottom:6px;display:flex;justify-content:space-between;align-items:baseline;}
-.review-entry .r-meta{font-size:12px;color:#203146;line-height:1.7;margin-bottom:10px;}
 .streak-badge{display:inline-flex;align-items:center;gap:3px;background:#FFF2DE;color:#203146;font-size:11.5px;font-weight:750;padding:3px 9px;border-radius:99px;}
 /* --- 知识卡 --- */
 .know-q{font-size:15.5px;font-weight:750;line-height:1.5;}
@@ -488,7 +485,7 @@ select,input[type=text],input[type=password]{width:100%;border:1.5px solid var(-
 .top-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;color:#121C2A;cursor:pointer;flex-shrink:0;padding:0;box-shadow:0 1px 3px rgba(25,27,34,.05);}
 .top-btn:active{transform:scale(.93);}
 
-/* 今日复习卡 */
+/* 复习卡样式（P48 起世界·今日不再使用） */
 .rv-card{background:linear-gradient(135deg,var(--pri-deep),var(--pri2));color:#fff;border-radius:20px;padding:17px 18px;margin-bottom:14px;box-shadow:0 14px 30px -18px rgba(52,133,214,.7);}
 .rv-card.empty{background:#fff;color:#121C2A;border:1px solid var(--line);box-shadow:0 2px 8px rgba(25,27,34,.04);}
 .rv-top{display:flex;justify-content:space-between;align-items:flex-start;}
@@ -1841,8 +1838,9 @@ function homeView(){
   
    const allItems = [...fixedItems, ...todoItems];
 
-  // 只按时间排，完成的不移动位置
-  allItems.sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+  // P48：未完成上移、已完成下移；同组内仍按时间先后排
+  const itemDone = (it) => it.manualPayload ? !!it.done : !!(it.checkKey && checks[it.checkKey]);
+  allItems.sort((a, b) => (itemDone(a) === itemDone(b)) ? (a.time || '99:99').localeCompare(b.time || '99:99') : (itemDone(a) ? 1 : -1));
 
   const renderItem = (it) => {
     const done = it.manualPayload ? !!it.done : !!(it.checkKey && checks[it.checkKey]); const cls = ['home-tl-item']; if (done) cls.push('is-done');
@@ -1917,7 +1915,7 @@ async function studyView(){
   return `<div class="hero-sm"><h1>世界</h1></div>${mainBar}${secBar}<div>${content}</div>`;
 }
 
-function todaySection(){ const tasks = LearnStore.getTodayTasks(); const done = tasks.filter(t => t.done).length; const streak = LearnStore.getStreak(); const schedEn = LearnStore.getAllScheduledKeys('english').length; const schedWk = LearnStore.getAllScheduledKeys('work').length; return reviewCardHTML() + `<div class="task-card"><div class="task-head"><div class="task-title">☀️ 今日待办</div><div class="task-progress">${done}/${tasks.length}${streak.count>0?' · 🔥'+streak.count+'天':''}</div></div>${tasks.map(t => `<div class="task-row" data-act="taskJump" data-key="${t.key}"><div class="task-check ${t.done?'on':''}">${t.done?'✓':''}</div><div class="task-label ${t.done?'on':''}">${t.label}</div><div class="task-count">${t.current}/${t.total} →</div></div>`).join('')}</div>${(schedEn+schedWk>0)?`<div class="review-entry"><div class="r-title"><span>🔁 开始复习</span><span>共 ${schedEn+schedWk} 条</span></div><div style="display:flex;gap:8px;">${schedEn?`<button class="btn" style="flex:1;background:#E9A03C;color:#fff;" data-act="startReview" data-type="english">英语复习</button>`:''}${schedWk?`<button class="btn" style="flex:1;background:#E9A03C;color:#fff;" data-act="startReview" data-type="work">专业复习</button>`:''}</div></div>`:''}`; }
+function todaySection(){ const tasks = LearnStore.getTodayTasks(); const done = tasks.filter(t => t.done).length; const streak = LearnStore.getStreak(); return `<div class="task-card"><div class="task-head"><div class="task-title">☀️ 今日待办</div><div class="task-progress">${done}/${tasks.length}${streak.count>0?' · 🔥'+streak.count+'天':''}</div></div>${tasks.map(t => `<div class="task-row" data-act="taskJump" data-key="${t.key}"><div class="task-check ${t.done?'on':''}">${t.done?'✓':''}</div><div class="task-label ${t.done?'on':''}">${t.label}</div><div class="task-count">${t.current}/${t.total} →</div></div>`).join('')}</div>`; }
 /* ---------- 英语学习 · 单词/跟读/名言/短文/语法 ---------- */
 function englishFollowInner(){
   const off = state.followOffset || 0;
@@ -3984,7 +3982,7 @@ async function recommendSection(){
   }
   return chips + `<div id="recBody">${recSkeleton()}</div>`;
 }
-// ============ 工具 Tab：随手记 / 影视书剧 / 心愿单 / 物品资产 / 足迹 / AI ============
+// ============ 工具 Tab：随手记 / 影视书剧 / 购物清单 / 物品资产 / 足迹 / AI ============
 function getNotes(){ try { return LS.get('app_notes', []); } catch(e){ return []; } }
 function setNotes(a){ LS.set('app_notes', a); }
 function noteTime(ts){ const d = new Date(ts); const p = n => String(n).padStart(2,'0'); return p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }
@@ -3996,8 +3994,8 @@ function toolsView(){
     { id:'notes', icon:'📝', color:'#3485D6', bg:'#E9F4FF', label:'随手记', desc:'心情 · 灵感 · 照片', count:(getNotes()||[]).length },
     { id:'eat', icon:'🍜', color:'#3485D6', bg:'#E9F4FF', label:'探店打卡', desc:'餐厅 · 评分 · 推荐菜', count:(getEats()||[]).length },
     { id:'film', icon:'🎬', color:'#3485D6', bg:'#E9F4FF', label:'影视·书·剧', desc:'想看 / 已看评分', count:(getMedia()||[]).length },
-    { id:'bucket', icon:'🎯', color:'#3485D6', bg:'#E9F4FF', label:'人生体验', desc:'想做的事 · 清单', count:(getBucket()||[]).filter(function(b){ return !b.done; }).length },
-    { id:'wish', icon:'🎁', color:'#3485D6', bg:'#E9F4FF', label:'心愿单', desc:'想要的 / 要送的', count:(getWishes()||[]).length },
+    { id:'bucket', icon:'🎯', color:'#3485D6', bg:'#E9F4FF', label:'人生体验', desc:'想做的事 · 清单', count:(getBucket()||[]).filter(function(b){ return !isBucketDone(b); }).length },
+    { id:'wish', icon:'🎁', color:'#3485D6', bg:'#E9F4FF', label:'购物清单', desc:'想买的 / 待入手', count:(getWishes()||[]).filter(function(w){ return !isWishBought(w); }).length },
     { id:'asset', icon:'📦', color:'#3485D6', bg:'#E9F4FF', label:'物品资产', desc:'家电 · 数码 · 花费', count:(getAssets()||[]).length },
     { id:'footprint', icon:'📍', color:'#3485D6', bg:'#E9F4FF', label:'足迹', desc:'去过的城市', count:(getFootprints()||[]).length },
     { id:'grow', icon:'🌱', color:'#3485D6', bg:'#E9F4FF', label:'养成', desc:'重新养一遍自己', count:null },
@@ -4412,7 +4410,7 @@ async function handleToolsAction(act, t, e){
   return false;
 }
 
-// ============ 工具子模块：物品资产 / 影视书剧 / 心愿单 / 足迹 / AI 助手 ============
+// ============ 工具子模块：物品资产 / 影视书剧 / 购物清单 / 足迹 / AI 助手 ============
 function getAssets(){ try { return LS.get('app_assets', []); } catch(e){ return []; } }
 function setAssets(a){ LS.set('app_assets', a); }
 function getMedia(){ try { return LS.get('app_media', []); } catch(e){ return []; } }
@@ -4427,6 +4425,9 @@ function getEats(){ try { return LS.get('app_eats', []); } catch(e){ return []; 
 function setEats(a){ LS.set('app_eats', a); }
 function getBucket(){ try { return LS.get('app_bucket', []); } catch(e){ return []; } }
 function setBucket(a){ LS.set('app_bucket', a); }
+/* P48：统一「已完成 / 已购买」判定，兼容历史数据里的多种字段 */
+function isWishBought(w){ return !!(w && (w.bought || w.boughtDate || w.done || w.status === 'bought' || w.status === 'done')); }
+function isBucketDone(b){ return !!(b && (b.done || b.doneDate || b.completed || b.status === 'done')); }
 function daysBetween(d1, d2){ const a = Date.parse((d1||todayStr())+'T00:00:00'); const b = Date.parse((d2||todayStr())+'T00:00:00'); return Math.max(1, Math.round(Math.abs(a - b)/86400000)); }
 
 function assetSection(){
@@ -4475,18 +4476,18 @@ function filmSection(){
 
 function wishSection(){
   const list = (getWishes()||[]).slice().sort(function(a,b){ return b.ts - a.ts; });
-  const unbought = list.filter(function(w){ return !w.bought; });
+  const unbought = list.filter(function(w){ return !isWishBought(w); });
   const sum = unbought.reduce(function(s,w){ return s + (parseFloat(w.price)||0); }, 0);
-  const form = `<div class="card"><div style="font-size:13px;font-weight:800;margin-bottom:8px;">➕ 添加一个心愿</div>
+  const form = `<div class="card"><div style="font-size:13px;font-weight:800;margin-bottom:8px;">➕ 添加一件想买的</div>
     <input id="wTitle" placeholder="想要什么，如 降噪耳机" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font:inherit;box-sizing:border-box;margin-bottom:7px;">
     <div style="display:flex;gap:7px;margin-bottom:7px;"><input id="wPrice" type="number" inputmode="decimal" placeholder="预估 ¥(选填)" style="flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font:inherit;box-sizing:border-box;"><select id="wPri" style="flex:1;padding:8px;border:1px solid var(--line);border-radius:10px;font:inherit;"><option value="中">优先级 中</option><option value="高">优先级 高</option><option value="低">优先级 低</option></select></div>
     <input id="wFor" placeholder="送给谁/场合（选填），如 妈妈生日" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font:inherit;box-sizing:border-box;margin-bottom:8px;">
     <button class="btn primary" style="width:100%;" data-act="saveWish">保存</button></div>`;
-  const stat = `<div style="background:#FFECEC;border:1px solid #FFF2DE;border-radius:14px;padding:12px;margin:12px 0;"><div style="font-size:22px;font-weight:850;color:#203146;">¥${sum.toFixed(0)}</div><div style="font-size:12px;color:#203146;">未买心愿合计（${unbought.length} 件）</div></div>`;
+  const stat = `<div style="background:#FFECEC;border:1px solid #FFF2DE;border-radius:14px;padding:12px;margin:12px 0;"><div style="font-size:22px;font-weight:850;color:#203146;">¥${sum.toFixed(0)}</div><div style="font-size:12px;color:#203146;">待买合计（${unbought.length} 件）</div></div>`;
   const items = list.length ? list.map(function(w){
     const priTag = { 高:'🔴 高', 中:'🟡 中', 低:'🟢 低' }[w.pri||'中'];
-    return `<div style="background:#fff;border:1px solid #eee;border-radius:14px;padding:12px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);${w.bought?'opacity:.55;':''}"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;"><div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:750;color:#121C2A;${w.bought?'text-decoration:line-through;':''}">${esc(w.title)}</div><div style="font-size:12px;color:var(--sub);margin-top:2px;">${w.price?('¥'+parseFloat(w.price).toFixed(0)+' · '):''}${priTag}${w.for?(' · '+esc(w.for)):''}</div></div><button class="link-btn" data-act="delWish" data-id="${w.id}">✕</button></div><div style="margin-top:8px;"><button class="btn ghost" style="font-size:12px;padding:6px 12px;" data-act="toggleWish" data-id="${w.id}">${w.bought?'↺ 标记未买':'✓ 已买'}</button></div></div>`;
-  }).join('') : `<div class="empty-state" style="margin-top:14px;"><div class="es-icon">🎁</div><div class="es-title">心愿单空空</div><div class="es-desc">记下想要的和要送的礼物</div></div>`;
+    return `<div style="background:#fff;border:1px solid #eee;border-radius:14px;padding:12px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);${isWishBought(w)?'opacity:.55;':''}"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;"><div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:750;color:#121C2A;${isWishBought(w)?'text-decoration:line-through;':''}">${esc(w.title)}</div><div style="font-size:12px;color:var(--sub);margin-top:2px;">${w.price?('¥'+parseFloat(w.price).toFixed(0)+' · '):''}${priTag}${w.for?(' · '+esc(w.for)):''}</div></div><button class="link-btn" data-act="delWish" data-id="${w.id}">✕</button></div><div style="margin-top:8px;"><button class="btn ghost" style="font-size:12px;padding:6px 12px;" data-act="toggleWish" data-id="${w.id}">${isWishBought(w)?'↺ 标记未买':'✓ 已买'}</button></div></div>`;
+  }).join('') : `<div class="empty-state" style="margin-top:14px;"><div class="es-icon">🎁</div><div class="es-title">购物清单空空</div><div class="es-desc">记下想买的东西和要送的礼物</div></div>`;
   return form + stat + items;
 }
 
@@ -4544,8 +4545,8 @@ function eatSection(){
 }
 
 function bucketSection(){
-  const list = (getBucket()||[]).slice().sort(function(a,b){ return (a.done?1:0) - (b.done?1:0) || (b.ts||0) - (a.ts||0); });
-  const doneCnt = list.filter(function(x){ return x.done; }).length;
+  const list = (getBucket()||[]).slice().sort(function(a,b){ return (isBucketDone(a)?1:0) - (isBucketDone(b)?1:0) || (b.ts||0) - (a.ts||0); });
+  const doneCnt = list.filter(function(x){ return isBucketDone(x); }).length;
   const total = list.length;
   const pct = total ? Math.round(doneCnt / total * 100) : 0;
   const cats = ['旅行','运动','技能','体验','其他'];
@@ -4563,10 +4564,10 @@ function bucketSection(){
     <div style="margin-top:8px;height:8px;background:#EC6A6A;border-radius:99px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:#3485D6;border-radius:99px;transition:width .4s;"></div></div>
   </div>`;
   const item = function(x){
-    return `<div class="bucket-card" style="background:#fff;border:1px solid #eee;border-radius:14px;padding:12px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);${x.done?'opacity:.62;':''}">
+    return `<div class="bucket-card" style="background:#fff;border:1px solid #eee;border-radius:14px;padding:12px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);${isBucketDone(x)?'opacity:.62;':''}">
       <div style="display:flex;gap:10px;align-items:flex-start;">
-        <button data-act="toggleBucket" data-id="${x.id}" style="width:22px;height:22px;flex-shrink:0;border-radius:50%;border:2px solid ${x.done?'#3485D6':'#EC6A6A'};background:${x.done?'#3485D6':'#fff'};color:#fff;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;margin-top:1px;cursor:pointer;">${x.done?'✓':''}</button>
-        <div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:750;color:#121C2A;${x.done?'text-decoration:line-through;':''}">${esc(x.title)}</div><div style="font-size:12px;color:var(--sub);margin-top:2px;">${esc(x.cat||'其他')}${x.done?(' · ✓ 已实现'+(x.doneDate?(' '+x.doneDate):'')):''}${x.note?(' · '+esc(x.note)):''}</div></div>
+        <button data-act="toggleBucket" data-id="${x.id}" style="width:22px;height:22px;flex-shrink:0;border-radius:50%;border:2px solid ${isBucketDone(x)?'#3485D6':'#EC6A6A'};background:${isBucketDone(x)?'#3485D6':'#fff'};color:#fff;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;margin-top:1px;cursor:pointer;">${isBucketDone(x)?'✓':''}</button>
+        <div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:750;color:#121C2A;${isBucketDone(x)?'text-decoration:line-through;':''}">${esc(x.title)}</div><div style="font-size:12px;color:var(--sub);margin-top:2px;">${esc(x.cat||'其他')}${isBucketDone(x)?(' · ✓ 已实现'+(x.doneDate?(' '+x.doneDate):'')):''}${x.note?(' · '+esc(x.note)):''}</div></div>
         <button class="link-btn" data-act="delBucket" data-id="${x.id}">✕</button>
       </div>
     </div>`;
@@ -4926,38 +4927,6 @@ function settingsSheet(sec){
     <button class="btn wide" style="background:#E9F4FF;color:#121C2A;" data-act="openSettings">‹ 返回设置列表</button>
     <div class="foot-note">数据保存在本设备 · 请定期备份</div>
   </div>`;
-}
-
-/* ---------- B. 今日复习（世界-今日） ---------- */
-function getDueCounts(){
-  const out = { english:0, work:0 };
-  ['english','work'].forEach(t => {
-    const s = LearnStore.getSchedule(t);
-    out[t] = Object.keys(s).filter(k => ((s[k] && s[k].nextDay) || 0) <= DAY).length;
-  });
-  return out;
-}
-function reviewCardHTML(){
-  const d = getDueCounts();
-  const total = d.english + d.work;
-  const streak = LearnStore.getStreak();
-  if (!total){
-    return `<div class="rv-card empty"><div class="rv-top"><div><div class="rv-k">今日复习</div><div class="rv-v">没有到期内容</div></div><div class="rv-ico">✓</div></div><div class="rv-sub">学过的单词和知识会按遗忘曲线排队，到期后出现在这里。</div></div>`;
-  }
-  return `<div class="rv-card"><div class="rv-top"><div><div class="rv-k">今日复习</div><div class="rv-v">${total} 条到期</div></div><div class="rv-ico">🔁</div></div><div class="rv-nums"><span>英语 ${d.english}</span><span>专业 ${d.work}</span>${streak.count>0?`<span>连续 ${streak.count} 天</span>`:''}</div><div class="rv-acts">${d.english?`<button class="rv-btn" data-act="reviewDue" data-type="english">复习英语 ${d.english}</button>`:''}${d.work?`<button class="rv-btn" data-act="reviewDue" data-type="work">复习专业 ${d.work}</button>`:''}</div></div>`;
-}
-function dueKeys(type, limit){
-  const s = LearnStore.getSchedule(type);
-  return Object.keys(s).filter(k => ((s[k] && s[k].nextDay) || 0) <= DAY).slice(0, limit || 20);
-}
-async function startDueReview(type){
-  const keys = dueKeys(type, 20);
-  if (!keys.length){ toast('今天没有到期内容'); return; }
-  let list = [];
-  if (type === 'english'){ await DeckLoader.ensureForReview(); list = keys.map(k => DeckLoader.findWord(k)).filter(Boolean); }
-  else { list = keys.map(k => SEED.VALVE_ALL.find(v => v.q === k)).filter(Boolean); }
-  if (!list.length){ toast('内容还没加载出来，请稍后重试'); return; }
-  startReview(type, list);
 }
 
 /* ---------- C. 全局搜索 ---------- */
@@ -5708,7 +5677,6 @@ async function handleV3Action(act, t, e){
   }
   if (act === 'openSearch'){ openSearchSheet(); return true; }
   if (act === 'searchJump'){ searchJump(t.dataset.kind, t.dataset.q); return true; }
-  if (act === 'reviewDue'){ await startDueReview(t.dataset.type); return true; }
   if (act === 'openAppLock'){ openSheet(appLockSheetHTML()); return true; }
   if (act === 'saveAppLockPin'){
     const el = document.getElementById('newLockPin'); const v = el ? String(el.value||'').trim() : '';
@@ -6556,6 +6524,86 @@ view.addEventListener('touchend', e => {
   }
   swipeCurrentWrapper = null;
 });
+/* ===== P48：子菜单左右滑动切换（右滑=下一个，左滑=上一个） ===== */
+const P48_SWIPE_MIN = 56;
+const P48_SWIPE_RATIO = 1.35;
+let _p48SwipeStart = null;
+
+function p48SwipeBars(){
+  const bars = Array.prototype.slice.call(view.querySelectorAll('.subtabs, .subtabs-secondary'));
+  return bars.map(function(bar){
+    const tabs = Array.prototype.slice.call(bar.querySelectorAll('.subtab'));
+    let on = -1;
+    for (let i = 0; i < tabs.length; i++){ if (tabs[i].classList.contains('on')){ on = i; break; } }
+    return { bar:bar, tabs:tabs, secondary:bar.classList.contains('subtabs-secondary'), on:on };
+  }).filter(function(g){ return g.tabs.length > 1 && g.on >= 0; });
+}
+
+function p48SwipeTarget(startEl, dir){
+  const groups = p48SwipeBars();
+  if (!groups.length) return null;
+  let order = [];
+  const bar = (startEl && startEl.closest) ? startEl.closest('.subtabs, .subtabs-secondary') : null;
+  if (bar){
+    const hit = groups.filter(function(g){ return g.bar === bar; })[0];
+    if (hit) order = [hit];                    /* 起点在标签条上：只切这一组，到边界就停 */
+  }
+  if (!order.length){
+    const sec = groups.filter(function(g){ return g.secondary; }).reverse();
+    const pri = groups.filter(function(g){ return !g.secondary; });
+    order = sec.concat(pri);                   /* 内容区：先切最内层，到边界再落到一级 */
+  }
+  for (let i = 0; i < order.length; i++){
+    const g = order[i], n = g.on + dir;
+    if (n >= 0 && n < g.tabs.length) return g.tabs[n];
+  }
+  return null;
+}
+
+let _p48ClickGuard = null, _p48GuardTimer = null;
+function p48DropClickGuard(){
+  if (_p48ClickGuard){ try { view.removeEventListener('click', _p48ClickGuard, true); } catch(e){} _p48ClickGuard = null; }
+  if (_p48GuardTimer){ clearTimeout(_p48GuardTimer); _p48GuardTimer = null; }
+}
+
+function p48HandleSubSwipe(startEl, dx, dy){
+  if (Math.abs(dx) < P48_SWIPE_MIN || Math.abs(dx) < Math.abs(dy) * P48_SWIPE_RATIO) return false;
+  const dir = dx > 0 ? 1 : -1;                /* 右滑下一个，左滑上一个 */
+  const target = p48SwipeTarget(startEl, dir);
+  if (!target) return false;
+  p48DropClickGuard();                        /* 连续滑动：先撤掉上一次的拦截，别拦自己 */
+  try { target.click(); } catch(e){ return false; }
+  /* 浏览器可能在滑动结束后补发一个 click，短暂拦截，避免误触落点上的卡片。
+     guard 必须在 target.click() 之后注册，否则会把自己这次点击也拦掉。 */
+  const guard = function(ev){ ev.stopPropagation(); ev.preventDefault(); };
+  _p48ClickGuard = guard;
+  view.addEventListener('click', guard, true);
+  _p48GuardTimer = setTimeout(p48DropClickGuard, 380);
+  return true;
+}
+window.__p48Swipe = { bars:p48SwipeBars, target:p48SwipeTarget, go:p48HandleSubSwipe };
+
+view.addEventListener('touchstart', function(e){
+  _p48SwipeStart = null;
+  if (!e.touches || e.touches.length !== 1) return;
+  const t0 = e.touches[0], el = e.target;
+  if (!el || !el.closest) return;
+  if (sheet.classList.contains('open')) return;
+  const lock = document.getElementById('lockScreen');
+  if (lock && lock.style.display !== 'none') return;
+  if (el.closest('input,textarea,select,[contenteditable],.swipe-wrapper,.no-sub-swipe')) return;
+  if (t0.clientX < 18 || t0.clientX > window.innerWidth - 18) return;  /* 让出系统侧滑返回 */
+  _p48SwipeStart = { x:t0.clientX, y:t0.clientY, el:el, t:Date.now() };
+}, { passive:true });
+
+view.addEventListener('touchend', function(e){
+  const s = _p48SwipeStart; _p48SwipeStart = null;
+  if (!s || !e.changedTouches || !e.changedTouches.length) return;
+  if (Date.now() - s.t > 900) return;         /* 长按不算切换 */
+  const t1 = e.changedTouches[0];
+  p48HandleSubSwipe(s.el, t1.clientX - s.x, t1.clientY - s.y);
+}, { passive:true });
+
 view.addEventListener('click', e => { const c = e.target.closest('.check'); if (c && !c.closest('[data-toggle-todo]') && !c.dataset.act){ if (c.dataset.checkKey){ c.classList.toggle('done'); const isDone = c.classList.contains('done'); setCheck(c.dataset.checkKey, isDone); try { syncCalendarFromHomeCheck(c.dataset.checkKey, isDone); } catch(err){} const supp = c.closest('.supp'); if (supp) supp.classList.toggle('taken', isDone); const homeItem = c.closest('.home-tl-item'); if (homeItem) homeItem.classList.toggle('is-done', isDone); syncToNativeWidget(); } return; } });
 view.addEventListener('click', e => { const tl = e.target.closest('[data-home-action]'); if (!tl || e.target.closest('.check')) return; const action = tl.dataset.homeAction; if (action === 'skin-morning' || action === 'skin-night'){ state.tab = 'life'; state.lifeSub = 'care'; state.careSub = 'skin'; render(); return; } if (action === 'supplement'){ state.tab = 'life'; state.lifeSub = 'care'; state.careSub = 'supp'; render(); return; } if (action === 'sport'){ state.tab = 'life'; state.lifeSub = 'sport'; state.sportSub = 'plan'; render(); return; } if (action === 'study'){ state.tab = 'study'; render(); return; } if (action === 'todo'){ state.tab = 'life'; state.lifeSub = 'calendar'; render(); return; } });
 view.addEventListener('click', e => { const del = e.target.closest('[data-del-tx]'); if (del){ e.stopPropagation(); const id = Number(del.dataset.delTx); if (!confirm('删除这笔记录？')) return; transactions = transactions.filter(x => x.id !== id); state.transactions = transactions; LS.set('app_h_transactions', transactions); syncToNativeWidget(); render(); return; } const tx = e.target.closest('[data-tx-id]'); if (tx){ const item = transactions.find(x => x.id === Number(tx.dataset.txId)); if (!item) return; state.pendingTx = { type:item.type, amount:item.amount, category:item.category, account:item.account||'现金', note:item.note||'', date:item.date||todayStr(), editingId:item.id }; renderTxEditor(); setTimeout(() => { const area = document.getElementById('txEditArea'); if (area) area.scrollIntoView({ block:'center', behavior:'smooth' }); }, 100); return; } });
@@ -7806,14 +7854,21 @@ window.handleNativeBack = function() {
     return true; 
   }
   
-  // 2. 如果不在首页（如在学习、生活、发现、我的），切回首页
+  // 2. P48：工具箱里的子应用，第一次返回先回工具箱首页，第二次才回 APP 首页
+  if (state.tab === 'tools' && state.toolsSub && state.toolsSub !== 'home') {
+    state.toolsSub = 'home';
+    render();
+    return true;
+  }
+
+  // 3. 不在首页（含工具箱首页），切回 APP 首页
   if (state.tab !== 'home') {
     state.tab = 'home';
     render();
     return true;
   }
   
-  // 3. 已经在首页且无弹窗，返回 false 告诉原生可以退出 App
+  // 4. 已经在 APP 首页且无弹窗，返回 false 告诉原生可以退出 App
   return false;
 };
 const _bootDay = todayStr();
