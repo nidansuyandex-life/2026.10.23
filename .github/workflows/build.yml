@@ -39,11 +39,24 @@ jobs:
     - name: Gradle version
       run: ./gradlew --version
 
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug --stacktrace
+    - name: Verify assets (static regression)
+      run: python3 ci/verify.py
 
-    - name: Upload APK
+    - name: Build Debug + Release APK
+      run: >
+        ./gradlew assembleDebug assembleRelease
+        -PappVersionCode=${{ github.run_number }}
+        -PappVersionName=1.0.${{ github.run_number }}
+        --stacktrace
+
+    - name: Upload Debug APK
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
         path: app/build/outputs/apk/debug/app-debug.apk
+
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release
+        path: app/build/outputs/apk/release/app-release.apk
