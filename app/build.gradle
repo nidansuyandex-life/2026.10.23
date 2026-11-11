@@ -9,6 +9,12 @@ android {
     namespace 'com.daily.healthlife'
     compileSdk 34
 
+    /* P57：AGP 8.x 默认关闭 BuildConfig 生成，defaultConfig 里用到
+       buildConfigField 必须显式开启，否则配置阶段直接失败。 */
+    buildFeatures {
+        buildConfig true
+    }
+
     /* P55：本地与 CI 共用同一份 keystore。
        以前 runner 每次新建 debug.keystore，导致新 APK 签名不同、无法覆盖安装。 */
     signingConfigs {
