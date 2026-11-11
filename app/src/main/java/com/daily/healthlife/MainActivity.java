@@ -17,6 +17,9 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceResponse;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -180,6 +183,28 @@ public class MainActivity extends AppCompatActivity {
         webView.addJavascriptInterface(jsBridge, "AndroidHttp");
 
         webView.setWebViewClient(new WebViewClient() {
+            /** P55：主文档加载失败不再白屏，跳到内置兜底页，数据仍在本机 */
+            private void showErrorPage(WebView v){
+                try {
+                    if (mDestroyed || isFinishing() || isDestroyed()) return;
+                    v.post(() -> { try { v.loadUrl("file:///android_asset/error.html"); } catch (Throwable ignored) {} });
+                } catch (Throwable ignored) {}
+            }
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                super.onReceivedError(view, request, error);
+                try { if (request != null && request.isForMainFrame()) showErrorPage(view); } catch (Throwable ignored) {}
+            }
+            @Override
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                super.onReceivedError(view, errorCode, description, failingUrl);
+                try { showErrorPage(view); } catch (Throwable ignored) {}
+            }
+            @Override
+            public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse errorResponse) {
+                super.onReceivedHttpError(view, request, errorResponse);
+                try { if (request != null && request.isForMainFrame()) showErrorPage(view); } catch (Throwable ignored) {}
+            }
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);

@@ -42,6 +42,14 @@ public class JsBridge {
         this.recorder = new VoiceRecorder(a);
     }
 
+    /** P55：设置页展示真实版本与构建时间，不再每次都是 1.0 */
+    @JavascriptInterface
+    public String getAppVersion() {
+        try {
+            return BuildConfig.VERSION_NAME + " · build " + BuildConfig.VERSION_CODE + " · " + BuildConfig.BUILD_AT;
+        } catch (Throwable t) { return "1.0"; }
+    }
+
     @JavascriptInterface
     public boolean isReady() {
         return tts != null && tts.isReady();
@@ -51,6 +59,14 @@ public class JsBridge {
     @JavascriptInterface
     public boolean speak(String text, String lang) {
         return tts != null && tts.speak(text, lang);
+    }
+
+    /** 带语速的朗读；返回 true=原生已发声，false=JS 走网络 TTS */
+    @JavascriptInterface
+    public boolean speakWithRate(String text, String lang, double rate) {
+        if (tts == null) return false;
+        try { tts.setRate((float) rate); } catch (Throwable ignored) {}
+        return tts.speak(text, lang);
     }
 
     @JavascriptInterface

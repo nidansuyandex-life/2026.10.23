@@ -93,6 +93,13 @@ public class TtsHelper {
         }
     }
 
+    /** 设置朗读语速（1.0=正常，0.5=较慢）；由 JS 的 speakWithRate 传入 */
+    public void setRate(float rate) {
+        try {
+            if (tts != null) tts.setSpeechRate(Math.max(0.3f, Math.min(2.0f, rate)));
+        } catch (Exception ignored) {}
+    }
+
     public void stop() {
         try {
             if (tts != null) tts.stop();
