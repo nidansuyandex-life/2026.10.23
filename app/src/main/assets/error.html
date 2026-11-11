@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<title>加载失败</title>
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#F6FAFF;color:#121C2A;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+       min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:28px;}
+  .box{width:100%;max-width:360px;background:#fff;border:1px solid #E4EDF7;border-radius:18px;padding:26px 22px;text-align:center;}
+  .ico{width:56px;height:56px;border-radius:18px;background:#E9F4FF;display:grid;place-items:center;font-size:26px;margin:0 auto 16px;}
+  h1{font-size:17px;margin:0 0 10px;font-weight:700;}
+  p{font-size:13px;color:#2F4359;line-height:1.8;margin:0 0 20px;}
+  button{width:100%;border:0;border-radius:12px;padding:13px;font-size:14.5px;font-weight:600;cursor:pointer;margin-top:8px;}
+  .primary{background:#3485D6;color:#fff;}
+  .ghost{background:#E9F4FF;color:#121C2A;}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="ico">📄</div>
+  <h1>页面没能加载出来</h1>
+  <p>可能是安装包里的文件没写完整，或设备存储暂时不可用。<br>数据都还在本机，重试一般就能恢复。</p>
+  <button class="primary" onclick="location.href='index.html'">重新加载</button>
+  <button class="ghost" onclick="location.reload()">刷新当前页</button>
+</div>
+</body>
+</html>
