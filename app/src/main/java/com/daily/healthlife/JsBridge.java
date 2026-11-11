@@ -74,6 +74,18 @@ public class JsBridge {
         if (tts != null) tts.stop();
     }
 
+    /** P58：前端诊断发音失败原因 */
+    @JavascriptInterface
+    public String ttsStatus() {
+        return tts != null ? tts.getStatusJson() : "{\"engine\":false}";
+    }
+
+    /** P58：拉起系统语音包安装，解决英文发音无声 */
+    @JavascriptInterface
+    public void installTtsData() {
+        if (tts != null) tts.installTtsData();
+    }
+
     @JavascriptInterface
     public void requestPermission() {
         try {
