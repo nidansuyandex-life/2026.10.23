@@ -2,20 +2,43 @@ plugins {
     id 'com.android.application'
 }
 
+def appVc = (project.findProperty('appVersionCode') ?: '1').toString().toInteger()
+def appVn = (project.findProperty('appVersionName') ?: '1.0').toString()
+
 android {
     namespace 'com.daily.healthlife'
     compileSdk 34
+
+    /* P55：本地与 CI 共用同一份 keystore。
+       以前 runner 每次新建 debug.keystore，导致新 APK 签名不同、无法覆盖安装。 */
+    signingConfigs {
+        debug {
+            storeFile rootProject.file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+        release {
+            storeFile rootProject.file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
 
     defaultConfig {
         applicationId "com.daily.healthlife"
         minSdk 24
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        versionCode appVc
+        versionName appVn
+        buildConfigField "String", "BUILD_AT", "\"" + new java.text.SimpleDateFormat('yyyy-MM-dd HH:mm').format(new Date()) + "\""
     }
 
     buildTypes {
         release {
+            signingConfig signingConfigs.release
+            /* 不开混淆：JS 桥方法名 / 反射调用被裁掉会导致 TTS、图片、通知失效 */
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
