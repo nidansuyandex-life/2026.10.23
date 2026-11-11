@@ -1444,6 +1444,13 @@ function extractDates(text){
   while((m = re.exec(text))){ const mo=+m[1],d=+m[2]; if(mo>=1&&mo<=12&&d>=1&&d<=31) found.push({date:`${Y}-${pad(mo)}-${pad(d)}`,start:m.index,end:re.lastIndex}); }
   re = /(\d{1,2})[\/\.\-](\d{1,2})(?!\d)/g;
   while((m = re.exec(text))){ const mo=+m[1],d=+m[2]; if(mo>=1&&mo<=12&&d>=1&&d<=31) found.push({date:`${Y}-${pad(mo)}-${pad(d)}`,start:m.index,end:re.lastIndex}); }
+  // P58 相对日期：今天/明天/后天/大后天/大大后天
+  const relWords = [['大大后天',4],['大后天',3],['后天',2],['明天',1],['明日',1],['今天',0],['今日',0]];
+  relWords.forEach(([w,add])=>{ let i=text.indexOf(w); while(i>=0){ const dd=new Date(); dd.setHours(0,0,0,0); dd.setDate(dd.getDate()+add); found.push({date:`${dd.getFullYear()}-${pad(dd.getMonth()+1)}-${pad(dd.getDate())}`,start:i,end:i+w.length}); i=text.indexOf(w,i+w.length); } });
+  // 星期/周X（含“下周/下下周”），如“周一”“下周三”
+  const wkMap={'日':0,'天':0,'一':1,'二':2,'三':3,'四':4,'五':5,'六':6};
+  let wm; const wkRe=/下*周|下*星期/g;
+  while((wm=wkRe.exec(text))){ const lead=wm[0]; const rest=text.slice(wkRe.lastIndex); const mm=/^[日天一二三四五六]/.exec(rest); if(!mm) continue; const wd=wkMap[mm[0]]; const downs=(lead.match(/下/g)||[]).length; let dd=new Date(); dd.setHours(0,0,0,0); if (downs >= 1){ const mondayOffset = (dd.getDay()+6)%7; const thisMonday = new Date(dd); thisMonday.setDate(dd.getDate()-mondayOffset); const nextMonday = new Date(thisMonday); nextMonday.setDate(thisMonday.getDate()+7*downs); dd = new Date(nextMonday); dd.setDate(nextMonday.getDate()+((wd+6)%7)); } else { let days=(wd-dd.getDay()+7)%7; if(days===0)days=7; dd.setDate(dd.getDate()+days); } found.push({date:`${dd.getFullYear()}-${pad(dd.getMonth()+1)}-${pad(dd.getDate())}`,start:wm.index,end:wkRe.lastIndex+mm[0].length}); }
   found.sort((a,b)=>a.start-b.start);
   let lastEnd = -1;
   for(const f of found){ if(f.start < lastEnd) continue; out.push(f); lastEnd = f.end; }
@@ -5731,7 +5738,7 @@ function settingsSheet(sec){
       <p class="tip" style="margin:8px 2px 0;">提醒内容会自动算出你今天还差什么（待办 / 运动 / 学习 / 记账）。若收不到，请在系统设置里给本应用开启「通知」和「闹钟和提醒」权限。</p>`,
     display: () => `
       <div class="set-row"><div><div class="set-lab">字号</div><div class="set-hint">整体放大或缩小</div></div>${segHTML('setCfg','fontScale',s.fontScale,[[0.94,'小'],[1,'标准'],[1.08,'大']])}</div>
-      <div class="set-row"><div><div class="set-lab">英语朗读语速</div><div class="set-hint">慢速适合新手跟读；优先用系统语音引擎，离线也能朗读，整段同一个清晰发音</div></div>${segHTML('setCfg','speakRate',s.speakRate,[['verySlow','很慢'],['slow','慢速'],['normal','正常']])}</div>`,
+      <div class="set-row"><div><div class="set-lab">英语朗读语速</div><div class="set-hint">慢速适合新手跟读；优先用系统语音引擎，离线也能朗读，整段同一个清晰发音</div></div>${segHTML('setCfg','speakRate',s.speakRate,[['verySlow','很慢'],['slow','慢速'],['normal','正常']])}<button class="btn" style="margin-left:8px;background:#E9F4FF;color:#121C2A;white-space:nowrap;" data-act="installTts">安装英文语音包</button></div>`,
     ai: () => `
       <div class="set-row" style="display:block;"><div class="set-lab" style="margin-bottom:8px;">服务商</div>
         <select id="aiProvider" style="width:100%;margin-bottom:10px;"><option value="none" ${AI.provider==='none'?'selected':''}>不启用</option><option value="zhipu" ${AI.provider==='zhipu'?'selected':''}>智谱 GLM（推荐 · 免费 · 只需填 Key）</option><option value="qwen" ${AI.provider==='qwen'?'selected':''}>通义千问</option><option value="deepseek" ${AI.provider==='deepseek'?'selected':''}>DeepSeek</option><option value="doubao" ${AI.provider==='doubao'?'selected':''}>豆包 · 火山方舟（需额外开通）</option></select>
@@ -7172,7 +7179,8 @@ if (act === 'clearExample'){
     saved[date].push({ time: time || '09:00', title, desc, }); 
     saveManualTodos(saved); closeSheet(); buildCalendarFromPlans(); syncToNativeWidget(); toast('已添加待办'); render({ keepScroll: true }); return; 
   }
-  if (act === 'todoVoice') { try { registerVoiceCallbacks(); } catch(e) {} window._voiceMode = 'todo'; startVoiceRecord(); toast('🎙️ 请说出待办，例如：11月15日给小林生日'); return; }
+  if (act === 'todoVoice') { try { registerVoiceCallbacks(); } catch(e) {} window._voiceMode = 'todo'; startVoiceRecord(); toast('🎙️ 请说出待办，例如：明天给小林生日 / 11月15日开会'); return; }
+  if (act === 'installTts') { try { if (window.AndroidTTS && typeof AndroidTTS.installTtsData === 'function'){ AndroidTTS.installTtsData(); toast('正在打开系统语音包安装…'); } else { toast('当前环境不支持，请在系统设置安装 TTS 语音'); } } catch(e){ toast('打开失败：' + e.message); } return; }
   if (act === 'confirmVoiceTodos') {
     const rows = window._vtRows || [];
     const saved = getManualTodos();
@@ -7422,7 +7430,7 @@ if (act === 'clearExample'){
   if (act === 'backToToday'){ const now = new Date(); state.calYear = now.getFullYear(); state.calMonth = now.getMonth(); state.selectedDate = todayStr(); render(); return; }
   if (act === 'toggleManual'){ const a = document.getElementById('textInputArea'); if (a) a.classList.toggle('show'); return; }
   if (act === 'parseManual'){ const v = document.getElementById('manualTxInput').value.trim(); if (!v){ toast('请输入文字'); return; } const p = parseTransactionText(v); p.date = todayStr(); state.pendingTx = p; renderTxEditor(); return; }
-  if (act === 'stopVoice'){ stopVoiceRecord(); toast('已停止录音，等待识别结果…'); return; }
+  if (act === 'stopVoice'){ stopVoiceRecord(true); toast('⏳ 已停止，正在识别…'); return; }
   if (act === 'setExportRange'){ state.exportRange = t.dataset.range; HealthStore.save('exportRange', state.exportRange); render({ keepScroll: true }); return; }
   if (act === 'exportCsv'){ exportCsv(); return; }
   if (act === 'exportExcel'){ exportExcel(); return; }
@@ -7825,11 +7833,23 @@ sheet.addEventListener('input', e => {
 sheet.addEventListener('click', async e => { const t = e.target.closest('[data-act]'); if (!t) return; const act = t.dataset.act; if (act === 'closeSheet'){ closeSheet(); return; } try { if (await handleV3Action(act, t, e)) return; } catch(err){ console.warn('V3 sheet action 失败', err); } if (act === 'confirmImportTx'){ confirmImportTx(t.dataset.mode); return; } if (act === 'reviewSpeak'){ toggleSpeak(t.dataset.text, t.dataset.lang||'en-US', t); return; } if (act === 'reviewSubmit'){ submitReviewAnswer(); return; } if (act === 'rate'){ rateAndNext(t.dataset.rating); return; } if (act === 'aiRole'){ state.aiRole = t.dataset.role; LS.set('ai-role', state.aiRole); openAIAssistant(); return; } if (act === 'clearAIHistory'){ if (confirm('清空？')){ LearnStore.clearAIHistory(); openAIAssistant(); } return; } if (act === 'aiSend'){ sendAIMessage(); return; } });
 
 let _voiceActive = false; let _voiceTimerHandle = null; let _voiceStartTime = 0; let _voiceResultHandled = false;
+/* P58 全局语音状态浮层：录音中 / 识别中，任何弹层都能看到，不再依赖麦克风 UI */
+function voiceOverlayEl(){
+  let el = document.getElementById('voiceOverlay');
+  if (!el){ el = document.createElement('div'); el.id = 'voiceOverlay'; el.style.cssText = 'position:fixed;left:50%;top:16%;transform:translateX(-50%);z-index:99999;display:none;flex-direction:column;align-items:center;gap:10px;padding:18px 24px;background:rgba(18,28,42,.94);color:#fff;border-radius:18px;box-shadow:0 12px 34px rgba(0,0,0,.4);min-width:210px;text-align:center;pointer-events:none;'; document.body.appendChild(el); }
+  return el;
+}
+function showVoiceOverlay(kind, msg){
+  const el = voiceOverlayEl(); el.style.display = 'flex';
+  if (kind === 'recording'){ el.innerHTML = '<div style="font-size:42px;animation:pulseMic 1.4s infinite;">🎙️</div><div style="font-size:16px;font-weight:800;">🎙️ 录音中…</div><div id="voiceOverlayHint" style="font-size:12.5px;opacity:.9;">' + (msg||'说完点「⏹ 停止识别」') + '</div>'; }
+  else { el.innerHTML = '<div style="font-size:42px;">🔍</div><div style="font-size:16px;font-weight:800;">🔍 识别中…</div><div style="font-size:12.5px;opacity:.9;">正在把你说的话转成文字</div>'; }
+}
+function hideVoiceOverlay(){ const el = document.getElementById('voiceOverlay'); if (el) el.style.display = 'none'; }
 function detectVoiceAPI(){ const candidates = ['AndroidTTS', 'AndroidSpeech', 'AndroidASR', 'AndroidVoice', 'AndroidRecognizer', 'AndroidVoiceInput']; for (const name of candidates){ const api = window[name]; if (api && typeof api.startRecognize === 'function') return name; } return null; }
-function registerVoiceCallbacks(){ const handler = function(text){ if (window._followPending){ const fp = window._followPending; window._followPending = null; gradeFollow(fp.target, String(text || ''), fp.key, fp.btn); return; } if (_voiceResultHandled) { console.log('[Voice] 忽略重复的识别回调'); return; } _voiceResultHandled = true; console.log('[Voice] 收到识别结果:', text); stopVoiceRecord(); if (window._voiceMode === 'todo') { window._voiceMode = null; handleVoiceTodo(String(text || '').trim()); return; } if (!text || !String(text).trim()){ toast('没有识别到内容，请再说一次或手动输入'); return; } const raw = String(text).trim(); try { const parsed = parseTransactionText(raw); parsed.date = todayStr(); state.pendingTx = parsed; if (state.tab !== 'life' || state.lifeSub !== 'money' || state.moneySub !== 'record'){ state.tab = 'life'; state.lifeSub = 'money'; state.moneySub = 'record'; render(); setTimeout(() => { renderTxEditor(); }, 150); } else { renderTxEditor(); } toast('已识别：' + raw.slice(0, 20) + (parsed.amount ? ' → ¥' + parsed.amount : '（请补金额）')); } catch(e){ console.error('[Voice] 处理失败:', e); toast('识别结果处理失败：' + e.message); } }; window.onVoiceResult = handler; window.onSpeechResult = handler; window.onSpeechRecognizeResult = handler; window.onVoiceRecognizeResult = handler; window.onASRResult = handler; window.onRecognizeResult = handler; window.onResult = handler; window.onVoiceError = function(err){ console.error('[Voice] 错误:', err); stopVoiceRecord(); toast('语音识别失败：' + (err || '未知错误，请手动输入')); }; }
+function registerVoiceCallbacks(){ const handler = function(text){ if (window._followPending){ const fp = window._followPending; window._followPending = null; gradeFollow(fp.target, String(text || ''), fp.key, fp.btn); return; } if (_voiceResultHandled) { console.log('[Voice] 忽略重复的识别回调'); return; } _voiceResultHandled = true; console.log('[Voice] 收到识别结果:', text); stopVoiceRecord(); hideVoiceOverlay(); if (window._voiceMode === 'todo') { window._voiceMode = null; handleVoiceTodo(String(text || '').trim()); return; } if (!text || !String(text).trim()){ toast('没有识别到内容，请再说一次或手动输入'); return; } const raw = String(text).trim(); try { const parsed = parseTransactionText(raw); parsed.date = todayStr(); state.pendingTx = parsed; if (state.tab !== 'life' || state.lifeSub !== 'money' || state.moneySub !== 'record'){ state.tab = 'life'; state.lifeSub = 'money'; state.moneySub = 'record'; render(); setTimeout(() => { renderTxEditor(); }, 150); } else { renderTxEditor(); } toast('已识别：' + raw.slice(0, 20) + (parsed.amount ? ' → ¥' + parsed.amount : '（请补金额）')); } catch(e){ console.error('[Voice] 处理失败:', e); toast('识别结果处理失败：' + e.message); } }; window.onVoiceResult = handler; window.onSpeechResult = handler; window.onSpeechRecognizeResult = handler; window.onVoiceRecognizeResult = handler; window.onASRResult = handler; window.onRecognizeResult = handler; window.onResult = handler; window.onVoiceError = function(err){ console.error('[Voice] 错误:', err); stopVoiceRecord(); hideVoiceOverlay(); toast('语音识别失败：' + (err || '未知错误，请手动输入')); }; }
 registerVoiceCallbacks();
-function startVoiceRecord(){ if (_voiceActive){ stopVoiceRecord(); return; } const apiName = detectVoiceAPI(); console.log('[Voice] 检测到接口:', apiName || '无'); if (!apiName){ toast('当前环境不支持语音识别，请点击「手动输入」'); return; } _voiceActive = true; _voiceResultHandled = false; _voiceStartTime = Date.now(); const mic = document.getElementById('micBtn'); if (mic) mic.classList.add('listening'); const hint = document.getElementById('micHint'); if (hint) hint.textContent = '🎙️ 正在聆听…说完点「⏹ 停止识别」'; let left = 30; if (_voiceTimerHandle) clearInterval(_voiceTimerHandle); _voiceTimerHandle = setInterval(() => { left--; if (hint) hint.textContent = `🎙️ 正在聆听…还剩 ${left} 秒`; if (left <= 0) stopVoiceRecord(); }, 1000); const api = window[apiName]; let result = null, error = null; try { result = api.startRecognize(30); } catch(e1){ try { result = api.startRecognize(10); } catch(e2){ try { result = api.startRecognize(); } catch(e3){ error = e3; } } } console.log('[Voice] startRecognize 返回:', result, error ? '错误:' + error.message : ''); if (error){ toast('启动语音识别失败：' + error.message); stopVoiceRecord(); return; } if (typeof result === 'string' && result){ window.onVoiceResult(result); } }
-function stopVoiceRecord(){ if (!_voiceActive && !_voiceTimerHandle) return; _voiceActive = false; if (_voiceTimerHandle){ clearInterval(_voiceTimerHandle); _voiceTimerHandle = null; } const mic = document.getElementById('micBtn'); if (mic) mic.classList.remove('listening'); const hint = document.getElementById('micHint'); if (hint) hint.textContent = '点击麦克风开始语音输入，说完后点「⏹ 停止识别」'; const apiName = detectVoiceAPI(); if (apiName){ try { const api = window[apiName]; if (api && typeof api.stopRecognize === 'function') api.stopRecognize(); } catch(e){ console.log('[Voice] stopRecognize 失败:', e.message); } } console.log('[Voice] 录音时长:', Math.round((Date.now() - _voiceStartTime) / 1000) + ' 秒'); }
+function startVoiceRecord(){ if (_voiceActive){ stopVoiceRecord(); return; } const apiName = detectVoiceAPI(); console.log('[Voice] 检测到接口:', apiName || '无'); if (!apiName){ toast('当前环境不支持语音识别，请点击「手动输入」'); return; } _voiceActive = true; _voiceResultHandled = false; _voiceStartTime = Date.now(); showVoiceOverlay('recording', '🎙️ 请说出待办内容（说完点「⏹ 停止识别」）'); const mic = document.getElementById('micBtn'); if (mic) mic.classList.add('listening'); const hint = document.getElementById('micHint'); if (hint) hint.textContent = '🎙️ 正在聆听…说完点「⏹ 停止识别」'; let left = 30; if (_voiceTimerHandle) clearInterval(_voiceTimerHandle); _voiceTimerHandle = setInterval(() => { left--; const ov=document.getElementById('voiceOverlayHint'); if (ov) ov.textContent = `🎙️ 录音中…还剩 ${left} 秒（说完点停止）`; if (hint) hint.textContent = `🎙️ 正在聆听…还剩 ${left} 秒`; if (left <= 0) stopVoiceRecord(true); }, 1000); const api = window[apiName]; let result = null, error = null; try { result = api.startRecognize(30); } catch(e1){ try { result = api.startRecognize(10); } catch(e2){ try { result = api.startRecognize(); } catch(e3){ error = e3; } } } console.log('[Voice] startRecognize 返回:', result, error ? '错误:' + error.message : ''); if (error){ hideVoiceOverlay(); toast('启动语音识别失败：' + error.message); stopVoiceRecord(); return; } if (typeof result === 'string' && result){ window.onVoiceResult(result); } }
+function stopVoiceRecord(recognizing){ if (!_voiceActive && !_voiceTimerHandle) return; _voiceActive = false; if (_voiceTimerHandle){ clearInterval(_voiceTimerHandle); _voiceTimerHandle = null; } const mic = document.getElementById('micBtn'); if (mic) mic.classList.remove('listening'); const hint = document.getElementById('micHint'); if (hint) hint.textContent = '点击麦克风开始语音输入，说完后点「⏹ 停止识别」'; if (recognizing) showVoiceOverlay('recognizing'); else hideVoiceOverlay(); const apiName = detectVoiceAPI(); if (apiName){ try { const api = window[apiName]; if (api && typeof api.stopRecognize === 'function') api.stopRecognize(); } catch(e){ console.log('[Voice] stopRecognize 失败:', e.message); } } console.log('[Voice] 录音时长:', Math.round((Date.now() - _voiceStartTime) / 1000) + ' 秒'); }
 view.addEventListener('click', e => { const mic = e.target.closest('#micBtn'); if (!mic) return; if (_voiceActive) stopVoiceRecord(); else startVoiceRecord(); });
 tabbar.addEventListener('click', e => { const t = e.target.closest('.tab'); if (!t) return; stopSpeak(); state.tab = t.dataset.tab; render(); });
 fab.addEventListener('click', () => {
@@ -8215,6 +8235,9 @@ function nativeSpeakText(text, langStr, rate){
     return api.speak(String(text), langStr) === true;
   } catch(e){ return false; }
 }
+function nativeTtsStatus(){
+  try { const a = window.AndroidTTS; if (!a || typeof a.ttsStatus !== 'function') return null; const s = a.ttsStatus(); return (typeof s === 'string') ? JSON.parse(s) : s; } catch(e){ return null; }
+}
 function nativeSpeakCleanup(seq, cleanup, ms){
   setTimeout(() => { if (seq === _speakSeq) cleanup(); }, ms);
 }
@@ -8309,7 +8332,14 @@ function playNetworkAudio(text, langStr, seq, btn) {
           return;
         }
         systemTTSQueue(chunks.slice(i), langStr, rate, seq, cleanup);
-        toast('在线发音不可用，已切备用发音；仍无声请检查系统语音引擎');
+        const st = nativeTtsStatus();
+        if (st && st.engine && st.initDone && !st.enAvailable && String(langStr).startsWith('en')){
+          toast('系统缺英文语音包，去「我的→设置→安装英文语音」后重试');
+        } else if (st && st.engine && !st.initDone){
+          toast('语音引擎初始化中，稍等几秒再试一次');
+        } else {
+          toast('在线发音不可用，已切备用发音；仍无声请检查系统语音引擎');
+        }
         return;
       }
     }
