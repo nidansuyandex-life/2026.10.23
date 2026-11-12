@@ -278,18 +278,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans 
 .stat-list .stat-row:last-child{border-bottom:none;padding-bottom:2px;}
 .stat-list .stat-row .v{min-width:56px;font-size:22px;font-weight:800;letter-spacing:-.5px;font-variant-numeric:tabular-nums;}
 .stat-list .stat-row .k{font-size:13px;color:var(--ink2);font-weight:600;}
-/* --- 首页时间线 --- */
-.home-tl-wrap{background:#fff;border-radius:var(--r-lg);margin-bottom:12px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow-card);}
-.home-tl-item{display:flex;align-items:center;gap:12px;padding:13px 16px;position:relative;transition:background .15s;cursor:pointer;}
-.home-tl-item:active{background:#E9F4FF;}
-.home-tl-item:not(:last-child)::after{content:'';position:absolute;left:27px;bottom:-7px;width:1.5px;height:15px;background:#E9F4FF;}
-.home-tl-text{flex:1;font-size:14px;font-weight:550;color:var(--ink);line-height:1.5;min-width:0;}
-.home-tl-text .tm{color:var(--ink3);font-size:12px;font-weight:650;margin-right:8px;display:inline-block;min-width:44px;font-variant-numeric:tabular-nums;}
-.home-tl-text .sub{color:var(--sub);font-size:12.5px;display:block;margin-top:2px;line-height:1.45;font-weight:450;}
-.home-tl-arrow{color:var(--ink);font-size:16px;flex:none;opacity:.55;}
-.home-tl-badge{font-size:11px;color:var(--ink);background:var(--accent-soft);padding:2px 8px;border-radius:6px;font-weight:700;flex:none;}
-.home-tl-item.is-done .home-tl-text{color:var(--ink3);}
-.home-tl-item.is-done{opacity:.6;}
+/* --- 首页今日清单（小方块，仿身体状态） --- */
+.home-chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:9px;}
+.home-chip{position:relative;display:flex;flex-direction:column;gap:5px;padding:12px 13px 13px;border-radius:14px;background:#fff;border:1.5px solid var(--line);box-shadow:var(--shadow-card);cursor:pointer;transition:transform .12s,background .15s;min-height:66px;overflow:hidden;}
+.home-chip:active{transform:scale(.97);background:#E9F4FF;}
+.home-chip .hc-time{font-size:12px;font-weight:800;color:var(--accent);letter-spacing:.3px;font-variant-numeric:tabular-nums;}
+.home-chip .hc-text{font-size:13.5px;font-weight:750;color:#121C2A;line-height:1.35;}
+.home-chip .hc-sub{font-size:11px;color:var(--sub);line-height:1.35;}
+.home-chip .hc-badge{position:absolute;top:9px;right:9px;font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;}
+.home-chip .hc-badge.routine{background:#E3F8F1;color:#1F6B53;}
+.home-chip .hc-badge.todo{background:#E9F4FF;color:#121C2A;}
+.home-chips-empty{text-align:center;color:var(--sub);font-size:14px;font-weight:600;padding:30px 0 26px;}
 .check{width:23px;height:23px;border-radius:50%;border:2px solid #DCE8F6;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;cursor:pointer;transition:.2s;background:#fff;}
 .check.done{background:var(--accent);border-color:var(--accent);}
 .check.done::after{content:'✓';}
@@ -300,6 +299,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans 
 .body-state-item .bsi-label{font-size:10px;font-weight:600;white-space:nowrap;}
 .body-state-item.active{background:var(--pri);color:#fff;}
 .body-state-item.active .bsi-label{color:#fff;font-weight:700;}
+/* --- 首页 概览 / 咪咪卡 --- */
+.home-overview{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px;}
+.home-ov{background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:13px 12px;box-shadow:var(--shadow-card);cursor:pointer;}
+.home-ov:active{background:#E9F4FF;}
+.home-ov .v{font-size:21px;font-weight:850;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.5px;}
+.home-ov .k{font-size:11.5px;color:var(--sub);margin-top:3px;font-weight:600;}
+.home-ov .ic{font-size:14px;margin-right:2px;}
+.home-mimi{margin-top:12px;border-radius:var(--r-md);padding:14px 15px;border:1px solid #CDE5FA;background:#E9F4FF;cursor:pointer;}
+.home-mimi:active{background:#D6ECFF;}
+.home-mimi .mm-h{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:850;color:#203146;}
+.home-mimi .mm-cnt{margin-left:auto;background:#3485D6;color:#fff;font-size:11px;font-weight:800;padding:2px 9px;border-radius:20px;}
+.home-mimi .mm-list{margin-top:9px;display:flex;flex-direction:column;gap:5px;}
+.home-mimi .mm-item{font-size:12.5px;color:#203146;line-height:1.5;}
 /* --- 任务卡 --- */
 .task-card{background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;margin-bottom:14px;box-shadow:var(--shadow-card);}
 .task-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
@@ -529,6 +541,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans 
 /* --- Toast --- */
 .toast{position:absolute;left:50%;bottom:160px;transform:translate(-50%,10px);background:rgba(25,27,34,.94);color:#fff;font-size:13.5px;font-weight:600;padding:11px 20px;border-radius:99px;opacity:0;transition:.25s;z-index:99;pointer-events:none;max-width:90%;text-align:center;}
 .toast.show{opacity:1;transform:translate(-50%,0);}
+/* --- 首页小方块：已完成变灰、下移 --- */
+.home-chip.hc-done{background:#F4F6F9;border-color:#E6EAF0;opacity:.62;}
+.home-chip.hc-done .hc-time{color:#9AA6B2;}
+.home-chip.hc-done .hc-text{color:#7A8794;text-decoration:line-through;text-decoration-color:#B6C0CC;}
+.home-chip.hc-done .hc-sub{color:#A6B0BB;}
+.home-chip.hc-done .hc-badge{opacity:.5;}
+.home-chip .hc-check{position:absolute;right:10px;bottom:9px;font-size:15px;font-weight:900;color:#1F6B53;}
 /* --- AI --- */
 .ai-msg{padding:12px 14px;border-radius:16px;margin-bottom:10px;font-size:13.5px;line-height:1.75;}
 .ai-msg.user{background:var(--pri);color:#fff;margin-left:32px;white-space:pre-wrap;border-radius:16px 16px 4px 16px;}
@@ -1406,6 +1425,8 @@ const LearnStore = {
 
 const HealthStore = { save(key, val){ try { LS.set('app_h_'+key, val); } catch(e){} }, load(key, def){ try { const s = LS.get('app_h_'+key, null); return s !== null ? s : def; } catch(e){ return def; } }, del(key){ LS.del('app_h_'+key); } };
 function getChecks(){ return LS.get('app_h_dailyChecks', {}); } function saveChecks(c){ LS.set('app_h_dailyChecks', c); }
+function getHomeRoutine(){ try { return LS.get('app_h_homeRoutine', []) || []; } catch(e){ return []; } }
+function setHomeRoutine(a){ LS.set('app_h_homeRoutine', Array.isArray(a) ? a.slice(-50) : []); }
 function setCheck(key, on){ const c = getChecks(); if (on) c[key] = true; else delete c[key]; saveChecks(c); } function isChecked(key){ return !!getChecks()[key]; }
 function getTodoStatusMap(){ return LS.get('app_h_todoStatus', {}); } function saveTodoStatusMap(m){ LS.set('app_h_todoStatus', m); }
 function getTodoKey(date, item){ return `${date}|${item.time || ''}|${item.title || ''}`; }
@@ -1421,6 +1442,9 @@ function setTodoDone(date, item, done){
   saveTodoStatusMap(m);
   syncHomeCheck(date, item, done);
 }
+/* 首页「折叠已完成」：全局开关，收起/展开已完成的灰块 */
+function getHomeFold(){ return !!LS.get('app_h_foldDone', false); }
+function setHomeFold(v){ LS.set('app_h_foldDone', !!v); }
 function syncCalendarFromHomeCheck(key, on){
   const m = /^home_(\d{4}-\d{2}-\d{2})_sport$/.exec(key || '');
   if (!m) return;
@@ -1433,6 +1457,23 @@ function syncCalendarFromHomeCheck(key, on){
   saveTodoStatusMap(map);
 }
 function getManualTodos(){ return LS.get('app_h_calendarManual', {}); } function saveManualTodos(m){ LS.set('app_h_calendarManual', m); }
+function openRoutineSheet(){
+  const list = getHomeRoutine();
+  const items = list.length ? list.map(function(r){
+    return '<div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px dashed #E9F4FF;">' +
+      '<span style="font-size:12px;color:#2F4359;min-width:48px;font-variant-numeric:tabular-nums;">' + esc(r.time || '—') + '</span>' +
+      '<span style="flex:1;font-size:14px;color:#121C2A;">' + esc(r.text) + '</span>' +
+      '<button class="link-btn" data-act="delRoutine" data-id="' + esc(r.id) + '" style="color:#A32E2E;font-size:13px;">删除</button></div>';
+  }).join('') : '<div class="tip-card">还没有固定流程。在下面加一条，它会每天出现在首页时间线里。</div>';
+  openSheet(
+    '<div class="sheet-head"><div class="sheet-emoji">🔁</div><div style="flex:1;"><h2>每日固定流程</h2><div class="muted">加进首页时间线，每天都出现、可打卡</div></div><button class="link-btn" data-act="closeSheet">✕</button></div>' +
+    '<div style="font-size:12.5px;color:#2F4359;line-height:1.65;margin:4px 0 12px;">这里加的是「每天都做」的固定事项（比如：吃维生素、遛狗、写日记）。它和「新建今日待办」不同——待办只当天有效，固定流程会一直挂着。</div>' +
+    '<div style="max-height:38vh;overflow:auto;">' + items + '</div>' +
+    '<div class="sheet-form-row" style="margin-top:14px;"><span class="lb">时间</span><input type="time" id="routineTime" value="09:00"></div>' +
+    '<div class="sheet-form-row" style="border-bottom:none;"><span class="lb">事项</span><input type="text" id="routineText" placeholder="例如：吃维生素 / 遛狗 20 分钟 / 写日记"></div>' +
+    '<button data-act="addRoutine" class="btn primary" style="width:100%;margin-top:12px;">＋ 添加这条到每日流程</button>'
+  );
+}
 
 function extractDates(text){
   const out = [];
@@ -1857,7 +1898,7 @@ const AI = { get provider(){ return AI_get_provider(); }, get apiKey(){ return A
     if (notOpen) msg = '模型服务未开通：火山方舟要为每个模型单独开通，只填 API Key 不会自动开通。请看下方开通指引。（原始错误：' + errs.join('；').slice(0, 150) + '）';
     const err = new Error(msg);
     err.allFailed = true; err.modelNotOpen = notOpen; throw err;
-  }, async call(system, user, maxTokens, temp){ if (!this.enabled()) throw new Error('AI 未配置'); try { const d = await this.request('chat', model => ({ model, messages: [{ role:'system', content:system }, { role:'user', content:user }], temperature: temp == null ? 0.4 : temp, max_tokens: maxTokens || 1000 }), 30000); return AI_extractMessageText(d) || null; } catch(e) { if (e && e.name === 'AbortError') throw new Error('AI 请求超时，请检查网络后重试'); throw e; } }, parseJSON(content){ const o = AI_extractJSONObject(content); if (o) return o; throw new Error('AI 返回不是 JSON：' + String(content || '').slice(0,120)); }, async scoreAnswer(q,a,ref){ if (!this.enabled()) return null; const system = `严格导师。只输出 JSON：{"accuracy":0-100,"correct":[],"missing":[],"supplement":""}`; return this.parseJSON(await this.call(system, `【问题】\n${q}\n\n【参考】\n${ref}\n\n【学员】\n${a}\n\n请评分。`, 1000, 0.2)); }, async judgeWord(w,a,cn){ if (!this.enabled()) return null; const system = `英语单词判卷。只输出 JSON：{"correct":true/false,"score":0-100,"feedback":"20字以内"}`; return this.parseJSON(await this.call(system, `单词：${w}\n参考：${cn}\n学员：${a}`, 200, 0.1)); }, async answerQuestion(q, ctx){ if (!this.enabled()) return null; const system = `专业助手。回答专业准确。1.直接回答 2.给适用边界 3.分点，400字内。`; return await this.call(system, ctx ? `背景：${ctx}\n\n问题：${q}` : q, 1000, 0.4); }, async assistant(q, role){ if (!this.enabled()) throw new Error('AI 未配置'); const cfg = this.roles[role] || this.roles.engineer; return await this.call(cfg.prompt + '\n分点作答，每点短句，400字内。', q, 1000, 0.4); }, async gradeExpression(scene, q, guide, answer){ if (!this.enabled()) return null; const system = `表达训练教练。场景「${scene}」\n题目：${q}\n要求：${guide}\n只输出 JSON：{"score":0-100,"level":"","strengths":[],"issues":[],"improved":"","advice":""}`; return this.parseJSON(await this.call(system, '用户的回答：\n'+answer, 1200, 0.3)); }, async recommendRoutine(skinKey, skinProfile, products, sealedProducts){
+  }, async call(system, user, maxTokens, temp){ if (!this.enabled()) throw new Error('AI 未配置'); try { const d = await this.request('chat', model => ({ model, messages: [{ role:'system', content:system }, { role:'user', content:user }], temperature: temp == null ? 0.4 : temp, max_tokens: maxTokens || 1000 }), 30000); return AI_extractMessageText(d) || null; } catch(e) { if (e && e.name === 'AbortError') throw new Error('AI 请求超时，请检查网络后重试'); throw e; } }, parseJSON(content){ const o = AI_extractJSONObject(content); if (o) return o; throw new Error('AI 返回不是 JSON：' + String(content || '').slice(0,120)); }, async scoreAnswer(q,a,ref){ if (!this.enabled()) return null; const system = `严格导师。只输出 JSON：{"accuracy":0-100,"correct":[],"missing":[],"supplement":""}`; return this.parseJSON(await this.call(system, `【问题】\n${q}\n\n【参考】\n${ref}\n\n【学员】\n${a}\n\n请评分。`, 1000, 0.2)); }, async judgeWord(w,a,cn){ if (!this.enabled()) return null; const system = `英语单词判卷。只输出 JSON：{"correct":true/false,"score":0-100,"feedback":"20字以内"}`; return this.parseJSON(await this.call(system, `单词：${w}\n参考：${cn}\n学员：${a}`, 200, 0.1)); }, async answerQuestion(q, ctx){ if (!this.enabled()) return null; const system = `你是帮普通人快速搞懂专业问题的小助手，用大白话解释。先一句话给结论，最多再补一句最关键的提醒。不超过120字。不要分点、不要编号、不要括号、不要技术符号，用一段自然的话写完。`; return await this.call(system, ctx ? `背景：${ctx}\n\n问题：${q}` : q, 1000, 0.4); }, async assistant(q, role){ if (!this.enabled()) throw new Error('AI 未配置'); const cfg = this.roles[role] || this.roles.engineer; return await this.call(cfg.prompt + '\n分点作答，每点短句，400字内。', q, 1000, 0.4); }, async gradeExpression(scene, q, guide, answer){ if (!this.enabled()) return null; const system = `表达训练教练。场景「${scene}」\n题目：${q}\n要求：${guide}\n只输出 JSON：{"score":0-100,"level":"","strengths":[],"issues":[],"improved":"","advice":""}`; return this.parseJSON(await this.call(system, '用户的回答：\n'+answer, 1200, 0.3)); }, async recommendRoutine(skinKey, skinProfile, products, sealedProducts){
   if (!this.enabled()) return null;
   const list = products.map(function(p,i){
     return '#' + (i+1) + ' ' + p.name + '【大类：' + ((PRODUCT_CATS[p.majorCat]||{}).label || p.majorCat) + '】' + (p.ingredients ? ' 成分：' + String(p.ingredients).slice(0,120) : '');
@@ -2026,6 +2067,8 @@ function homeView(){
     { time:'22:00', text:'洗漱（护肤）', sub:'晚间护理', action:'skin-night', badge:'晚间', checkKey: `home_${t}_skin_pm` }, { time:'22:30', text:'睡前 90/90 呼吸', checkKey: `home_${t}_breathe` }
   ];
   if (showProtein) fixedItems.push({ time:'20:30', text:'吃蛋白粉', sub:'训练后 20–25g 蛋白粉', action:'supplement', badge:'补剂', checkKey: `home_${t}_protein` });
+  /* 每日固定流程：用户自己加的、每天都会出现并可打卡的事项 */
+  (getHomeRoutine() || []).forEach(function(r){ if (r && r.text){ fixedItems.push({ time: r.time || '09:00', text: r.text, sub: r.sub || '', badge:'每日', checkKey: 'home_routine_' + r.id + '_' + t }); } });
   // 修复：使用最新的 getTodoStatusMap 获取 done 状态
   const statusMap = getTodoStatusMap();
   const todoItems = manualTodos.map(mt => ({ 
@@ -2033,6 +2076,7 @@ function homeView(){
       text: mt.title, 
       action: 'todo', 
       isTodo: true, 
+      key: getTodoKey(t, mt), 
       manualPayload: encodeURIComponent(JSON.stringify({ date: t, time: mt.time, title: mt.title })), 
       done: !!statusMap[getTodoKey(t, mt)] 
   }));
@@ -2043,16 +2087,26 @@ function homeView(){
   const itemDone = (it) => it.manualPayload ? !!it.done : !!(it.checkKey && checks[it.checkKey]);
   allItems.sort((a, b) => (itemDone(a) === itemDone(b)) ? (a.time || '99:99').localeCompare(b.time || '99:99') : (itemDone(a) ? 1 : -1));
 
-  const renderItem = (it) => {
-    const done = it.manualPayload ? !!it.done : !!(it.checkKey && checks[it.checkKey]); const cls = ['home-tl-item']; if (done) cls.push('is-done');
-    const actionAttr = it.action ? `data-home-action="${it.action}"` : ''; const badge = it.badge ? `<span class="home-tl-badge">${it.badge}</span>` : (it.isTodo ? `<span class="home-tl-badge" style="color:#121C2A;background:#E9F4FF">代办</span>` : '');
-    const arrow = it.action ? `<span class="home-tl-arrow">›</span>` : ''; const sub = it.sub ? `<span class="sub">${esc(it.sub)}</span>` : '';
-    const checkHtml = it.manualPayload ? `<span class="check ${done?'done':''}" data-toggle-todo="${it.manualPayload}"></span>` : `<span class="check ${done?'done':''}" data-check-key="${it.checkKey}"></span>`;
-    return `<div class="${cls.join(' ')}" ${actionAttr}>${checkHtml}<span class="home-tl-text">${it.time ? `<span class="tm">${it.time}</span>` : ''}${esc(it.text)}${sub}</span>${badge}${arrow}</div>`;
+  // 今日清单：未完成排前、已完成变灰排后；点一下切换完成（不再消失）；「折叠已完成」可收起/展开灰块
+  const fold = getHomeFold();
+  const visible = fold ? allItems.filter(it => !itemDone(it)) : allItems.slice();
+  visible.sort((a, b) => (itemDone(a) === itemDone(b)) ? (a.time || '99:99').localeCompare(b.time || '99:99') : (itemDone(a) ? 1 : -1));
+  const renderChip = (it) => {
+    const done = itemDone(it);
+    const timeHtml = (it.time && it.time !== '99:99') ? `<div class="hc-time">${it.time}</div>` : '';
+    const subHtml = it.sub ? `<div class="hc-sub">${esc(it.sub)}</div>` : '';
+    let badge = '';
+    if (it.badge === '每日') badge = `<span class="hc-badge routine">每日</span>`;
+    else if (it.isTodo) badge = `<span class="hc-badge todo">代办</span>`;
+    else if (it.badge) badge = `<span class="hc-badge" style="background:var(--accent-soft);color:var(--ink);">${it.badge}</span>`;
+    const actAttr = it.manualPayload ? `data-tl-todo="${it.manualPayload}"` : `data-check-key="${it.checkKey}"`;
+    const checkMark = done ? `<div class="hc-check">✓</div>` : '';
+    return `<div class="home-chip ${done ? 'hc-done' : ''}" ${actAttr}>${badge}${timeHtml}<div class="hc-text">${esc(it.text)}</div>${subHtml}${checkMark}</div>`;
   };
-
-  // 直接渲染所有项（不再折叠）
-  let tlHtml = `<div class="home-tl-wrap">${allItems.map(renderItem).join('')}</div>`;
+  let tlHtml;
+  if (allItems.length === 0) tlHtml = `<div class="home-chips-empty">今天还没有安排 🌿<br>点右上角「＋ 待办 / ＋ 每日固定」加一个吧</div>`;
+  else if (visible.length === 0) tlHtml = `<div class="home-chips-empty">今天都完成啦 🎉</div>`;
+  else tlHtml = `<div class="home-chips">${visible.map(renderChip).join('')}</div>`;
 
   const tasks = LearnStore.getTodayTasks(); const doneTasks = tasks.filter(x => x.done).length; const monthTx = transactions.filter(x => x.date.startsWith(t.slice(0,7))); const monthExp = monthTx.filter(x => x.type === 'expense').reduce((s,x) => s + x.amount, 0); const todaySess = getSportSession();
   const bodyStateOptions = [{ mode:'original', label:'正常', icon:'✅' },{ mode:'swim', label:'游泳', icon:'🏊' },{ mode:'reduced', label:'减量', icon:'🔻' },{ mode:'period', label:'经期', icon:'🌸' },{ mode:'leave', label:'请假', icon:'📝' },{ mode:'rest', label:'休息', icon:'😴' }];
@@ -2060,15 +2114,31 @@ function homeView(){
   /* P37：按用户要求，首页顶部的「提醒备份」警告条已移除 */
   const periodWarnHtml = pfHome.inPeriod ? `<div class="backup-warn" style="background:#E9F4FF;border-color:#E9F4FF;color:#121C2A;" data-act="${recToday?'periodSetNormal':'periodGoLog'}"><span>🌸 ${recToday?'已为你默认「经期休息」，点此恢复正常':(pfHome.inPredicted?'预测今天在经期窗口内（仅供参考），去记录或确认 ›':'经期进行中')}</span><span>${recToday?'恢复正常 ›':'记录 ›'}</span></div>` : '';
 
+  /* 头部问候 + 今日进度 */
+  const h = now.getHours();
+  const greet = h < 6 ? '夜深了，早点休息' : h < 11 ? '早上好' : h < 13 ? '中午好' : h < 18 ? '下午好' : h < 22 ? '晚上好' : '夜深了，早点休息';
+  const wd = ['周日','周一','周二','周三','周四','周五','周六'][now.getDay()];
+  const wth = HealthStore.load('lastWeather', null);
+  const wthHtml = wth ? `<div class="hg-weather"><div class="t">${esc(wth.temp)}℃</div><div>${esc(wth.text)}</div></div>` : '';
+  const totalC = allItems.length, doneC = allItems.filter(itemDone).length;
+  const pct = totalC ? Math.round(doneC / totalC * 100) : 0;
+
+  /* 咪咪到期提醒卡（无事项时不显示） */
+  const mimiDue = mimiDueList();
+  const mimiHtml = mimiDue.length
+    ? `<div class="home-mimi" data-act="gotoMimi"><div class="mm-h">🐱 咪咪 · 现在要记得<span class="mm-cnt">${mimiDue.length}</span></div><div class="mm-list">${mimiDue.slice(0,5).map(x => `<div class="mm-item">• ${esc(x)}</div>`).join('')}${mimiDue.length > 5 ? `<div class="mm-item" style="opacity:.7;">还有 ${mimiDue.length - 5} 项 ›</div>` : ''}</div></div>`
+    : '';
+
   return `${periodWarnHtml}
-  <div class="stats" style="grid-template-columns:repeat(3,1fr);margin-top:4px;">
-    <div class="stat" data-act="jumpFromHome" data-target="study" style="cursor:pointer;"><div class="v" style="color:var(--ink)">${doneTasks}/${tasks.length}</div><div class="k">今日学习</div></div>
-    <div class="stat" data-act="jumpFromHome" data-target="sport" style="cursor:pointer;"><div class="v" style="color:var(--ink)">${todaySess ? (todaySess.endTs ? '✓' : (todaySess.pausedAt ? '⏸' : '⏳')) : '—'}</div><div class="k">训练状态</div></div>
-    <div class="stat" data-act="jumpFromHome" data-target="money" style="cursor:pointer;"><div class="v" style="color:var(--ink)">¥${monthExp.toFixed(0)}</div><div class="k">本月支出</div></div>
+  <div class="home-overview">
+    <div class="home-ov" data-act="jumpFromHome" data-target="study"><div class="v"><span class="ic">📚</span>${doneTasks}/${tasks.length}</div><div class="k">今日学习</div></div>
+    <div class="home-ov" data-act="jumpFromHome" data-target="sport"><div class="v"><span class="ic">🏃</span>${todaySess ? (todaySess.endTs ? '✓' : (todaySess.pausedAt ? '⏸' : '⏳')) : '—'}</div><div class="k">训练状态</div></div>
+    <div class="home-ov" data-act="jumpFromHome" data-target="money"><div class="v"><span class="ic">💰</span>¥${monthExp.toFixed(0)}</div><div class="k">本月支出</div></div>
   </div>
-  <div class="sec-title" style="margin:8px 4px 6px;">今日身体状态 <span class="muted">点击切换</span></div>
+  ${mimiHtml}
+  <div class="sec-title" style="margin:14px 4px 6px;">今日身体状态 <span class="muted">点击切换</span></div>
   <div class="card" style="padding:8px;"><div class="body-state-grid">${bodyStateHtml}</div></div>
-  <div class="sec-title" style="margin:10px 4px 6px;"><span>时间线</span><span style="display:flex;align-items:center;gap:8px;"><button class="mini-add" data-act="openTodoSheet" style="font-size:12px;padding:5px 12px;">＋ 新建今日待办</button><span class="muted" style="font-weight:500;font-size:12.5px;">点左侧圆圈打卡</span></span></div>
+  <div class="sec-title" style="margin:14px 4px 6px;"><span>今日清单 · 已完成 ${doneC}/${totalC}</span><span style="display:flex;align-items:center;gap:8px;">${doneC > 0 ? `<button class="mini-add" data-act="toggleFoldHome" style="font-size:12px;padding:5px 11px;background:#EDEFF3;color:#5B6878;">${fold ? '展开已完成' : '折叠已完成'}</button>` : ''}<button class="mini-add" data-act="openTodoSheet" style="font-size:12px;padding:5px 11px;">＋ 待办</button><button class="mini-add" data-act="openRoutine" style="font-size:12px;padding:5px 11px;background:#E3F8F1;color:#1F6B53;">＋ 每日固定</button></span></div>
   ${tlHtml}
   <div class="foot-note">数据仅保存在本设备</div>`;
 }
@@ -7150,6 +7220,8 @@ if (act === 'clearExample'){
   if (act === 'gotoBodyData'){ state.tab = 'life'; state.lifeSub = 'sport'; state.sportSub = 'body'; render(); return; }
   if (act === 'gotoExport'){ state.tab = 'me'; render(); return; }
   if (act === 'jumpFromHome'){ const target = t.dataset.target; if (target === 'study'){ state.tab = 'study'; state.studySub = 'today'; } else if (target === 'sport'){ state.tab = 'life'; state.lifeSub = 'sport'; state.sportSub = 'plan'; } else if (target === 'money'){ state.tab = 'life'; state.lifeSub = 'money'; state.moneySub = 'record'; } render(); return; }
+  if (act === 'gotoMimi'){ state.tab = 'tools'; state.toolsSub = 'mimi'; state.mimiSub = 'profile'; render(); return; }
+  if (act === 'toggleFoldHome'){ const fold = !getHomeFold(); setHomeFold(fold); render({ keepScroll: true }); return true; }
   if (act === 'openTodoSheet') { 
     const defaultDate = state.selectedDate || todayStr(); 
     openSheet(`<div class="sheet-head"><div class="sheet-emoji">📝</div><div style="flex:1;"><h2>新建待办</h2></div></div>
@@ -7174,6 +7246,9 @@ if (act === 'clearExample'){
   if (act === 'todoVoice') { try { registerVoiceCallbacks(); } catch(e) {} window._voiceMode = 'todo'; startVoiceRecord(); toast('🎙️ 说一句带日期的话即可，例如：明天开会 / 下周六聚会（说完点「⏹ 停止并识别」）'); return; }
   if (act === 'testTts') { try { toggleSpeak('Hello, this is a pronunciation test.', 'en-US'); toast('正在试听…若仍无声请检查网络（有道在线发音）'); } catch(e){ toast('试听失败：' + e.message); } return; }
   if (act === 'installTts') { try { if (window.AndroidTTS && typeof AndroidTTS.installTtsData === 'function'){ AndroidTTS.installTtsData(); toast('正在打开系统语音包安装…'); } else { toast('当前环境不支持，请在系统设置安装 TTS 语音'); } } catch(e){ toast('打开失败：' + e.message); } return; }
+  if (act === 'openRoutine'){ openRoutineSheet(); return; }
+  if (act === 'addRoutine'){ const time = (document.getElementById('routineTime')||{}).value || '09:00'; const text = ((document.getElementById('routineText')||{}).value || '').trim(); if (!text){ toast('请输入事项'); return; } const list = getHomeRoutine(); list.push({ id: 'r' + Date.now(), time: time, text: text }); setHomeRoutine(list); render({ keepScroll: true }); openRoutineSheet(); toast('已加入每日流程'); return; }
+  if (act === 'delRoutine'){ const id = t.dataset.id; if (!id) return; setHomeRoutine(getHomeRoutine().filter(function(x){ return x.id !== id; })); render({ keepScroll: true }); openRoutineSheet(); return; }
   if (act === 'confirmVoiceTodos') {
     const rows = window._vtRows || [];
     const saved = getManualTodos();
@@ -7730,6 +7805,7 @@ view.addEventListener('touchend', function(e){
 }, { passive:false });
 
 view.addEventListener('click', e => { const c = e.target.closest('.check'); if (c && !c.closest('[data-toggle-todo]') && !c.dataset.act){ if (c.dataset.checkKey){ c.classList.toggle('done'); const isDone = c.classList.contains('done'); setCheck(c.dataset.checkKey, isDone); try { syncCalendarFromHomeCheck(c.dataset.checkKey, isDone); } catch(err){} const supp = c.closest('.supp'); if (supp) supp.classList.toggle('taken', isDone); const homeItem = c.closest('.home-tl-item'); if (homeItem) homeItem.classList.toggle('is-done', isDone); syncToNativeWidget(); } return; } });
+view.addEventListener('click', e => { const chip = e.target.closest('.home-chip'); if (!chip) return; const ck = chip.dataset.checkKey, td = chip.dataset.tlTodo; if (ck){ const wasDone = !!getChecks()[ck]; const nowDone = !wasDone; setCheck(ck, nowDone); try { syncCalendarFromHomeCheck(ck, nowDone); } catch(err){} setHomeFold(nowDone); /* 点完成→自动折叠收起；点灰块恢复→自动展开 */ syncToNativeWidget(); render({ keepScroll: true }); } else if (td){ try { const payload = JSON.parse(decodeURIComponent(td)); const manual = (getManualTodos()[payload.date] || []).find(x => x.time === payload.time && x.title === payload.title); const dayList = (state.calendarData && state.calendarData[payload.date]) || []; const planned = dayList.find(x => x.time === payload.time && x.title === payload.title); const item = manual || planned; if (item){ const m = getTodoStatusMap(); const willDone = !m[getTodoKey(payload.date, item)]; setTodoDone(payload.date, item, willDone); setHomeFold(willDone); /* 完成即折叠 / 恢复即展开 */ syncToNativeWidget(); render({ keepScroll: true }); } } catch(err){ console.warn('[Todo] 打卡失败', err); } } });
 view.addEventListener('click', e => { const tl = e.target.closest('[data-home-action]'); if (!tl || e.target.closest('.check')) return; const action = tl.dataset.homeAction; if (action === 'skin-morning' || action === 'skin-night'){ state.tab = 'life'; state.lifeSub = 'care'; state.careSub = 'skin'; render(); return; } if (action === 'supplement'){ state.tab = 'life'; state.lifeSub = 'care'; state.careSub = 'supp'; render(); return; } if (action === 'sport'){ state.tab = 'life'; state.lifeSub = 'sport'; state.sportSub = 'plan'; render(); return; } if (action === 'study'){ state.tab = 'study'; render(); return; } if (action === 'todo'){ state.tab = 'life'; state.lifeSub = 'calendar'; render(); return; } });
 view.addEventListener('click', e => { const del = e.target.closest('[data-del-tx]'); if (del){ e.stopPropagation(); const id = Number(del.dataset.delTx); if (!confirm('删除这笔记录？')) return; transactions = transactions.filter(x => x.id !== id); state.transactions = transactions; LS.set('app_h_transactions', transactions); syncToNativeWidget(); render(); return; } const tx = e.target.closest('[data-tx-id]'); if (tx){ const item = transactions.find(x => x.id === Number(tx.dataset.txId)); if (!item) return; state.pendingTx = { type:item.type, amount:item.amount, category:item.category, account:item.account||'现金', note:item.note||'', date:item.date||todayStr(), editingId:item.id }; renderTxEditor(); setTimeout(() => { const area = document.getElementById('txEditArea'); if (area) area.scrollIntoView({ block:'center', behavior:'smooth' }); }, 100); return; } });
 view.addEventListener('change', e => { if (e.target.id === 'planStartInput'){ const v = e.target.value; if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return; setPlanStart(new Date(v + 'T00:00:00')); buildCalendarFromPlans(); render(); return; } if (e.target.id === 'clothCat'){ state.closetCat = e.target.value; render({ keepScroll: true }); return; } if (e.target.dataset && e.target.dataset.gkey){ const v = parseFloat(e.target.value); if (!isNaN(v)) state.garmentDraft[e.target.dataset.gkey] = v; else delete state.garmentDraft[e.target.dataset.gkey]; render({ keepScroll: true }); return; } if (e.target.id === 'clothUpload'){
