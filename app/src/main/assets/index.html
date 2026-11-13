@@ -199,6 +199,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans 
 .cm-bubble.error{background:#FFF2DE;color:#203146;border:1px solid #F0D6A8;}
 .cm-bubble.bot + .cm-bubble.bot{margin-top:-6px;}
 .cm-empty .cm-bubble.bot{max-width:88%;margin-left:auto;margin-right:auto;text-align:left;}
+/* 知识库「问 AI」打字机光标 */
+.tw-cursor{display:inline-block;color:var(--brand);font-weight:700;animation:twblink 1s steps(1) infinite;}
+@keyframes twblink{50%{opacity:0;}}
 .cm-meta{font-size:10.5px;color:var(--sub);margin-top:5px;display:flex;gap:11px;align-items:center;flex-wrap:wrap;}
 .cm-meta .cm-pill{color:var(--pri);font-weight:700;}
 .cm-act{border:0;background:transparent;color:var(--pri);font-size:11px;font-weight:700;padding:0;cursor:pointer;}
@@ -1457,6 +1460,39 @@ function syncCalendarFromHomeCheck(key, on){
   saveTodoStatusMap(map);
 }
 function getManualTodos(){ return LS.get('app_h_calendarManual', {}); } function saveManualTodos(m){ LS.set('app_h_calendarManual', m); }
+/* 待办到点通知：把未过期未完成的待办同步给原生排闹钟，已完成/过期的撤销 */
+function parseTodoDateTime(dateStr, timeStr){
+  try {
+    if (!dateStr) return null;
+    const p = String(dateStr).split('-').map(Number);
+    if (p.length < 3 || !p[0] || !p[1] || !p[2]) return null;
+    let hh = 9, mm = 0;
+    if (timeStr && /^\d{1,2}:\d{2}$/.test(String(timeStr))){ const t = String(timeStr).split(':').map(Number); hh = t[0]; mm = t[1]; }
+    const dt = new Date(p[0], p[1] - 1, p[2], hh, mm, 0, 0);
+    if (isNaN(dt.getTime())) return null;
+    return dt;
+  } catch(e){ return null; }
+}
+function syncTodoAlarms(){
+  try {
+    if (!window.AndroidBridge || typeof AndroidBridge.scheduleTodoAlarm !== 'function') return;
+    const now = Date.now();
+    const saved = getManualTodos();
+    const status = getTodoStatusMap();
+    Object.keys(saved).forEach(function(date){
+      (saved[date] || []).forEach(function(todo){
+        const k = getTodoKey(date, todo);
+        const dt = parseTodoDateTime(date, todo.time);
+        if (!dt) return;
+        if (status[k] || dt.getTime() <= now){
+          try { AndroidBridge.cancelTodoAlarm(date, todo.time || '', todo.title || ''); } catch(e){}
+        } else {
+          try { AndroidBridge.scheduleTodoAlarm(date, todo.time || '', todo.title || '', dt.getTime()); } catch(e){}
+        }
+      });
+    });
+  } catch(e){ console.warn('syncTodoAlarms failed', e); }
+}
 function openRoutineSheet(){
   const list = getHomeRoutine();
   const items = list.length ? list.map(function(r){
@@ -1733,7 +1769,7 @@ function getRangeTransactions(){ const today = todayStr(), ym = today.slice(0,7)
 
 function AI_get_provider(){ return LS.get('ai-provider', 'zhipu'); } function AI_get_apiKey(){ return LS.get('ai-key', ''); } function AI_get_model(){ return LS.get('ai-model', ''); } function AI_get_visionModel(){ return LS.get('ai-vision-model', ''); }
 /* ===== 多 API Key（P27）：备用列表 + 自动故障转移 ===== */
-const AI_LABELS = { zhipu:'智谱 GLM', qwen:'通义千问', deepseek:'DeepSeek', doubao:'豆包' };
+const AI_LABELS = { zhipu:'智谱 GLM', qwen:'通义千问', deepseek:'DeepSeek', doubao:'豆包', custom:'自定义' };
 function AI_get_keys(){ try { const a = LS.get('ai-keys', []); return Array.isArray(a) ? a : []; } catch(e){ return []; } }
 function AI_set_keys(a){ LS.set('ai-keys', a || []); }
 function AI_get_lastGood(){ try { return LS.get('ai-last-good', ''); } catch(e){ return ''; } }
@@ -1848,7 +1884,7 @@ function AI_normalizeRoutine(obj){
     .filter(Boolean).slice(0, 8);
   return { morning:norm(am), night:norm(pm), reason:String(obj.reason || obj['说明'] || obj['理由'] || ''), gaps:gaps };
 }
-const AI = { get provider(){ return AI_get_provider(); }, get apiKey(){ return AI_get_apiKey(); }, get model(){ return AI_get_model(); }, get visionModel(){ return AI_get_visionModel(); }, set(p,k){ LS.set('ai-provider', p||'none'); LS.set('ai-key', k||''); LS.set('ai-model',''); LS.set('ai-vision-model',''); }, enabled(){ return ((this.provider !== 'none' && !!this.apiKey) || AI_get_keys().some(x => x && x.key && x.provider && x.provider !== 'none')); }, roles: { engineer:{ name:'👷 工程师', prompt:'你是阀门行业资深工程师。' }, customer:{ name:'👤 客户', prompt:'你是一个挑剔的客户。' }, boss:{ name:'💼 老板', prompt:'你是一个务实的老板。' }, teacher:{ name:'🎓 英语老师', prompt:'你是英语老师。' }, health:{ name:'💊 健康顾问', prompt:'你是健康生活顾问。' }, skincare:{ name:'💄 护肤顾问', prompt:'你是专业护肤顾问。' } }, endpoints(){ return { deepseek:{ base:'https://api.deepseek.com/v1/chat/completions', model:'deepseek-chat' }, qwen:{ base:'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model:'qwen-turbo' }, zhipu:{ base:'https://open.bigmodel.cn/api/paas/v4/chat/completions', model:'glm-4.7-flash' }, doubao:{ base:'https://ark.cn-beijing.volces.com/api/v3/chat/completions', model:'doubao-seed-2-1-pro-260915' } }; }, visionModels(){ return { deepseek:'', qwen:'qwen-vl-max', zhipu:'glm-4.6v-flash', doubao:'doubao-seed-2-1-pro-260915' }; }, visionName(){ return this.visionModels()[this.provider] || ''; }, keys(){ return AI_get_keys(); }, lastGood(){ return AI_get_lastGood(); }, lastUsed(){ return AI_get_lastUsed(); },
+const AI = { get provider(){ return AI_get_provider(); }, get apiKey(){ return AI_get_apiKey(); }, get model(){ return AI_get_model(); }, get visionModel(){ return AI_get_visionModel(); }, set(p,k){ LS.set('ai-provider', p||'none'); LS.set('ai-key', k||''); LS.set('ai-model',''); LS.set('ai-vision-model',''); }, enabled(){ return ((this.provider !== 'none' && !!this.apiKey) || AI_get_keys().some(x => x && x.key && x.provider && x.provider !== 'none')); }, roles: { engineer:{ name:'👷 工程师', prompt:'你是阀门行业资深工程师。' }, customer:{ name:'👤 客户', prompt:'你是一个挑剔的客户。' }, boss:{ name:'💼 老板', prompt:'你是一个务实的老板。' }, teacher:{ name:'🎓 英语老师', prompt:'你是英语老师。' }, health:{ name:'💊 健康顾问', prompt:'你是健康生活顾问。' }, skincare:{ name:'💄 护肤顾问', prompt:'你是专业护肤顾问。' } }, endpoints(){ return { deepseek:{ base:'https://api.deepseek.com/v1/chat/completions', model:'deepseek-chat' }, qwen:{ base:'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model:'qwen-turbo' }, zhipu:{ base:'https://open.bigmodel.cn/api/paas/v4/chat/completions', model:'glm-4.7-flash' }, doubao:{ base:'https://ark.cn-beijing.volces.com/api/v3/chat/completions', model:'doubao-seed-2-1-pro-260915' }, custom:{ base:(LS.get('ai-custom-base','')||''), model:(LS.get('ai-custom-model','')||'') } }; }, visionModels(){ return { deepseek:'', qwen:'qwen-vl-max', zhipu:'glm-4.6v-flash', doubao:'doubao-seed-2-1-pro-260915', custom:(LS.get('ai-custom-vision','')||'') }; }, visionName(){ return this.visionModels()[this.provider] || ''; }, keys(){ return AI_get_keys(); }, lastGood(){ return AI_get_lastGood(); }, lastUsed(){ return AI_get_lastUsed(); },
   candidates(kind, main){
     const eps = this.endpoints(), vm = this.visionModels(), list = [];
     const add = (id, provider, key, use, label, isMain) => {
@@ -1861,8 +1897,21 @@ const AI = { get provider(){ return AI_get_provider(); }, get apiKey(){ return A
     };
     add('main', main ? main.provider : this.provider, main ? main.key : this.apiKey, 'auto', '主 Key', true);
     AI_get_keys().forEach((x, i) => { if (x) add(x.id || ('b' + i), x.provider, x.key, x.use || 'auto', (AI_LABELS[x.provider] || x.provider) + ' · 备用', false); });
+    // 按场景指定优先服务商：图片识别优先「智谱 GLM」，对话优先「DeepSeek」
+    const prefer = kind === 'vision' ? 'zhipu' : 'deepseek';
+    list.sort((a, b) => {
+      const ra = a.provider === prefer ? 0 : 1;
+      const rb = b.provider === prefer ? 0 : 1;
+      if (ra !== rb) return ra - rb;
+      return (b.isMain ? 1 : 0) - (a.isMain ? 1 : 0);
+    });
+    // 故障转移兜底：仅当目标优先服务商没有可用 Key 时，才把上次成功的 Key 提到最前
     const lg = AI_get_lastGood();
-    if (lg){ const i = list.findIndex(c => c.id === lg); if (i > 0) list.unshift(list.splice(i, 1)[0]); }
+    if (lg){
+      const hasPrefer = list.some(c => c.provider === prefer);
+      const i = list.findIndex(c => c.id === lg);
+      if (!hasPrefer && i > 0){ list.unshift(list.splice(i, 1)[0]); }
+    }
     return list;
   },
   async request(kind, bodyFn, timeout, main){
@@ -1950,7 +1999,7 @@ const CacheStore = { loadFresh(key, days){ const c = LS.get('cache:'+key, null);
 const state = { 
   tab:'home', studySub:'today', englishSub:'today', englishDeck: LS.get('english-deck', '') || '',  
   englishPage: 1, valvePage: 1, recommendCat:'', recOffset:0, openKnow:null, openThink:null, 
-  thinkHint:null, searchQuery:'', valveCat:'全部', review:null, aiLoading:false, aiAnsweringFor:null, 
+  thinkHint:null, searchQuery:'', valveCat:'全部', review:null, aiLoading:false, aiAnsweringFor:null, aiStreamingFor:null,
   aiSkincareLoading:false, passageHidden:false, aiRole: LS.get('ai-role','engineer'), generalData:null, 
   generalLoading:false, quoteResults:[], quoteLoading:false, storyResults:[], storyLoading:false, 
   yiyanData:null, yiyanLoading:false, newsResults:[], newsLoading:false, 
@@ -2446,7 +2495,7 @@ function knowCard(v, i, isDone, isDoneToday){
         <div style="display:flex;gap:8px;margin-top:9px;flex-wrap:wrap;">
           <button style="background:var(--brand);color:#fff;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:650;border:0;cursor:pointer;" data-act="askAbout" data-q="${esc(v.q)}" ${isLoading?'disabled':''}>${isLoading?'⏳ 思考中…':'问 AI'}</button>
         </div>
-        ${hasAsk?`<div style="margin-top:12px;background:#E9F4FF;border:1px solid #E3E8F0;border-radius:12px;padding:13px;"><div style="font-size:12.5px;font-weight:750;color:var(--ink);margin-bottom:9px;">🤖 AI 解答</div><div style="font-size:13px;line-height:1.78;color:#121C2A;white-space:pre-wrap;">${esc(askCache.answer)}</div></div>`:''}
+        ${(hasAsk && state.aiStreamingFor !== v.q) ? `<div style="margin-top:12px;background:#E9F4FF;border:1px solid #E3E8F0;border-radius:12px;padding:13px;"><div style="font-size:12.5px;font-weight:750;color:var(--ink);margin-bottom:9px;">🤖 AI 解答</div><div style="font-size:13px;line-height:1.78;color:#121C2A;white-space:pre-wrap;">${esc(askCache.answer)}</div></div>` : (state.aiStreamingFor === v.q ? `<div style="margin-top:12px;background:#E9F4FF;border:1px solid #E3E8F0;border-radius:12px;padding:13px;"><div style="font-size:12.5px;font-weight:750;color:var(--ink);margin-bottom:9px;">🤖 AI 解答</div><div class="ask-ans" data-askans="${esc(v.q)}" style="font-size:13px;line-height:1.78;color:#121C2A;white-space:pre-wrap;"><span class="tw-cursor">▋</span></div></div>` : '')}
       </div>
       <div style="margin-top:14px;padding-top:14px;border-top:1px dashed #E9F4FF;">
         <div style="font-size:12px;color:var(--sub);margin-bottom:8px;font-weight:700;">📝 我的笔记</div>
@@ -2702,7 +2751,7 @@ function moneyRecordPane(){
   if (todayTx.some(t => t.amount >= 500)) { 
     extraHtml = `<div class="card" style="background:linear-gradient(135deg,#FFF2DE,#FFF2DE);margin-top:12px;"><div style="font-size:13.5px;font-weight:750;color:#203146;margin-bottom:6px;">💡 发现大额支出</div><div style="font-size:12.5px;color:#203146;line-height:1.6;margin-bottom:10px;">今天有一笔超过 500 元的账单，想练习一下如何用英语和同事描述你的财务规划吗？</div><button class="btn" style="background:#E9A03C;color:#fff;padding:8px 14px;font-size:12px;" data-act="goToExpressFromMoney">去练习场景 →</button></div>`; 
   } 
-  return `<div class="card"><div class="mic-wrap"><button class="mic" id="micBtn">🎙️</button><p class="mic-hint" id="micHint">点击麦克风开始语音输入，说完后点「⏹ 停止识别」</p><div class="mic-actions"><button class="btn-ghost-h" data-act="toggleManual" style="flex:1;font-size:13px;padding:11px;">⌨️ 手动输入</button><button class="btn-ghost-h" data-act="stopVoice" style="flex:1;font-size:13px;padding:11px;background:#FFECEC;color:var(--ink);">⏹ 停止识别</button></div><div class="text-input-area" id="textInputArea"><input type="text" id="manualTxInput" placeholder="如：午餐 35 元 / 发工资 8000"><button class="btn-ghost-h" data-act="parseManual" style="padding:11px">解析这笔</button></div></div><div id="txEditArea"></div></div><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">今日明细 <span class="muted" style="color:var(--sub);font-size:12.5px">点条目编辑 · 左滑删除</span></div>${txHtml(todayTx)}</div>${extraHtml}`; 
+  return `<div class="card"><div class="mic-wrap"><button class="mic" id="micBtn">🎙️</button><p class="mic-hint" id="micHint">点击麦克风开始语音输入，说完后点「⏹ 停止识别」</p><div class="mic-actions"><button class="btn-ghost-h" data-act="toggleManual" style="flex:1;font-size:13px;padding:11px;">⌨️ 手动输入</button><button class="btn-ghost-h" data-act="stopVoice" style="flex:1;font-size:13px;padding:11px;background:#FFECEC;color:var(--ink);">⏹ 停止识别</button></div><div class="text-input-area" id="textInputArea"><input type="text" id="manualTxInput" placeholder="如：午餐 35 元 / 发工资 8000"><button class="btn-ghost-h" data-act="parseManual" style="padding:11px">解析这笔</button></div></div><div id="txEditArea"></div></div><div class="card" style="margin-top:12px;background:#FFF7EC;border:1px solid #F3E2C4;"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">📷 小票拍照记账</div><div style="display:flex;gap:8px;margin-bottom:8px;"><button class="btn" data-act="receiptPhotoPick" style="flex:1;background:#2DBE98;color:#fff;font-size:13px;padding:10px;">🖼 从相册选小票</button><button class="btn" data-act="receiptCameraPick" style="flex:1;background:#E9F4FF;color:#121C2A;font-size:13px;padding:10px;">📷 拍小票</button></div><p class="tip" style="margin:0 0 8px;font-size:12px;color:var(--sub)">拍照或选图后，AI 自动识别金额、商家、分类并填入下方表单（需配置支持读图的服务商，如智谱 / 通义）</p><input type="file" id="receiptPhoto" accept="image/*" style="display:none"><input type="file" id="receiptCamera" accept="image/*" capture="environment" style="display:none"><div id="receiptStatus" class="muted" style="font-size:12.5px;color:var(--sub);min-height:16px;"></div></div><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">今日明细 <span class="muted" style="color:var(--sub);font-size:12.5px">点条目编辑 · 左滑删除</span></div>${txHtml(todayTx)}</div>${extraHtml}`; 
 }
 function moneyBookPane(){ const today = todayStr(); const ym = today.slice(0, 7); const monthExpense = transactions.filter(t => t.type === 'expense' && t.date.startsWith(ym)).reduce((s,t) => s + t.amount, 0); const monthIncome = transactions.filter(t => t.type === 'income' && t.date.startsWith(ym)).reduce((s,t) => s + t.amount, 0); const cats = {}; transactions.filter(t => t.type === 'expense' && t.date.startsWith(ym)).forEach(t => { cats[t.category] = (cats[t.category] || 0) + t.amount; }); const total = Object.values(cats).reduce((s,v) => s + v, 0) || 1; const catHtml = Object.entries(cats).length ? Object.entries(cats).sort((a,b) => b[1]-a[1]).map(([k,v]) => `<div class="progress"><div class="bar" style="width:${(v/total*100).toFixed(0)}%"></div></div><div class="row-between" style="margin-bottom:10px"><span class="muted" style="font-size:12px;color:var(--sub)">${k}</span><span class="muted" style="font-size:12px;color:var(--sub)">${(v/total*100).toFixed(0)}%</span></div>`).join('') : '<p class="tip" style="color:#2F4359">本月暂无支出</p>'; const iconOf = c => c === '餐饮' ? '☕' : c === '交通' ? '🚕' : c === '购物' ? '🛒' : c === '工资' ? '💼' : '💳'; const recent = transactions.slice().sort((a,b) => (b.date + (b.time||'00:00')).localeCompare(a.date + (a.time||'00:00'))).slice(0, 20); const recentHtml = recent.length ? recent.map(t => `<div class="tx" data-tx-id="${t.id}"><div class="ic">${iconOf(t.category)}</div><div class="body"><div class="h-t-name">${esc(t.note || t.category)}</div><div class="muted" style="font-size:12.5px;color:var(--sub)">${esc(t.date)} ${esc(t.time)} · ${t.type === 'income' ? '收入' : '支出'}${t.account?' · '+esc(t.account):''} · ${esc(t.category)}</div></div><div class="amt ${t.type === 'income' ? 'inc' : ''}">${t.type === 'income' ? '+' : '-'}${t.amount.toFixed(2)}</div><button class="del-tx" data-del-tx="${t.id}">✕</button></div>`).join('') : '<p class="tip" style="color:#2F4359">暂无记录</p>'; return `<div class="balance"><div class="lab">本月支出</div><div class="big">¥ ${monthExpense.toFixed(2)}</div><div class="foot"><span>收入 ¥ ${monthIncome.toFixed(2)}</span><span>结余 ¥ ${(monthIncome - monthExpense).toFixed(2)}</span></div></div><div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">分类占比</div>${catHtml}</div><div class="card"><div class="row-between" style="margin-bottom:8px;"><div style="font-size:13px;font-weight:700;">最近记录</div><span class="muted" style="color:var(--sub);font-size:12.5px">共 ${transactions.length} 笔</span></div>${recentHtml}</div>`; }
 function moneyExportPane(){ const rangeLabel = { month:'本月', lastMonth:'上月', '3months':'近 3 月', all:'全部' }; const list = getRangeTransactions(); const totalExp = list.filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0); const totalInc = list.filter(t => t.type === 'income').reduce((s,t) => s + t.amount, 0); return `<div class="card"><div style="font-size:13px;font-weight:700;margin-bottom:10px;">选择时间范围</div><div class="chips" style="margin:0;flex-wrap:wrap;">${['month','lastMonth','3months','all'].map(r => `<span class="chip ${state.exportRange===r?'on':''}" data-act="setExportRange" data-range="${r}">${rangeLabel[r]}</span>`).join('')}</div><p class="tip" style="margin-top:10px;font-size:12px;color:var(--sub)">当前：${rangeLabel[state.exportRange]} · 共 ${list.length} 条记录</p></div><button class="btn-primary" data-act="exportExcel" style="background:linear-gradient(135deg,#2DBE98,#2DBE98)">📊 导出 Excel（.xls，可用 WPS/Excel 打开）</button><button class="btn-ghost-h" data-act="exportCsv" style="margin-top:8px">📄 导出 CSV（纯文本）</button><button class="btn-ghost-h" data-act="importTxCsv" style="margin-top:8px">📥 导入账单（支持 CSV / Excel .xls / .xlsx）</button><button class="btn-ghost-h" data-act="openDownloadFolder" style="margin-top:8px">📂 打开系统"下载"文件夹</button><div class="card" style="margin-top:12px"><div style="font-size:13px;font-weight:700;margin-bottom:8px;">导出预览 <span class="muted" style="color:var(--sub);font-weight:500;font-size:12.5px">${list.length} 条</span></div><div style="font-size:12px;color:var(--sub);line-height:1.7">记录数：${list.length} 条<br>支出合计：¥ ${totalExp.toFixed(2)}<br>收入合计：¥ ${totalInc.toFixed(2)}<br><br><b>导入支持：</b>CSV / Excel .xls / .xlsx，会弹窗让您确认导入方式和跳过重复。</div></div>`; }
@@ -3290,6 +3339,54 @@ async function recognizeProductPhoto(dataUrl, onPartial){
     }
   }
   return info;
+}
+/* ===== 小票拍照记账（复用视觉 AI 识别金额/商家/分类） ===== */
+async function recognizeReceiptPhoto(dataUrl){
+  const setR = (t) => { const el = document.getElementById('receiptStatus'); if (el) el.textContent = t; };
+  setR('① 正在压缩照片…');
+  const url = await shrinkImage(dataUrl, 1000, 0.72);
+  if (!url) throw new Error('图片读取失败或超时，请换一张照片，或改用「从相册选图」');
+  if (!AI.enabled()) throw new Error('请先在「我的 → 设置 → AI 助手」填入 API Key（需支持读图的服务商，如智谱 / 通义）');
+  setR('② 正在让 AI 识别小票金额与商家（约 10–40 秒，请勿退出页面）…');
+  const prompt = [
+    '你是记账助手。请仔细看这张购物小票 / 账单照片。只输出一个 JSON 对象，不要解释、不要 Markdown 代码块。',
+    '格式：{"total":<应付/实付总金额的数字，无货币符号，无符号>,"merchant":"商店/商家名称（看不清填空字符串）","date":"消费日期 YYYY-MM-DD（看不清填空字符串）","category":"消费类别，必须从[餐饮,交通,购物,超市,娱乐,医疗,居家,其他]里选最贴切的一个","items":["商品名1","商品名2"]}。',
+    '规则：① total 是照片上显示的实付/应付总额数字，不要带货币符号；② category 必须是给定列表中的一个，拿不准填"其他"；③ 没有 items 就填空数组。'
+  ].join('');
+  const d = await AI.request('vision', model => ({ model, temperature:0.1, max_tokens:1200, messages:[{ role:'user', content:[ { type:'text', text:prompt }, { type:'image_url', image_url:{ url } } ] }] }), 70000);
+  setR('③ 正在解析…');
+  const content = d && d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+  let info = null; try { info = AI.parseJSON(content); } catch(e){ info = null; }
+  if (!info || info.total === undefined || info.total === null) throw new Error('AI 没识别出金额，请拍清晰小票或手动输入');
+  const total = parseFloat(info.total);
+  if (isNaN(total) || total <= 0) throw new Error('识别到的金额无效，请手动输入或重拍');
+  info.total = total;
+  info.merchant = String(info.merchant || '').trim();
+  info.date = String(info.date || '').trim();
+  info.category = String(info.category || '其他').trim();
+  if (!getCatList('expense').includes(info.category)) info.category = '其他';
+  return info;
+}
+async function handleReceiptPhoto(input){
+  const file = input.files && input.files[0];
+  const setR = (t) => { const el = document.getElementById('receiptStatus'); if (el) el.textContent = t; };
+  if (!file){ setR('✗ 没有拿到照片，请重新点按钮再试'); return; }
+  try { input.value = ''; } catch(er){}
+  const reader = new FileReader();
+  reader.onerror = () => { setR('✗ 照片读取失败，请重选一张'); };
+  reader.onabort = () => { setR('✗ 照片读取被中断，请重试'); };
+  reader.onload = async ev => {
+    const raw = ev.target && ev.target.result;
+    if (!raw || String(raw).indexOf('data:image') !== 0 || String(raw).length < 128){ setR('✗ 照片内容为空，请换一张'); return; }
+    try {
+      const info = await recognizeReceiptPhoto(raw);
+      setR('✓ 已识别：' + info.merchant + ' ¥' + info.total.toFixed(2) + '（' + info.category + '）— 请核对下方表单后保存');
+      state.pendingTx = { type:'expense', amount: info.total, category: info.category, account:'现金', note: info.merchant, date: info.date || todayStr() };
+      renderTxEditor();
+      toast('已识别小票，请确认金额与分类');
+    } catch(err){ setR('✗ ' + ((err && err.message) || '识别失败，请手动输入')); toast('识别失败，可手动输入'); }
+  };
+  try { reader.readAsDataURL(file); } catch(er){ setR('✗ 照片读取失败'); }
 }
 function fillProductFromAI(info, silent){
   const set = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined && v !== null && v !== '') el.value = v; };
@@ -5140,6 +5237,7 @@ function companionBubbleHTML(m, isLastBot, withMeta){
     (!mine && !m.error ? '<button class="cm-act" data-act="speak" data-lang="zh-CN" data-text="' + esc(txt) + '">🔊 读出来</button>' : '') +
     (!mine && isLastBot && !m.error ? '<button class="cm-act" data-act="cmpRegen">↻ 换句说法</button>' : '') +
     '</div>';
+  if (m._streaming) return '<div class="cm-bubble bot" data-cmid="' + esc(m.id) + '"><span class="cm-text"></span></div>';
   return '<div class="cm-bubble ' + (mine ? 'user' : (m.error ? 'error' : 'bot')) + '">' + esc(txt) + meta + '</div>';
 }
 /* 模型自己决定连发几条：它换行了就连发，没换行就是一条，客户端不造台词 */
@@ -5185,6 +5283,43 @@ function companionPaint(){
 function companionAutoScroll(){
   if (state.tab !== 'tools' || state.toolsSub !== 'ai') return;
   try { companionPaint(); } catch(e){}
+}
+/* 打字机：把完整回复逐字填进正在 stream 的 bot 气泡，体验上等同流式输出 */
+function companionTypewriter(botId, fullText){
+  return new Promise(function(resolve){
+    try {
+      const el = document.querySelector('[data-cmid="' + botId + '"] .cm-text');
+      const box = document.getElementById('cmpBox');
+      if (!el){ resolve(); return; }
+      let i = 0;
+      const tick = function(){
+        if (!document.querySelector('[data-cmid="' + botId + '"] .cm-text')){ resolve(); return; } /* 期间被重绘则中止 */
+        const step = fullText.length > 120 ? 2 : 1;   /* 长回复一次两字，不至于太慢 */
+        i = Math.min(fullText.length, i + step);
+        el.textContent = fullText.slice(0, i);
+        if (box) box.scrollTop = box.scrollHeight;
+        if (i >= fullText.length){ resolve(); return; }
+        setTimeout(tick, fullText.length > 240 ? 10 : 18);
+      };
+      setTimeout(tick, 120);
+    } catch(e){ resolve(); }
+  });
+}
+/* 知识库「问 AI」打字机：在占位气泡里逐字填，期间被重绘/折叠则自动中止 */
+async function askTypewriter(q, text){
+  const find = function(){ const els = document.querySelectorAll('.ask-ans'); for (let i=0;i<els.length;i++){ if (els[i].getAttribute('data-askans') === q) return els[i]; } return null; };
+  const box = find(); if (!box) return;
+  const cursor = document.createElement('span'); cursor.className = 'tw-cursor'; cursor.textContent = '▋';
+  const full = String(text || '');
+  const step = full.length > 120 ? 2 : 1;
+  const gap = full.length > 240 ? 10 : 18;
+  for (let i=0;i<full.length;i+=step){
+    const b = find(); if (!b || state.aiStreamingFor !== q){ if (b) b.textContent = full; state.aiStreamingFor = null; return; } /* 中途切走/重绘则补齐为全文并停 */
+    b.textContent = full.slice(0, i + step);
+    b.appendChild(cursor);
+    await new Promise(r => setTimeout(r, gap));
+  }
+  const b = find(); if (b) b.textContent = full;
 }
 /* 开场白由模型现写：贴合人设、时段、记忆，每人设每次进 App 只生成一次；
    失败就什么都不显示，绝不塞一句写死的问候。 */
@@ -5310,9 +5445,16 @@ async function companionGenerate(){
   try {
     const reply = await companionReply(getCompanionMsgs(), prof);
     if (!reply){ toast('这次没收到回复，点 ↻ 再试一次'); return false; }
+    /* 打字机：先放一个空的「正在输入」气泡，拿到完整回复后逐字显示，体验等同流式 */
+    const botId = 'c' + Date.now();
     const list = getCompanionMsgs();
-    list.push({ id:'c' + Date.now(), role:'bot', text:reply, ts:Date.now(), persona:prof.persona });
+    list.push({ id:botId, role:'bot', text:'', ts:Date.now(), persona:prof.persona, _streaming:true });
     setCompanionMsgs(list);
+    companionPaint();
+    await companionTypewriter(botId, reply);
+    const list2 = getCompanionMsgs();
+    const idx = list2.findIndex(function(x){ return x.id === botId; });
+    if (idx >= 0){ list2[idx].text = reply; delete list2[idx]._streaming; setCompanionMsgs(list2); }
     ok = true;
     /* P59d：按用户要求关闭自动记忆提炼（companionDigest 保留但不调用），改由对话上下文自然记忆 */
     companionSummarize().catch(function(){}); /* 更早的旧对话后台慢慢压成前情 */
@@ -5780,6 +5922,7 @@ function reopenAISheet(){
   const np = document.getElementById('aiProvider'), nk = document.getElementById('aiKey');
   if (np && p) np.value = p;
   if (nk && k) nk.value = k;
+  if (np){ np.onchange = function(){ const b = document.getElementById('aiCustomBox'); if (b) b.style.display = np.value === 'custom' ? 'block' : 'none'; }; }
 }
 
 function settingsSheet(sec){
@@ -5803,7 +5946,15 @@ function settingsSheet(sec){
       <div class="set-row"><div><div class="set-lab">英语朗读语速</div><div class="set-hint">系统无英文语音包也没关系：自动走国内在线发音（有道），免安装、联网即可朗读</div></div>${segHTML('setCfg','speakRate',s.speakRate,[['verySlow','很慢'],['slow','慢速'],['normal','正常']])}<button class="btn" style="margin-left:8px;background:#E9F4FF;color:#121C2A;white-space:nowrap;" data-act="testTts">试听发音</button></div>`,
     ai: () => `
       <div class="set-row" style="display:block;"><div class="set-lab" style="margin-bottom:8px;">服务商</div>
-        <select id="aiProvider" style="width:100%;margin-bottom:10px;"><option value="none" ${AI.provider==='none'?'selected':''}>不启用</option><option value="zhipu" ${AI.provider==='zhipu'?'selected':''}>智谱 GLM（推荐 · 免费 · 只需填 Key）</option><option value="qwen" ${AI.provider==='qwen'?'selected':''}>通义千问</option><option value="deepseek" ${AI.provider==='deepseek'?'selected':''}>DeepSeek</option><option value="doubao" ${AI.provider==='doubao'?'selected':''}>豆包 · 火山方舟（需额外开通）</option></select>
+        <select id="aiProvider" style="width:100%;margin-bottom:10px;"><option value="none" ${AI.provider==='none'?'selected':''}>不启用</option><option value="zhipu" ${AI.provider==='zhipu'?'selected':''}>智谱 GLM（推荐 · 免费 · 只需填 Key）</option><option value="qwen" ${AI.provider==='qwen'?'selected':''}>通义千问</option><option value="deepseek" ${AI.provider==='deepseek'?'selected':''}>DeepSeek</option><option value="doubao" ${AI.provider==='doubao'?'selected':''}>豆包 · 火山方舟（需额外开通）</option><option value="custom" ${AI.provider==='custom'?'selected':''}>自定义（填接口地址）</option></select>
+        <div id="aiCustomBox" style="${AI.provider==='custom'?'':'display:none;'}margin-top:10px;padding:11px;border:1px solid #E3EAF2;border-radius:10px;background:#FBFDFF;">
+          <div class="set-lab" style="margin-bottom:6px;">接口地址（完整 chat/completions URL）</div>
+          <input type="text" id="aiCustomBase" placeholder="https://你的服务/v1/chat/completions" value="${esc(LS.get('ai-custom-base',''))}" style="width:100%;box-sizing:border-box;">
+          <div class="set-lab" style="margin:10px 0 6px;">对话模型名</div>
+          <input type="text" id="aiCustomModel" placeholder="如 gpt-4o / your-model" value="${esc(LS.get('ai-custom-model',''))}" style="width:100%;box-sizing:border-box;">
+          <div class="set-lab" style="margin:10px 0 6px;">视觉模型名（识图用，可不填）</div>
+          <input type="text" id="aiCustomVision" placeholder="不填则识图不可用" value="${esc(LS.get('ai-custom-vision',''))}" style="width:100%;box-sizing:border-box;">
+        </div>
         <div class="set-lab" style="margin-bottom:6px;">API Key</div>
         <input type="password" id="aiKey" placeholder="粘贴开放平台生成的 API Key" value="${esc(AI.apiKey)}">
         <p class="set-hint" style="margin:8px 2px 0;">✅ 模型已自动选好，<b>不用填模型名</b>。填 Key → 点测试 → 保存即可。</p>
@@ -6581,7 +6732,7 @@ async function handleV3Action(act, t, e){
   }
   if (act === 'clearAISettings'){
     if (!confirm('清空全部 AI 设置？\n服务商、主 API Key、备用 Key 和记住的模型都会被清除。')) return true;
-    ['ai-provider','ai-key','ai-model','ai-vision-model','ai-keys','ai-last-good','ai-last-used'].forEach(k => { try { LS.del(k); } catch(er){} });
+    ['ai-provider','ai-key','ai-model','ai-vision-model','ai-keys','ai-last-good','ai-last-used','ai-custom-base','ai-custom-model','ai-custom-vision'].forEach(k => { try { LS.del(k); } catch(er){} });
     try { Object.keys(localStorage).filter(k => k.indexOf('ai-model-pref:') === 0).forEach(k => localStorage.removeItem(k)); } catch(er){}
     try { openSheet(settingsSheet('ai')); } catch(er){}
     const st = document.getElementById('aiTestStatus');
@@ -6720,6 +6871,12 @@ document.addEventListener('change', e => {
   if (el && el.id === 'pPd') setPeriodDraft({ period: el.value });
 });
 setTimeout(() => { try { applySettings(); updateUnitResult(); } catch(e){} }, 300);
+
+/* 小票拍照记账：独立的文件选择监听，避免干扰护肤/产品识别那条 change 链 */
+document.addEventListener('change', function(e){
+  const id = e.target && e.target.id;
+  if (id === 'receiptPhoto' || id === 'receiptCamera'){ handleReceiptPhoto(e.target); }
+});
 
 const VIEWS = { home:homeView, study:studyView, life:lifeView, grow:growView, tools:toolsView, me:meView };
 const SKELETON = { home:'<div class="sk" style="height:140px"></div>', study:'<div class="sk" style="height:140px"></div>', life:'<div class="sk" style="height:140px"></div>', grow:'<div class="sk" style="height:320px"></div>', me:'<div class="sk" style="height:180px"></div>' };
@@ -7241,7 +7398,7 @@ if (act === 'clearExample'){
     const saved = getManualTodos(); 
     if (!saved[date]) saved[date] = []; 
     saved[date].push({ time: time || '09:00', title, desc, }); 
-    saveManualTodos(saved); closeSheet(); buildCalendarFromPlans(); syncToNativeWidget(); toast('已添加待办'); render({ keepScroll: true }); return; 
+    saveManualTodos(saved); closeSheet(); buildCalendarFromPlans(); syncToNativeWidget(); syncTodoAlarms(); toast('已添加待办'); render({ keepScroll: true }); return; 
   }
   if (act === 'todoVoice') { try { registerVoiceCallbacks(); } catch(e) {} window._voiceMode = 'todo'; startVoiceRecord(); toast('🎙️ 说一句带日期的话即可，例如：明天开会 / 下周六聚会（说完点「⏹ 停止并识别」）'); return; }
   if (act === 'testTts') { try { toggleSpeak('Hello, this is a pronunciation test.', 'en-US'); toast('正在试听…若仍无声请检查网络（有道在线发音）'); } catch(e){ toast('试听失败：' + e.message); } return; }
@@ -7261,7 +7418,7 @@ if (act === 'clearExample'){
       saved[date].push({ time, title, desc: r.desc || '语音添加' });
     });
     saveManualTodos(saved); window._vtRows = null;
-    closeSheet(); buildCalendarFromPlans(); syncToNativeWidget();
+    closeSheet(); buildCalendarFromPlans(); syncToNativeWidget(); syncTodoAlarms();
     toast('已创建 ' + rows.length + ' 条语音待办'); render({ keepScroll: true }); return;
   }
   if (act === 'togglePastTodos'){ state.showPastTodos = !state.showPastTodos; render({ keepScroll: true }); return; }
@@ -7398,7 +7555,7 @@ if (act === 'clearExample'){
   if (act === 'startWeeklyTest'){ startWeeklyTest(); return; }
   if (act === 'startAllTest'){ startAllTest(); return; }
   if (act === 'startReview'){ e.stopPropagation(); const type = t.dataset.type; if (type === 'english'){ toast('加载中…'); try { await DeckLoader.ensureForReview(); } catch(err){} const keys = LearnStore.getReviewList('english', REVIEW_TARGET); const list = keys.map(k => DeckLoader.findWord(k)).filter(Boolean); if (!list.length){ toast('还没有学过的单词'); return; } startReview(type, list); } else { const keys = LearnStore.getReviewList('work', REVIEW_TARGET); const list = keys.map(k => SEED.VALVE_ALL.find(v => v.q === k)).filter(Boolean); if (!list.length){ toast('还没有学过的知识'); return; } startReview(type, list); } return; }
-  if (act === 'askAbout'){ e.stopPropagation(); const q = t.dataset.q; const card = t.closest('.know') || t.closest('.card'); if (!card) return; const input = card.querySelector('[data-qa-q]'); const question = (input && input.value || '').trim(); if (!question){ toast('先输入问题'); return; } if (!AI.enabled()){ toast('请先配置 AI'); return; } LS.set('ask-text:'+q, question); state.aiAnsweringFor = q; state.aiLoading = true; render({ keepScroll: true }); try { const item = SEED.VALVE_ALL.find(v => v.q === q); const ctx = item ? `${item.cat}：${item.a} ${item.key}` : ''; const answer = await AI.answerQuestion(question, ctx); LS.set('ask-cache:'+q, { question, answer: answer||'（无返回）', t: Date.now() }); toast('AI 已解答'); } catch(err){ LS.set('ask-cache:'+q, { question, answer: '调用失败：'+(err.message||'未知'), t: Date.now() }); toast('调用失败'); } state.aiLoading = false; state.aiAnsweringFor = null; render({ keepScroll: true }); return; }
+  if (act === 'askAbout'){ e.stopPropagation(); const q = t.dataset.q; const card = t.closest('.know') || t.closest('.card'); if (!card) return; const input = card.querySelector('[data-qa-q]'); const question = (input && input.value || '').trim(); if (!question){ toast('先输入问题'); return; } if (!AI.enabled()){ toast('请先配置 AI'); return; } LS.set('ask-text:'+q, question); state.aiAnsweringFor = q; state.aiLoading = true; render({ keepScroll: true }); try { const item = SEED.VALVE_ALL.find(v => v.q === q); const ctx = item ? `${item.cat}：${item.a} ${item.key}` : ''; const answer = await AI.answerQuestion(question, ctx); LS.set('ask-cache:'+q, { question, answer: answer||'（无返回）', t: Date.now() }); state.aiLoading = false; state.aiAnsweringFor = null; state.aiStreamingFor = q; render({ keepScroll: true }); await askTypewriter(q, answer || '（无返回）'); state.aiStreamingFor = null; toast('AI 已解答'); } catch(err){ state.aiLoading = false; state.aiAnsweringFor = null; state.aiStreamingFor = null; LS.set('ask-cache:'+q, { question, answer: '调用失败：'+(err.message||'未知'), t: Date.now() }); toast('调用失败'); render({ keepScroll: true }); } return; }
   if (act === 'gradeAnswer'){ e.stopPropagation(); const scene = t.dataset.scene, q = t.dataset.q, guide = t.dataset.guide; const ta = document.getElementById(t.dataset.ansid || 'exprAnswer'); const answer = (ta && ta.value || '').trim(); if (!answer){ toast('先写下你的回答'); return; } if (!AI.enabled()){ toast('请先配置 AI'); return; } const key = 'expr-'+scene+'-'+q; LS.set('expr-ans:'+key, answer); t.disabled = true; t.textContent = '⏳ 评分中…'; const resultEl = document.getElementById(t.dataset.resid || 'gradeResult'); if (resultEl) resultEl.innerHTML = `<div style="margin-top:12px;padding:14px;background:#E9F4FF;border-radius:12px;font-size:13px;color:var(--sub);text-align:center;">AI 评分中…</div>`; try { const result = await AI.gradeExpression(scene, q, guide, answer); if (result){ LS.set('expr-grade:'+key, result); { const hh = LS.get('expr-history', []); hh.push({ t: Date.now(), score: (result && result.score) || 0 }); LS.set('expr-history', hh.slice(-60)); } LS.set('expr-done:'+todayStr(), true); if (resultEl) resultEl.innerHTML = renderGradeCard(result); updateTopbar(); syncToNativeWidget(); toast('评分完成'); } } catch(err){ if (resultEl) resultEl.innerHTML = renderGradeCard({ error:'调用失败：'+(err.message||'未知') }); } finally { t.disabled = false; t.textContent = '🔄 重新评分'; } return; }
   if (act === 'goToExpressFromMoney') { state.tab = 'study'; state.studySub = 'express'; render(); return; }
 
@@ -7492,6 +7649,12 @@ if (act === 'clearExample'){
     if (f){ f.value = ''; setPhotoStatus(cam ? '正在打开相机…拍好后会自动开始识别' : '正在打开相册…选好照片后会自动开始识别'); f.click(); }
     return;
   }
+  if (act === 'receiptPhotoPick' || act === 'receiptCameraPick'){
+    const cam = act === 'receiptCameraPick';
+    const f = document.getElementById(cam ? 'receiptCamera' : 'receiptPhoto');
+    if (f){ f.value = ''; f.click(); }
+    return;
+  }
   if (act === 'careSub'){ state.careSub = t.dataset.sub; render(); return; }
   if (act === 'prevMonth'){ state.calMonth--; if (state.calMonth < 0){ state.calMonth = 11; state.calYear--; } HealthStore.save('calMonth', state.calMonth); HealthStore.save('calYear', state.calYear); render(); return; }
   if (act === 'nextMonth'){ state.calMonth++; if (state.calMonth > 11){ state.calMonth = 0; state.calYear++; } HealthStore.save('calMonth', state.calMonth); HealthStore.save('calYear', state.calYear); render(); return; }
@@ -7542,7 +7705,7 @@ if (act === 'clearExample'){
   setTimeout(() => location.reload(), 600);
   return;
 }
- if (act === 'saveAI'){ const provider = document.getElementById('aiProvider').value; const key = document.getElementById('aiKey').value.trim(); if (provider !== 'none' && !key){ toast('请填入 API Key'); return; } AI.set(provider, key); toast(provider === 'none' ? '已关闭 AI' : '已保存，模型自动选好'); closeSheet(); render({ keepScroll: true }); return; }
+ if (act === 'saveAI'){ const provider = document.getElementById('aiProvider').value; const key = document.getElementById('aiKey').value.trim(); if (provider !== 'none' && !key){ toast('请填入 API Key'); return; } if (provider === 'custom'){ const cb = ((document.getElementById('aiCustomBase')||{}).value || '').trim(); const cm = ((document.getElementById('aiCustomModel')||{}).value || '').trim(); const cv = ((document.getElementById('aiCustomVision')||{}).value || '').trim(); if (!cb || !cm){ toast('自定义接口需填接口地址和对话模型名'); return; } LS.set('ai-custom-base', cb); LS.set('ai-custom-model', cm); LS.set('ai-custom-vision', cv); } AI.set(provider, key); toast(provider === 'none' ? '已关闭 AI' : (provider === 'custom' ? '已保存自定义接口' : '已保存，模型自动选好')); closeSheet(); render({ keepScroll: true }); return; }
  if (act === 'addAIKey'){
    const pEl = document.getElementById('bkProvider'), kEl = document.getElementById('bkKey'), uEl = document.getElementById('bkUse');
    const provider = pEl ? pEl.value : 'zhipu', key = kEl ? kEl.value.trim() : '', use = uEl ? uEl.value : 'auto';
@@ -7620,7 +7783,9 @@ view.addEventListener('click', async e => {
       const item = manual || planned;
       if (item){
         const m = getTodoStatusMap(); const k = getTodoKey(payload.date, item);
-        setTodoDone(payload.date, item, !m[k]);
+        const willDone = !m[k];
+        setTodoDone(payload.date, item, willDone);
+        if (willDone){ try { if (window.AndroidBridge && typeof AndroidBridge.cancelTodoAlarm === 'function') AndroidBridge.cancelTodoAlarm(payload.date, item.time || '', item.title || ''); } catch(e){} }
         syncToNativeWidget(); render({ keepScroll: true });
       }
     } catch(err){ console.warn('[Todo] 打卡失败', err); }
@@ -7630,11 +7795,12 @@ view.addEventListener('click', async e => {
   if (del){
     try {
       const payload = JSON.parse(decodeURIComponent(del.dataset.delTodo));
+      try { if (window.AndroidBridge && typeof AndroidBridge.cancelTodoAlarm === 'function') AndroidBridge.cancelTodoAlarm(payload.date, payload.time || '', payload.title || ''); } catch(e){}
       const saved = getManualTodos();
       if (saved[payload.date]){
         saved[payload.date] = saved[payload.date].filter(x => !(x.time === payload.time && x.title === payload.title));
         if (!saved[payload.date].length) delete saved[payload.date];
-        saveManualTodos(saved); syncToNativeWidget(); render({ keepScroll: true });
+        saveManualTodos(saved); syncToNativeWidget(); syncTodoAlarms(); render({ keepScroll: true });
       }
     } catch(err){}
     return;
@@ -7805,7 +7971,7 @@ view.addEventListener('touchend', function(e){
 }, { passive:false });
 
 view.addEventListener('click', e => { const c = e.target.closest('.check'); if (c && !c.closest('[data-toggle-todo]') && !c.dataset.act){ if (c.dataset.checkKey){ c.classList.toggle('done'); const isDone = c.classList.contains('done'); setCheck(c.dataset.checkKey, isDone); try { syncCalendarFromHomeCheck(c.dataset.checkKey, isDone); } catch(err){} const supp = c.closest('.supp'); if (supp) supp.classList.toggle('taken', isDone); const homeItem = c.closest('.home-tl-item'); if (homeItem) homeItem.classList.toggle('is-done', isDone); syncToNativeWidget(); } return; } });
-view.addEventListener('click', e => { const chip = e.target.closest('.home-chip'); if (!chip) return; const ck = chip.dataset.checkKey, td = chip.dataset.tlTodo; if (ck){ const wasDone = !!getChecks()[ck]; const nowDone = !wasDone; setCheck(ck, nowDone); try { syncCalendarFromHomeCheck(ck, nowDone); } catch(err){} setHomeFold(nowDone); /* 点完成→自动折叠收起；点灰块恢复→自动展开 */ syncToNativeWidget(); render({ keepScroll: true }); } else if (td){ try { const payload = JSON.parse(decodeURIComponent(td)); const manual = (getManualTodos()[payload.date] || []).find(x => x.time === payload.time && x.title === payload.title); const dayList = (state.calendarData && state.calendarData[payload.date]) || []; const planned = dayList.find(x => x.time === payload.time && x.title === payload.title); const item = manual || planned; if (item){ const m = getTodoStatusMap(); const willDone = !m[getTodoKey(payload.date, item)]; setTodoDone(payload.date, item, willDone); setHomeFold(willDone); /* 完成即折叠 / 恢复即展开 */ syncToNativeWidget(); render({ keepScroll: true }); } } catch(err){ console.warn('[Todo] 打卡失败', err); } } });
+view.addEventListener('click', e => { const chip = e.target.closest('.home-chip'); if (!chip) return; const ck = chip.dataset.checkKey, td = chip.dataset.tlTodo; if (ck){ const wasDone = !!getChecks()[ck]; const nowDone = !wasDone; setCheck(ck, nowDone); try { syncCalendarFromHomeCheck(ck, nowDone); } catch(err){} setHomeFold(nowDone); /* 点完成→自动折叠收起；点灰块恢复→自动展开 */ syncToNativeWidget(); render({ keepScroll: true }); } else if (td){ try { const payload = JSON.parse(decodeURIComponent(td)); const manual = (getManualTodos()[payload.date] || []).find(x => x.time === payload.time && x.title === payload.title); const dayList = (state.calendarData && state.calendarData[payload.date]) || []; const planned = dayList.find(x => x.time === payload.time && x.title === payload.title); const item = manual || planned; if (item){ const m = getTodoStatusMap(); const willDone = !m[getTodoKey(payload.date, item)]; setTodoDone(payload.date, item, willDone); if (willDone){ try { if (window.AndroidBridge && typeof AndroidBridge.cancelTodoAlarm === 'function') AndroidBridge.cancelTodoAlarm(payload.date, item.time || '', item.title || ''); } catch(e){} } setHomeFold(willDone); /* 完成即折叠 / 恢复即展开 */ syncToNativeWidget(); render({ keepScroll: true }); } } catch(err){ console.warn('[Todo] 打卡失败', err); } } });
 view.addEventListener('click', e => { const tl = e.target.closest('[data-home-action]'); if (!tl || e.target.closest('.check')) return; const action = tl.dataset.homeAction; if (action === 'skin-morning' || action === 'skin-night'){ state.tab = 'life'; state.lifeSub = 'care'; state.careSub = 'skin'; render(); return; } if (action === 'supplement'){ state.tab = 'life'; state.lifeSub = 'care'; state.careSub = 'supp'; render(); return; } if (action === 'sport'){ state.tab = 'life'; state.lifeSub = 'sport'; state.sportSub = 'plan'; render(); return; } if (action === 'study'){ state.tab = 'study'; render(); return; } if (action === 'todo'){ state.tab = 'life'; state.lifeSub = 'calendar'; render(); return; } });
 view.addEventListener('click', e => { const del = e.target.closest('[data-del-tx]'); if (del){ e.stopPropagation(); const id = Number(del.dataset.delTx); if (!confirm('删除这笔记录？')) return; transactions = transactions.filter(x => x.id !== id); state.transactions = transactions; LS.set('app_h_transactions', transactions); syncToNativeWidget(); render(); return; } const tx = e.target.closest('[data-tx-id]'); if (tx){ const item = transactions.find(x => x.id === Number(tx.dataset.txId)); if (!item) return; state.pendingTx = { type:item.type, amount:item.amount, category:item.category, account:item.account||'现金', note:item.note||'', date:item.date||todayStr(), editingId:item.id }; renderTxEditor(); setTimeout(() => { const area = document.getElementById('txEditArea'); if (area) area.scrollIntoView({ block:'center', behavior:'smooth' }); }, 100); return; } });
 view.addEventListener('change', e => { if (e.target.id === 'planStartInput'){ const v = e.target.value; if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return; setPlanStart(new Date(v + 'T00:00:00')); buildCalendarFromPlans(); render(); return; } if (e.target.id === 'clothCat'){ state.closetCat = e.target.value; render({ keepScroll: true }); return; } if (e.target.dataset && e.target.dataset.gkey){ const v = parseFloat(e.target.value); if (!isNaN(v)) state.garmentDraft[e.target.dataset.gkey] = v; else delete state.garmentDraft[e.target.dataset.gkey]; render({ keepScroll: true }); return; } if (e.target.id === 'clothUpload'){
@@ -8319,6 +8485,47 @@ function nativeSpeakCleanup(seq, cleanup, ms){
 }
 
 /* 多源网络 TTS：长文按句切块依次播放（不再 200 字截断），整体慢速适合新手 */
+/* 发音音频本地缓存（IndexedDB）：拉过的音频缓存，离线/省流量重听。无 IDB 时自动降级为不缓存 */
+const _ttsDB = (function(){
+  var disabled = false, dbp = null;
+  function open(){
+    if (disabled) return Promise.reject(new Error('disabled'));
+    if (dbp) return dbp;
+    dbp = new Promise(function(res, rej){
+      try {
+        if (!window.indexedDB) { disabled = true; rej(new Error('no idb')); return; }
+        var req = indexedDB.open('tts_cache_db', 1);
+        req.onupgradeneeded = function(){ var db = req.result; if (!db.objectStoreNames.contains('audio')) db.createObjectStore('audio', { keyPath: 'url' }); };
+        req.onsuccess = function(){ res(req.result); };
+        req.onerror = function(){ disabled = true; rej(req.error); };
+      } catch(e){ disabled = true; rej(e); }
+    });
+    return dbp;
+  }
+  function get(url){
+    if (disabled) return Promise.resolve(null);
+    return open().then(function(db){ return new Promise(function(res){ var tx = db.transaction('audio','readonly'); var rq = tx.objectStore('audio').get(url); rq.onsuccess = function(){ res(rq.result || null); }; rq.onerror = function(){ res(null); }; }); }).catch(function(){ return null; });
+  }
+  function put(url, blob){
+    if (disabled || !blob || !blob.size) return Promise.resolve();
+    return open().then(function(db){ return new Promise(function(res){ var tx = db.transaction('audio','readwrite'); tx.objectStore('audio').put({ url:url, blob:blob, ts:Date.now() }); tx.oncomplete = function(){ res(); }; tx.onerror = function(){ res(); }; }); }).then(function(){ return prune(); }).catch(function(){});
+  }
+  var pruning = false;
+  function prune(){
+    if (pruning || disabled) return Promise.resolve();
+    pruning = true;
+    return open().then(function(db){ return new Promise(function(res, rej){ var tx = db.transaction('audio','readonly'); var rq = tx.objectStore('audio').getAll(); rq.onsuccess = function(){ res(rq.result || []); }; rq.onerror = function(){ rej(rq.error); }; }); }).then(function(records){
+      var MAX = 500;
+      if (records.length > MAX){
+        records.sort(function(a,b){ return a.ts - b.ts; });
+        var toDel = records.slice(0, records.length - MAX).map(function(r){ return r.url; });
+        return open().then(function(db2){ return new Promise(function(res){ var tx = db2.transaction('audio','readwrite'); var st = tx.objectStore('audio'); toDel.forEach(function(u){ st.delete(u); }); tx.oncomplete = function(){ res(); }; tx.onerror = function(){ res(); }; }); });
+      }
+    }).catch(function(){}).then(function(){ pruning = false; });
+  }
+  return { get: get, put: put };
+})();
+
 function playNetworkAudio(text, langStr, seq, btn) {
   const player = document.getElementById('ttsPlayer');
   if (!player) return;
@@ -8367,37 +8574,54 @@ function playNetworkAudio(text, langStr, seq, btn) {
       try { player.pause(); } catch(e){}
       resolve(ok);
     }
-    const tryNext = () => {
+    const tryNext = async () => {
       if (done) return;
       if (seq !== _speakSeq){ finish(false); return; }
       if (idx >= sources.length){ finish(false); return; }
       const srcItem = sources[idx++];
       let settled = false;
+      wires();
       const srcTimer = setTimeout(() => {
         if (settled || done) return;
         settled = true; markFail(srcItem.name); wires();
         try { player.pause(); } catch(e){}
         tryNext();
       }, 3000);
-      player.onplaying = () => { if (settled || done) return; settled = true; clearTimeout(srcTimer); lockedSrc = idx - 1; markOk(srcItem.name); };
-      player.onended = () => { if (!done){ clearTimeout(srcTimer); finish(true); } };
       player.onerror = () => {
         if (settled || done) return;
         settled = true; clearTimeout(srcTimer); markFail(srcItem.name); wires();
         try { player.pause(); } catch(e){}
+        if (fromCache){ try { URL.revokeObjectURL(url); } catch(e){} }
         tryNext();
       };
+      // 先查本地缓存；命中则直接播本地 blob（离线可用、省流量）
+      let url = srcItem.url, fromCache = false;
       try {
-        player.src = srcItem.url;
+        const cached = await _ttsDB.get(url).catch(() => null);
+        if (cached && cached.blob && cached.blob.size > 0){ fromCache = true; url = URL.createObjectURL(cached.blob); }
+      } catch(e){}
+      player.onplaying = () => {
+        if (settled || done) return;
+        settled = true; clearTimeout(srcTimer); lockedSrc = idx - 1; markOk(srcItem.name);
+        // 在线播放成功后异步下载并缓存，下次直接走本地
+        if (!fromCache){ try { fetch(srcItem.url).then(r => r.ok ? r.blob() : null).then(b => { if (b) _ttsDB.put(srcItem.url, b); }).catch(()=>{}); } catch(e){} }
+      };
+      player.onended = () => {
+        if (fromCache){ try { URL.revokeObjectURL(url); } catch(e){} }
+        if (!done){ clearTimeout(srcTimer); finish(true); }
+      };
+      try {
+        player.src = url;
         try { player.playbackRate = rate; } catch(e){}
         const p = player.play();
         if (p && p.catch) p.catch(err => {
           if (settled || done) return;
           if (err && err.name === 'AbortError') return;
           settled = true; clearTimeout(srcTimer); markFail(srcItem.name); wires();
+          if (fromCache){ try { URL.revokeObjectURL(url); } catch(e){} }
           tryNext();
         });
-      } catch(e){ if (!done){ settled = true; clearTimeout(srcTimer); tryNext(); } }
+      } catch(e){ if (!done){ settled = true; clearTimeout(srcTimer); if (fromCache){ try { URL.revokeObjectURL(url); } catch(_){} } tryNext(); } }
     };
     tryNext();
   });
@@ -9091,14 +9315,28 @@ window.p55AppVersion = function(){
   try { if (window.AndroidBridge && typeof AndroidBridge.getAppVersion === 'function') return String(AndroidBridge.getAppVersion()); } catch(e){}
   return '1.0 · 开发版';
 };
-function p55NetUpdate(){
+/* 网络状态：Android WebView 冷启动时 navigator.onLine 初始值常误报 false（实际有网），
+   导致一进 App 就显示"当前离线"横幅，几百毫秒后网络栈就绪又触发 online 事件消失。
+   这里做"去抖 + 延迟确认"，过滤这种假离线闪烁；真断网仍正常提示。 */
+var _netOfflineTimer = null, _netWasOffline = false;
+function p55NetSetOffline(show){
+  try { var b = document.getElementById('netBanner'); if (b) b.style.display = show ? 'block' : 'none'; } catch(e){}
+}
+function p55NetEvaluate(immediate){
   try {
-    var b = document.getElementById('netBanner');
-    if (b) b.style.display = (navigator.onLine === false) ? 'block' : 'none';
+    if (navigator.onLine !== false){            // 在线/未知 → 隐藏横幅；若此前确曾离线则提示恢复
+      if (_netWasOffline){ try { toast('网络已恢复'); } catch(e){} }
+      _netWasOffline = false; p55NetSetOffline(false); return;
+    }
+    if (_netOfflineTimer) clearTimeout(_netOfflineTimer);
+    if (immediate){ _netWasOffline = true; p55NetSetOffline(true); try { toast('网络已断开，AI 与天气暂不可用'); } catch(e){} return; }
+    _netOfflineTimer = setTimeout(function(){
+      if (navigator.onLine === false){ _netWasOffline = true; p55NetSetOffline(true); try { toast('网络已断开，AI 与天气暂不可用'); } catch(e){} }
+    }, 1500);
   } catch(e){}
 }
-window.addEventListener('offline', function(){ p55NetUpdate(); try { toast('网络已断开，AI 与天气暂不可用'); } catch(e){} });
-window.addEventListener('online',  function(){ p55NetUpdate(); try { toast('网络已恢复'); } catch(e){} });
+window.addEventListener('offline', function(){ p55NetEvaluate(false); }); // 去抖确认，防抖动误报
+window.addEventListener('online',  function(){ p55NetEvaluate(true); });
 function p55ExportErrLog(){
   var txt = window.dumpErrorLog ? window.dumpErrorLog() : '';
   if (window.AndroidFile && typeof AndroidFile.saveFile === 'function'){
@@ -9117,7 +9355,7 @@ function p55ExportErrLog(){
     loadDataFromGlobals(); 
     /* P55：首屏先出界面，三个大词库在后台并行补齐，不阻塞显示 */
     try { window.__ensureAllData(); } catch(e){}
-    p55NetUpdate();
+    p55NetEvaluate(false); // 启动时延迟确认在线状态，过滤 WebView 冷启动的假离线
     migrateOldSkinProducts(); 
     buildCalendarFromPlans(); 
     LearnStore.checkIn(); 
@@ -9132,6 +9370,7 @@ function p55ExportErrLog(){
     try { initAppLock(); } catch(e){}
     initWalkReminder();
     try { initEveningReminder(); } catch(e){ console.warn('[Evening] 启动失败', e); }
+    try { syncTodoAlarms(); } catch(e){ console.warn('[Todo] 启动同步闹钟失败', e); }
     setTimeout(() => { try { if (window.AndroidBridge && window.AndroidBridge.getWidgetTimelineData) { const nativeJson = window.AndroidBridge.getWidgetTimelineData(); if (nativeJson && nativeJson !== "[]") { const arr = JSON.parse(nativeJson); const checks = getChecks(); let changed = false; const wt = todayStr();
           arr.forEach(item => { if (!item.key) return; if (item.done && !checks[item.key]) { checks[item.key] = true; changed = true; }
             else if (item.done === false && checks[item.key] && String(item.key).indexOf('_' + wt + '_') >= 0) { delete checks[item.key]; changed = true; } }); if (changed) { saveChecks(checks); render(); } } } syncToNativeWidget(); } catch (e) { console.error('init widget sync error:', e); } }, 1200);
