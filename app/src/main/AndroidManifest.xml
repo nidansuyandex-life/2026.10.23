@@ -83,5 +83,12 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- 手动待办：到点提醒。每条待办一个独立闹钟，删除/完成/过期由页面调用取消 -->
+        <receiver android:name=".TodoAlarmReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="com.daily.healthlife.TODO_FIRE" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

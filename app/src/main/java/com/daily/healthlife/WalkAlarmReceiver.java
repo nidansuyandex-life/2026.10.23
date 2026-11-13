@@ -1,5 +1,6 @@
 package com.daily.healthlife;
 
+import android.Manifest;
 import android.app.AlarmManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -8,11 +9,15 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 
 import java.util.Calendar;
 
@@ -79,11 +84,16 @@ public class WalkAlarmReceiver extends BroadcastReceiver {
 
     /**
      * 启动走动倒计时。
-     * 优先原生前台服务（通知栏实时倒计时 + 后台提醒）。若后台启动前台服务被系统拒绝
-     * （Android 12+ 限制 / 国产 ROM 激进清理），则降级为静态通知 + 一条兜底「时间到」精确闹钟，
-     * 保证至少「到时间」能提醒、且现在就能在通知栏看到提示。
+     * 核心目标：无论前台服务能否起来，「到点」都要可靠提醒（通知 + 震动 + 兜底结束闹钟）。
+     *  - 优先原生前台服务（通知栏实时倒计时 + 后台提醒）；
+     *  - 若后台启动前台服务被系统拒绝（Android 12+ 限制 / 国产 ROM 激进清理），降级为静态通知；
+     *  - 若服务看似起来却被静默杀掉，1.5s 后补一条静态提醒，杜绝「静默无提醒」。
      */
     private void startWalkTimer(Context ctx, int seconds) {
+        // ★ 先保证「现在就提醒」：震动 + 兜底「时间到」精确闹钟（即便服务被清理也能响）
+        vibrate(ctx);
+        try { WalkEndReceiver.schedule(ctx, seconds); } catch (Throwable ignored) {}
+
         boolean started = false;
         if (!WalkTimerService.sRunning) {
             try {
@@ -101,11 +111,18 @@ public class WalkAlarmReceiver extends BroadcastReceiver {
             }
         }
         if (!started) {
-            // 后台启动前台服务被拒：降级方案（静态通知 + 兜底闹钟）
-            try { WalkEndReceiver.schedule(ctx, seconds); } catch (Throwable ignored) {}
+            // 后台启动前台服务被拒：直接弹静态提醒（后台也能看到）
             showNotification(ctx);
+        } else {
+            // 服务看似起来了，但部分国产 ROM 会静默杀掉刚起的前台服务；
+            // 1.5s 后若服务其实没在跑，补一条静态提醒，保证「到点一定有提醒」。
+            final Context fctx = ctx.getApplicationContext();
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                if (!WalkTimerService.sRunning) {
+                    try { showNotification(fctx); } catch (Throwable ignored) {}
+                }
+            }, 1500);
         }
-        vibrate(ctx);
         // 前台时仍让页面弹出居中倒计时 UI（WebView 内大数字）
         if (MainActivity.isAppForeground()) {
             MainActivity.runJs("window.onNativeWalkAlarm && window.onNativeWalkAlarm()");
@@ -137,11 +154,14 @@ public class WalkAlarmReceiver extends BroadcastReceiver {
             try {
                 if (exact) {
                     am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
+                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    // 没授权精确闹钟：改用 setAlarmClock，系统级可靠触发、不会被 Doze 拖延
+                    am.setAlarmClock(new AlarmManager.AlarmClockInfo(at, pi), pi);
                 } else {
                     am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
                 }
             } catch (SecurityException se) {
-                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
+                try { am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi); } catch (Exception ignored) {}
             }
         } catch (Exception ignored) {
         }
@@ -209,6 +229,10 @@ public class WalkAlarmReceiver extends BroadcastReceiver {
 
     private void showNotification(Context ctx) {
         try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS)
+                        != PackageManager.PERMISSION_GRANTED) return;
+            }
             NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm == null) return;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

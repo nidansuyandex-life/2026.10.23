@@ -387,6 +387,26 @@ public class JsBridge {
         }
     }
 
+    // ==================== 手动待办：到点提醒 ====================
+
+    /** 页面把一条未过期未完成待办同步过来，原生排精确闹钟到点提醒 */
+    @JavascriptInterface
+    public void scheduleTodoAlarm(String date, String time, String title, long ts) {
+        try {
+            TodoAlarmReceiver.schedule(act.getApplicationContext(), date, time, title, ts);
+        } catch (Exception ignored) {
+        }
+    }
+
+    /** 页面把一条待办（删除/完成/过期）撤销，原生取消对应闹钟 */
+    @JavascriptInterface
+    public void cancelTodoAlarm(String date, String time, String title) {
+        try {
+            TodoAlarmReceiver.cancel(act.getApplicationContext(), date, time, title);
+        } catch (Exception ignored) {
+        }
+    }
+
     // ==================== 晚间小结提醒 ====================
 
     /** 页面把晚间提醒设置同步过来；enabled: 1 开 / 0 关，minute 为当天的分钟数（如 20:30 = 1230） */
