@@ -49,6 +49,13 @@
         
         <service android:name=".WalkTimerService" android:exported="false" android:foregroundServiceType="dataSync" />
 
+        <!-- 走动倒计时「时间到」的兜底提醒：即便前台服务被后台清理，精确闹钟也能准时弹通知 -->
+        <receiver android:name=".WalkEndReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="com.daily.healthlife.WALK_END" />
+            </intent-filter>
+        </receiver>
+
         <!-- 站立提醒的系统级调度：App 关闭/重启后依然能准点触发 -->
         <receiver android:name=".WalkAlarmReceiver" android:exported="false">
             <intent-filter>

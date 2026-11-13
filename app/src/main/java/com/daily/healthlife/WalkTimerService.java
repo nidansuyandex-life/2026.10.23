@@ -105,6 +105,8 @@ public class WalkTimerService extends Service {
 
         try {
             if (intent != null && intent.hasExtra("duration")) {
+                // 已在倒计时中（闹钟 + JS 重复触发同一时刻）：不重置，沿用已有计时
+                if (timer != null) return START_NOT_STICKY;
                 int seconds = Math.max(1, intent.getIntExtra("duration", 200));
                 final String startMsg = "该站起来走动了，活动两到三分钟";
 
@@ -113,6 +115,8 @@ public class WalkTimerService extends Service {
                 catch (Throwable ignored) {}
 
                 safeSpeak(startMsg, "start");
+                // 安排兜底「时间到」闹钟：即便服务被国产 ROM 后台清理杀掉，到点也能提醒
+                try { WalkEndReceiver.schedule(getApplicationContext(), seconds); } catch (Throwable ignored) {}
                 startTimer(seconds * 1000L);
             }
         } catch (Throwable t) {
@@ -165,6 +169,7 @@ public class WalkTimerService extends Service {
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentIntent(pendingIntent)
                 .setOngoing(ongoing)
+                .setOnlyAlertOnce(true)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .build();
     }
@@ -183,11 +188,20 @@ public class WalkTimerService extends Service {
             if (timer != null) timer.cancel();
         } catch (Throwable ignored) {}
         try {
+            final int totalSec = (int) Math.ceil(ms / 1000.0);
+            // 立刻刷新一次，避免第一秒通知文案空白
+            try { updateForegroundNotification("活动倒计时", "剩余 " + totalSec + " 秒 · 起身走动中"); } catch (Throwable ignored) {}
             timer = new CountDownTimer(ms, 1000) {
-                @Override public void onTick(long millisUntilFinished) {}
+                @Override public void onTick(long millisUntilFinished) {
+                    if (destroyed) return;
+                    int sec = (int) Math.ceil(millisUntilFinished / 1000.0);
+                    try { updateForegroundNotification("活动倒计时", "剩余 " + sec + " 秒 · 起身走动中"); } catch (Throwable ignored) {}
+                }
 
                 @Override public void onFinish() {
                     if (destroyed) return;
+                    // 倒计时正常走到 0：取消兜底闹钟，避免重复提醒
+                    try { WalkEndReceiver.cancel(getApplicationContext()); } catch (Throwable ignored) {}
                     // 1. 提示音（用完必须 release，否则多次触发会耗尽资源）
                     try {
                         final ToneGenerator toneG = new ToneGenerator(AudioManager.STREAM_ALARM, 100);

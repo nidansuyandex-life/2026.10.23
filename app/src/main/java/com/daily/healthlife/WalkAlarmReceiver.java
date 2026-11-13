@@ -70,16 +70,46 @@ public class WalkAlarmReceiver extends BroadcastReceiver {
         }
         sp.edit().putInt("lastSlot", slot).apply();
 
-        boolean handledByPage = false;
-        if (MainActivity.isAppForeground()) {
-            handledByPage = MainActivity.runJs("window.onNativeWalkAlarm && window.onNativeWalkAlarm()");
-        }
-        if (!handledByPage) {
-            showNotification(context);
-            vibrate(context);
-        }
+        // 开始一次走动倒计时：原生前台服务负责「通知栏实时倒计时 + 后台到点提醒」；
+        // 无论如何都先启动它（前后台都启动，依赖精确闹钟的系统豁免），前台时页面再补一个居中大数字 UI。
+        startWalkTimer(context, 200);
 
         scheduleNext(context);
+    }
+
+    /**
+     * 启动走动倒计时。
+     * 优先原生前台服务（通知栏实时倒计时 + 后台提醒）。若后台启动前台服务被系统拒绝
+     * （Android 12+ 限制 / 国产 ROM 激进清理），则降级为静态通知 + 一条兜底「时间到」精确闹钟，
+     * 保证至少「到时间」能提醒、且现在就能在通知栏看到提示。
+     */
+    private void startWalkTimer(Context ctx, int seconds) {
+        boolean started = false;
+        if (!WalkTimerService.sRunning) {
+            try {
+                Intent si = new Intent(ctx, WalkTimerService.class);
+                si.putExtra("duration", seconds);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    ctx.startForegroundService(si);
+                } else {
+                    ctx.startService(si);
+                }
+                started = true;
+            } catch (Throwable t) {
+                android.util.Log.w("WalkAlarmReceiver", "startForegroundService denied, fallback", t);
+                started = false;
+            }
+        }
+        if (!started) {
+            // 后台启动前台服务被拒：降级方案（静态通知 + 兜底闹钟）
+            try { WalkEndReceiver.schedule(ctx, seconds); } catch (Throwable ignored) {}
+            showNotification(ctx);
+        }
+        vibrate(ctx);
+        // 前台时仍让页面弹出居中倒计时 UI（WebView 内大数字）
+        if (MainActivity.isAppForeground()) {
+            MainActivity.runJs("window.onNativeWalkAlarm && window.onNativeWalkAlarm()");
+        }
     }
 
     /** 排下一次提醒 */

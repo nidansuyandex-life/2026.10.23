@@ -138,6 +138,10 @@ public class JsBridge {
     @JavascriptInterface
     public void stopNativeWalkTimer() {
         try {
+            // 用户主动结束 / 倒计时收尾：同时取消兜底「时间到」闹钟，避免幽灵提醒
+            WalkEndReceiver.cancel(act.getApplicationContext());
+        } catch (Throwable ignored) {}
+        try {
             act.getApplicationContext().stopService(new Intent(act.getApplicationContext(), WalkTimerService.class));
         } catch (Throwable ignored) {}
     }
