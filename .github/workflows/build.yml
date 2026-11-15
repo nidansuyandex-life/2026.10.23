@@ -8,6 +8,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # 发版需要：创建 Release 与 tag
+    permissions:
+      contents: write
 
     steps:
     - name: Checkout
@@ -49,6 +52,37 @@ jobs:
         -PappVersionName=1.0.${{ github.run_number }}
         --stacktrace
 
+    # —— 可选：用你自己的生产密钥重签（默认不启用）。
+    #   在仓库 Settings → Secrets and variables → Actions 里添加：
+    #     SIGNING_KEY        用 openssl base64 < your.keystore | tr -d '\n' 生成
+    #     KEY_ALIAS          密钥别名
+    #     KEY_STORE_PASSWORD 密钥库密码
+    #     KEY_PASSWORD       密钥密码
+    #   不填则直接用 Gradle 已用仓库内 debug.keystore 签好的 app-release.apk。
+    - name: Sign Release APK (optional, only if SIGNING_KEY secret set)
+      if: ${{ secrets.SIGNING_KEY != '' }}
+      uses: r0adkll/sign-android-release@v1
+      id: sign_release
+      with:
+        releaseDirectory: app/build/outputs/apk/release
+        signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+        alias: ${{ secrets.KEY_ALIAS }}
+        keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+        keyPassword: ${{ secrets.KEY_PASSWORD }}
+      env:
+        BUILD_TOOLS_VERSION: "34.0.0"
+
+    - name: Pick release APK to publish
+      id: pick
+      run: |
+        if [ -n "$SIGNING_KEY" ]; then
+          echo "apk=${{ steps.sign_release.outputs.signedReleaseFile }}" >> "$GITHUB_OUTPUT"
+        else
+          echo "apk=app/build/outputs/apk/release/app-release.apk" >> "$GITHUB_OUTPUT"
+        fi
+      env:
+        SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
       with:
@@ -59,4 +93,22 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: app-release
-        path: app/build/outputs/apk/release/app-release.apk
+        path: ${{ steps.pick.outputs.apk }}
+
+    # —— 发版：每次 push 到 main/master 自动建一个 Release，
+    #    把已签名的 release APK 和 debug APK 挂上去，直接拿到安装链接。
+    - name: Publish GitHub Release
+      uses: softprops/action-gh-release@v2
+      if: github.event_name == 'push'
+      with:
+        tag_name: v${{ github.run_number }}
+        name: 健康生活 v1.0.${{ github.run_number }}
+        body: |
+          自动构建 · 提交 ${{ github.sha }}
+          - app-release.apk：已签名，可直接安装
+          - app-debug.apk：调试包
+        files: |
+          ${{ steps.pick.outputs.apk }}
+          app/build/outputs/apk/debug/app-debug.apk
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
