@@ -268,6 +268,20 @@ public class JsBridge {
         } catch (Exception ignored) {}
     }
 
+    /**
+     * 让页面 JS 直接拉起系统相机拍照（不走 <input type=file capture>）。
+     * 拍完通过 window.__cameraCb(cbId, path) 回调，path 为空串表示取消/失败。
+     * 页面拿到 path 后可用 AndroidFile.readImage(path) 取回 base64 预览。
+     */
+    @JavascriptInterface
+    public void openCamera(String cbId) {
+        try {
+            final String id = cbId == null ? "" : cbId;
+            // JsBridge 方法运行在 WebView 的 JavaBridge 线程，启动 Activity 必须切主线程
+            act.runOnUiThread(() -> act.openNativeCamera(id));
+        } catch (Throwable ignored) {}
+    }
+
     @JavascriptInterface
     public void saveFile(String content, String filename, String mime) {
         try {

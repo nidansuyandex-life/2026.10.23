@@ -44,7 +44,10 @@ public class MainActivity extends AppCompatActivity {
     private ValueCallback<Uri[]> mUploadMessage;
     private Uri mCameraPhotoUri;
     private File mCameraPhotoFile;
+    /** JsBridge.openCamera 的回调 id：拍照结果通过 window.__cameraCb(cbId, path) 回传页面 */
+    private String mCameraCbId = "";
     private final static int FILE_CHOOSER_RESULT_CODE = 10000;
+    private final static int CAMERA_RESULT_CODE = 10001;
     private volatile boolean mDestroyed = false;
     /** 系统文件选择器/相机打开期间为 true：此时 onResume 不得整页重绘 */
     private volatile boolean mFileChooserBusy = false;
@@ -383,9 +386,62 @@ public class MainActivity extends AppCompatActivity {
         } catch (Throwable ignored) { return null; }
     }
 
+    /** 供 JsBridge.openCamera 调用：在主线程启动系统相机拍照 */
+    void openNativeCamera(String cbId) {
+        try {
+            if (isFinishing() || isDestroyed()) {
+                MainActivity.runJs("window.__cameraCb && window.__cameraCb("
+                        + org.json.JSONObject.quote(cbId) + ",'')");
+                return;
+            }
+            File dir = new File(getCacheDir(), "images");
+            if (!dir.exists()) dir.mkdirs();
+            File photo = new File(dir, "cam_" + System.currentTimeMillis() + ".jpg");
+            Uri photoUri = FileProvider.getUriForFile(this,
+                    getPackageName() + ".fileprovider", photo);
+            Intent cam = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            cam.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
+            cam.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            cam.setClipData(android.content.ClipData.newUri(getContentResolver(), "photo", photoUri));
+            try {
+                java.util.List<android.content.pm.ResolveInfo> ris = getPackageManager()
+                        .queryIntentActivities(cam, PackageManager.MATCH_DEFAULT_ONLY);
+                for (android.content.pm.ResolveInfo ri : ris) {
+                    grantUriPermission(ri.activityInfo.packageName, photoUri,
+                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                }
+            } catch (Throwable ignored) {}
+            mCameraCbId = cbId;
+            mCameraPhotoUri = photoUri;
+            mCameraPhotoFile = photo;
+            mFileChooserBusy = true;
+            mFileChooserTs = System.currentTimeMillis();
+            startActivityForResult(cam, CAMERA_RESULT_CODE);
+        } catch (Throwable e) {
+            MainActivity.runJs("window.__cameraCb && window.__cameraCb("
+                    + org.json.JSONObject.quote(cbId) + ",'')");
+        }
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == CAMERA_RESULT_CODE) {
+            String cb = mCameraCbId;
+            mCameraCbId = "";
+            String path = "";
+            if (resultCode == Activity.RESULT_OK && mCameraPhotoFile != null
+                    && mCameraPhotoFile.exists() && mCameraPhotoFile.length() > 0) {
+                path = mCameraPhotoFile.getAbsolutePath();
+            }
+            final String p = path;
+            MainActivity.runJs("window.__cameraCb && window.__cameraCb("
+                    + org.json.JSONObject.quote(cb) + "," + org.json.JSONObject.quote(p) + ")");
+            mCameraPhotoUri = null;
+            mCameraPhotoFile = null;
+            scheduleChooserUnlock();
+            return;
+        }
         if (requestCode != FILE_CHOOSER_RESULT_CODE) return;
         if (mUploadMessage == null) { scheduleChooserUnlock(); return; }
         Uri[] raw = null;
